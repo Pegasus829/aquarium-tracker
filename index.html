@@ -17,7 +17,7 @@
   --nh3:     #f87171;
   --no2:     #fb923c;
   --no3:     #facc15;
-  --tap:     #34d399;
+  --tap:     #22d3ee;
   --safe:    #10b981;
   --warn:    #f59e0b;
   --danger:  #ef4444;
@@ -40,7 +40,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
 .section-label-line { flex: 1; height: 1px; background: var(--border); }
 
 .form-card { max-width: 860px; margin: 0 auto 10px; background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 18px; }
-.form-card.tap-card { border-color: rgba(52,211,153,0.2); margin-bottom: 28px; }
+.form-card.tap-card { border-color: rgba(34,211,238,0.2); margin-bottom: 28px; }
 .form-title { font-family: var(--mono); font-size: 11px; font-weight: 600; color: var(--white); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 14px; }
 .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px,1fr)); gap: 10px; margin-bottom: 12px; }
 .form-grid-tap { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
@@ -59,7 +59,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
 .status-bar { max-width: 860px; margin: 0 auto 24px; display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; }
 .tap-status-bar { max-width: 860px; margin: 0 auto 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .stat-pill { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 10px 8px; text-align: center; }
-.stat-pill.tap-pill { border-color: rgba(52,211,153,0.15); }
+.stat-pill.tap-pill { border-color: rgba(34,211,238,0.15); }
 .stat-label { font-family: var(--mono); font-size: 8px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
 .stat-value { font-family: var(--display); font-size: 16px; font-weight: 700; }
 .stat-status { font-family: var(--mono); font-size: 8px; letter-spacing: 0.08em; text-transform: uppercase; margin-top: 2px; }
@@ -208,6 +208,23 @@ canvas.chart { width: 100%; height: 110px; display: block; }
   </div>
 </div>
 
+<!-- Tap form -->
+<div class="section-label">
+  <div class="section-label-text">🚰 Filtered Tap Water</div>
+  <div class="section-label-line"></div>
+</div>
+<div class="form-card tap-card">
+  <div class="form-title">+ Log Tap Water Test</div>
+  <div class="form-grid-tap">
+    <div class="field"><label class="tap-label">Nitrate (ppm)</label><input type="number" id="t-no3" step="5" min="0" placeholder="25"></div>
+    <div class="field"><label style="color:var(--muted)">Notes (optional)</label><input type="text" id="t-note" placeholder="e.g. filter changed"></div>
+  </div>
+  <div class="form-row">
+    <div class="field date-field"><label style="color:var(--muted)">Date &amp; Time</label><input type="datetime-local" id="t-date"></div>
+    <button class="btn-add tap-btn" onclick="addTapReading()">Add Tap Test</button>
+  </div>
+</div>
+
 <div class="status-bar" id="statusBar">
   <div class="stat-pill"><div class="stat-label">pH</div><div class="stat-value c-muted">—</div></div>
   <div class="stat-pill"><div class="stat-label">Ammonia</div><div class="stat-value c-muted">—</div></div>
@@ -262,22 +279,6 @@ canvas.chart { width: 100%; height: 110px; display: block; }
   <div id="logBody"><div class="log-empty">No readings logged yet</div></div>
 </div>
 
-<!-- Tap form -->
-<div class="section-label">
-  <div class="section-label-text">🚰 Filtered Tap Water</div>
-  <div class="section-label-line"></div>
-</div>
-<div class="form-card tap-card">
-  <div class="form-title">+ Log Tap Water Test</div>
-  <div class="form-grid-tap">
-    <div class="field"><label class="tap-label">Nitrate (ppm)</label><input type="number" id="t-no3" step="5" min="0" placeholder="25"></div>
-    <div class="field"><label style="color:var(--muted)">Notes (optional)</label><input type="text" id="t-note" placeholder="e.g. filter changed"></div>
-  </div>
-  <div class="form-row">
-    <div class="field date-field"><label style="color:var(--muted)">Date &amp; Time</label><input type="datetime-local" id="t-date"></div>
-    <button class="btn-add tap-btn" onclick="addTapReading()">Add Tap Test</button>
-  </div>
-</div>
 <div class="tap-status-bar" id="tapStatusBar">
   <div class="stat-pill tap-pill"><div class="stat-label">Latest Filtered Tap NO₃</div><div class="stat-value c-muted">—</div></div>
   <div class="stat-pill tap-pill"><div class="stat-label">Last Tested</div><div class="stat-value c-muted" style="font-size:13px">—</div></div>
@@ -433,7 +434,7 @@ function drawChart(canvasId, ndId, pts, color, yMin, yMax, safeMin, safeMax, sec
   if(safeMin!==undefined){
     const y1=yPos(Math.min(safeMax,rMax));
     const y2=yPos(Math.max(safeMin,rMin));
-    ctx.fillStyle='rgba(16,185,129,0.07)';
+    ctx.fillStyle='rgba(16,185,129,0.18)';
     ctx.fillRect(pad.l,y1,pw,y2-y1);
   }
 
@@ -508,9 +509,9 @@ function drawChart(canvasId, ndId, pts, color, yMin, yMax, safeMin, safeMax, sec
 function renderCharts() {
   const toPts=(arr,key)=>arr.filter(r=>r[key]!==null&&r[key]!==undefined).map(r=>({t:new Date(r.date).getTime(),v:r[key]}));
 
-  drawChart('chart-ph', 'nd-ph', toPts(readings,'ph'), '#a78bfa', 6, 8, 6.5, 7.2);
-  drawChart('chart-nh3','nd-nh3',toPts(readings,'nh3'),'#f87171', 0, 2, 0, 0.25);
-  drawChart('chart-no2','nd-no2',toPts(readings,'no2'),'#fb923c', 0, 2, 0, 0.25);
+  drawChart('chart-ph', 'nd-ph', toPts(readings,'ph'), '#a78bfa', 6.0, 7.5, 6.5, 7.2);
+  drawChart('chart-nh3','nd-nh3',toPts(readings,'nh3'),'#f87171', 0, 1, 0, 0.25);
+  drawChart('chart-no2','nd-no2',toPts(readings,'no2'),'#fb923c', 0, 1, 0, 0.25);
   drawChart('chart-no3','nd-no3',toPts(readings,'no3'),'#facc15', 0,100, 0, 20, toPts(tapReadings,'no3'),'#34d399');
 }
 
