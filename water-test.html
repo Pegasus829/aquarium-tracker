@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Water Quality Tracker</title>
+<style>
+:root {
+  --bg:      #0c0f14;
+  --surface: #141820;
+  --card:    #1a1f2a;
+  --border:  rgba(255,255,255,0.07);
+  --text:    #c9d4e8;
+  --muted:   #4a5568;
+  --white:   #f0f4ff;
+  --ph:      #a78bfa;
+  --nh3:     #f87171;
+  --no2:     #fb923c;
+  --no3:     #facc15;
+  --tap:     #34d399;
+  --safe:    #10b981;
+  --warn:    #f59e0b;
+  --danger:  #ef4444;
+  --font:    -apple-system, 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif;
+  --mono:    'SF Mono', 'Fira Code', 'Courier New', monospace;
+  --display: -apple-system, 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; padding: 24px 16px 80px; }
+
+.header { max-width: 860px; margin: 0 auto 28px; display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.header-left h1 { font-family: var(--display); font-size: clamp(20px,5vw,28px); font-weight: 800; color: var(--white); letter-spacing: -0.02em; line-height: 1.1; }
+.header-left p { font-size: 11px; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; margin-top: 4px; font-family: var(--mono); }
+.save-btn { background: var(--safe); color: #0a1f14; border: none; border-radius: 8px; padding: 9px 16px; font-family: var(--display); font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; transition: opacity 0.15s; flex-shrink: 0; }
+.save-btn:active { opacity: 0.8; }
+.save-note { font-size: 10px; color: var(--muted); font-family: var(--mono); margin-top: 4px; text-align: right; }
+
+.section-label { max-width: 860px; margin: 0 auto 10px; display: flex; align-items: center; gap: 10px; }
+.section-label-text { font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+.section-label-line { flex: 1; height: 1px; background: var(--border); }
+
+.form-card { max-width: 860px; margin: 0 auto 10px; background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 18px; }
+.form-card.tap-card { border-color: rgba(52,211,153,0.2); margin-bottom: 28px; }
+.form-title { font-family: var(--mono); font-size: 11px; font-weight: 600; color: var(--white); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 14px; }
+.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px,1fr)); gap: 10px; margin-bottom: 12px; }
+.form-grid-tap { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+.field label { display: block; font-family: var(--mono); font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 5px; }
+.field input { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 9px 10px; font-family: var(--mono); font-size: 14px; color: var(--white); outline: none; transition: border-color 0.2s; -webkit-tap-highlight-color: transparent; }
+.field input:focus { border-color: rgba(255,255,255,0.25); }
+.field input::placeholder { color: var(--muted); font-size: 12px; }
+.ph-label { color: var(--ph); } .nh3-label { color: var(--nh3); } .no2-label { color: var(--no2); } .no3-label { color: var(--no3); } .tap-label { color: var(--tap); }
+.form-row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+.date-field { flex: 1; min-width: 160px; }
+.date-field input { font-size: 12px; }
+.btn-add { background: var(--white); color: var(--bg); border: none; border-radius: 8px; padding: 10px 20px; font-family: var(--display); font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; transition: opacity 0.15s; -webkit-tap-highlight-color: transparent; flex-shrink: 0; }
+.btn-add.tap-btn { background: var(--tap); color: #0a1f14; }
+.btn-add:active { opacity: 0.8; }
+
+.status-bar { max-width: 860px; margin: 0 auto 24px; display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; }
+.tap-status-bar { max-width: 860px; margin: 0 auto 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.stat-pill { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 10px 8px; text-align: center; }
+.stat-pill.tap-pill { border-color: rgba(52,211,153,0.15); }
+.stat-label { font-family: var(--mono); font-size: 8px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+.stat-value { font-family: var(--display); font-size: 16px; font-weight: 700; }
+.stat-status { font-family: var(--mono); font-size: 8px; letter-spacing: 0.08em; text-transform: uppercase; margin-top: 2px; }
+
+.charts-wrap { max-width: 860px; margin: 0 auto 24px; display: flex; flex-direction: column; gap: 16px; }
+.chart-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px 16px 12px; }
+.chart-header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+.chart-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.chart-name { font-family: var(--mono); font-size: 11px; font-weight: 600; color: var(--white); letter-spacing: 0.08em; text-transform: uppercase; flex: 1; }
+.chart-range { font-family: var(--mono); font-size: 9px; color: var(--muted); letter-spacing: 0.06em; }
+.chart-legend { display: flex; gap: 12px; }
+.legend-item { display: flex; align-items: center; gap: 4px; font-family: var(--mono); font-size: 9px; color: var(--muted); }
+.legend-dot { width: 6px; height: 6px; border-radius: 50%; }
+.chart-canvas-wrap { position: relative; height: 110px; }
+canvas.chart { width: 100%; height: 110px; display: block; }
+.chart-no-data { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 11px; color: var(--muted); letter-spacing: 0.08em; }
+
+.log-wrap { max-width: 860px; margin: 0 auto 12px; background: var(--card); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+.log-wrap.tap-log { border-color: rgba(52,211,153,0.15); margin-bottom: 28px; }
+.log-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+.log-title { font-family: var(--mono); font-size: 11px; font-weight: 600; color: var(--white); letter-spacing: 0.08em; text-transform: uppercase; }
+.log-count { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+.log-table { width: 100%; border-collapse: collapse; }
+.log-table th { font-family: var(--mono); font-size: 8px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+.log-table td { padding: 9px 12px; font-family: var(--mono); font-size: 12px; border-bottom: 1px solid rgba(255,255,255,0.03); }
+.log-table tr:last-child td { border-bottom: none; }
+.log-table tr:hover td { background: rgba(255,255,255,0.02); }
+.del-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 14px; padding: 2px 4px; border-radius: 4px; -webkit-tap-highlight-color: transparent; transition: color 0.15s; }
+.del-btn:hover { color: var(--danger); }
+.log-empty { padding: 20px; text-align: center; font-family: var(--mono); font-size: 11px; color: var(--muted); letter-spacing: 0.08em; }
+
+.c-safe { color: var(--safe); } .c-warn { color: var(--warn); } .c-danger { color: var(--danger); } .c-muted { color: var(--muted); }
+
+/* ── Password gate ── */
+#gate {
+  position: fixed; inset: 0; z-index: 1000;
+  background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px;
+}
+.gate-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 18px; padding: 36px 32px; width: 100%; max-width: 360px;
+  text-align: center;
+}
+.gate-icon { font-size: 36px; margin-bottom: 16px; }
+.gate-title {
+  font-family: var(--display); font-size: 20px; font-weight: 800;
+  color: var(--white); letter-spacing: -0.02em; margin-bottom: 6px;
+}
+.gate-sub {
+  font-family: var(--mono); font-size: 10px; color: var(--muted);
+  letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 28px;
+}
+.gate-input {
+  width: 100%; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; padding: 13px 16px; font-family: var(--mono);
+  font-size: 16px; color: var(--white); outline: none; text-align: center;
+  letter-spacing: 0.15em; margin-bottom: 12px;
+  transition: border-color 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+.gate-input:focus { border-color: rgba(255,255,255,0.3); }
+.gate-input.error { border-color: var(--danger); animation: shake 0.3s ease; }
+@keyframes shake {
+  0%,100% { transform: translateX(0); }
+  25%      { transform: translateX(-8px); }
+  75%      { transform: translateX(8px); }
+}
+.gate-btn {
+  width: 100%; background: var(--white); color: var(--bg); border: none;
+  border-radius: 10px; padding: 13px; font-family: var(--display); font-size: 13px;
+  font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+  cursor: pointer; transition: opacity 0.15s; margin-bottom: 10px;
+}
+.gate-btn:active { opacity: 0.8; }
+.gate-error {
+  font-family: var(--mono); font-size: 10px; color: var(--danger);
+  letter-spacing: 0.08em; height: 14px; margin-top: 2px;
+}
+.gate-hint {
+  font-family: var(--mono); font-size: 9px; color: var(--muted);
+  letter-spacing: 0.06em; margin-top: 16px; line-height: 1.6;
+}
+#app { display: none; }
+</style>
+</head>
+<body>
+
+<!-- Password gate -->
+<div id="gate">
+  <div class="gate-card">
+    <div class="gate-icon">🐠</div>
+    <div class="gate-title">Water Quality Tracker</div>
+    <div class="gate-sub">Fluval Flex 2.0 · 57L</div>
+    <input class="gate-input" type="password" id="gateInput" placeholder="••••••••••••"
+      autocomplete="current-password" onkeydown="if(event.key==='Enter')unlock()">
+    <button class="gate-btn" onclick="unlock()">Unlock</button>
+    <div class="gate-error" id="gateError"></div>
+    <div class="gate-hint">Password protected · readings are read-only without access</div>
+  </div>
+</div>
+
+<!-- App (hidden until unlocked) -->
+<div id="app">
+
+<div class="header">
+  <div class="header-left">
+    <h1>Water Quality Tracker</h1>
+    <p>Fluval Flex 2.0 · 57L · Nitrogen Cycle Log</p>
+  </div>
+  <div>
+    <button class="save-btn" onclick="downloadFile()">⬇ Save Updated File</button>
+    <div class="save-note">Download after adding readings</div>
+  </div>
+</div>
+
+<!-- Tank form -->
+<div class="section-label">
+  <div class="section-label-text">🐠 Tank Readings</div>
+  <div class="section-label-line"></div>
+</div>
+<div class="form-card">
+  <div class="form-title">+ Log Tank Reading</div>
+  <div class="form-grid">
+    <div class="field"><label class="ph-label">pH</label><input type="number" id="f-ph" step="0.1" min="0" max="14" placeholder="6.8"></div>
+    <div class="field"><label class="nh3-label">Ammonia (ppm)</label><input type="number" id="f-nh3" step="0.25" min="0" placeholder="0.0"></div>
+    <div class="field"><label class="no2-label">Nitrite (ppm)</label><input type="number" id="f-no2" step="0.25" min="0" placeholder="0.0"></div>
+    <div class="field"><label class="no3-label">Nitrate (ppm)</label><input type="number" id="f-no3" step="5" min="0" placeholder="0"></div>
+  </div>
+  <div class="form-row">
+    <div class="field date-field"><label style="color:var(--muted)">Date &amp; Time</label><input type="datetime-local" id="f-date"></div>
+    <button class="btn-add" onclick="addReading()">Add Reading</button>
+  </div>
+</div>
+
+<div class="status-bar" id="statusBar">
+  <div class="stat-pill"><div class="stat-label">pH</div><div class="stat-value c-muted">—</div></div>
+  <div class="stat-pill"><div class="stat-label">Ammonia</div><div class="stat-value c-muted">—</div></div>
+  <div class="stat-pill"><div class="stat-label">Nitrite</div><div class="stat-value c-muted">—</div></div>
+  <div class="stat-pill"><div class="stat-label">Nitrate</div><div class="stat-value c-muted">—</div></div>
+</div>
+
+<div class="charts-wrap">
+  <div class="chart-card">
+    <div class="chart-header">
+      <div class="chart-dot" style="background:var(--ph)"></div>
+      <div class="chart-name">pH</div>
+      <div class="chart-range">Target: 6.5–7.2</div>
+    </div>
+    <div class="chart-canvas-wrap"><canvas class="chart" id="chart-ph"></canvas><div class="chart-no-data" id="nd-ph">No readings yet</div></div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-header">
+      <div class="chart-dot" style="background:var(--nh3)"></div>
+      <div class="chart-name">Ammonia</div>
+      <div class="chart-range">Target: 0 ppm</div>
+    </div>
+    <div class="chart-canvas-wrap"><canvas class="chart" id="chart-nh3"></canvas><div class="chart-no-data" id="nd-nh3">No readings yet</div></div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-header">
+      <div class="chart-dot" style="background:var(--no2)"></div>
+      <div class="chart-name">Nitrite</div>
+      <div class="chart-range">Target: 0 ppm</div>
+    </div>
+    <div class="chart-canvas-wrap"><canvas class="chart" id="chart-no2"></canvas><div class="chart-no-data" id="nd-no2">No readings yet</div></div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-header">
+      <div class="chart-dot" style="background:var(--no3)"></div>
+      <div class="chart-name">Tank Nitrate vs Filtered Tap</div>
+      <div class="chart-range">Tank target: &lt;20 ppm</div>
+      <div class="chart-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:var(--no3)"></div>Tank</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--tap)"></div>Filtered Tap</div>
+      </div>
+    </div>
+    <div class="chart-canvas-wrap"><canvas class="chart" id="chart-no3"></canvas><div class="chart-no-data" id="nd-no3">No readings yet</div></div>
+  </div>
+</div>
+
+<div class="log-wrap">
+  <div class="log-header">
+    <div class="log-title">Tank Reading Log</div>
+    <div class="log-count" id="logCount">0 readings</div>
+  </div>
+  <div id="logBody"><div class="log-empty">No readings logged yet</div></div>
+</div>
+
+<!-- Tap form -->
+<div class="section-label">
+  <div class="section-label-text">🚰 Filtered Tap Water</div>
+  <div class="section-label-line"></div>
+</div>
+<div class="form-card tap-card">
+  <div class="form-title">+ Log Tap Water Test</div>
+  <div class="form-grid-tap">
+    <div class="field"><label class="tap-label">Nitrate (ppm)</label><input type="number" id="t-no3" step="5" min="0" placeholder="25"></div>
+    <div class="field"><label style="color:var(--muted)">Notes (optional)</label><input type="text" id="t-note" placeholder="e.g. filter changed"></div>
+  </div>
+  <div class="form-row">
+    <div class="field date-field"><label style="color:var(--muted)">Date &amp; Time</label><input type="datetime-local" id="t-date"></div>
+    <button class="btn-add tap-btn" onclick="addTapReading()">Add Tap Test</button>
+  </div>
+</div>
+<div class="tap-status-bar" id="tapStatusBar">
+  <div class="stat-pill tap-pill"><div class="stat-label">Latest Filtered Tap NO₃</div><div class="stat-value c-muted">—</div></div>
+  <div class="stat-pill tap-pill"><div class="stat-label">Last Tested</div><div class="stat-value c-muted" style="font-size:13px">—</div></div>
+</div>
+<div class="log-wrap tap-log">
+  <div class="log-header">
+    <div class="log-title">Tap Water Log</div>
+    <div class="log-count" id="tapLogCount">0 readings</div>
+  </div>
+  <div id="tapLogBody"><div class="log-empty">No tap tests logged yet</div></div>
+</div>
+
+</div><!-- /app -->
+
+<script>
+// ══ PASSWORD CONFIG ══════════════════════════════════════════
+// SHA-256 hash of the password. Default password: aquarium2025
+// To change: run this in browser console and paste result below:
+// crypto.subtle.digest('SHA-256', new TextEncoder().encode('yourpassword'))
+//   .then(b => console.log([...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')))
+const PASSWORD_HASH = '65457dba64001716cd0aaa2791e8fe1253ce80166f228e64fd23dff5ad85bfc6';
+// ═════════════════════════════════════════════════════════════
+
+async function hashString(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return [...new Uint8Array(buf)].map(x => x.toString(16).padStart(2,'0')).join('');
+}
+
+async function unlock() {
+  const input = document.getElementById('gateInput');
+  const error = document.getElementById('gateError');
+  const val = input.value;
+  if (!val) return;
+  const hash = await hashString(val);
+  if (hash === PASSWORD_HASH) {
+    sessionStorage.setItem('wqt_auth', '1');
+    document.getElementById('gate').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    render();
+  } else {
+    error.textContent = 'Incorrect password';
+    input.classList.add('error');
+    input.value = '';
+    setTimeout(() => { input.classList.remove('error'); error.textContent = ''; }, 1500);
+  }
+}
+
+// Check session — skip gate if already authenticated this session
+if (sessionStorage.getItem('wqt_auth') === '1') {
+  document.getElementById('gate').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+}
+</script>
+
+<script>
+// ══ EMBEDDED DATA — edit here to seed readings ══
+var readings = [
+  { date:'2025-04-13T15:00', ph:6.4,  nh3:0.5, no2:0.5, no3:80 },
+  { date:'2025-04-18T10:00', ph:6.4,  nh3:0,   no2:0,   no3:40 },
+  { date:'2025-05-02T09:32', ph:6.4,  nh3:0,   no2:0,   no3:40 }
+];
+var tapReadings = [
+  { date:'2025-04-18T09:00', no3:50,  note:'mains tap — baseline' },
+  { date:'2025-05-02T09:00', no3:25,  note:'filtered tap — first test' }
+];
+// ══════════════════════════════════════════════
+
+function nowLocal() {
+  const d = new Date();
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return d.toISOString().slice(0,16);
+}
+document.getElementById('f-date').value = nowLocal();
+document.getElementById('t-date').value = nowLocal();
+
+// ── Status helpers ──
+function phStatus(v)  { if(v===null)return['—','c-muted','']; if(v>=6.5&&v<=7.2)return[v.toFixed(1),'c-safe','GOOD']; if(v>=6.2&&v<=7.5)return[v.toFixed(1),'c-warn','WATCH']; return[v.toFixed(1),'c-danger','ACT']; }
+function nh3Status(v) { if(v===null)return['—','c-muted','']; if(v===0)return['0','c-safe','CLEAR']; if(v<=0.5)return[v,'c-warn','CYCLING']; return[v,'c-danger','HIGH']; }
+function no2Status(v) { if(v===null)return['—','c-muted','']; if(v===0)return['0','c-safe','CLEAR']; if(v<=1)return[v,'c-warn','CYCLING']; return[v,'c-danger','HIGH']; }
+function no3Status(v) { if(v===null)return['—','c-muted','']; if(v<=20)return[v,'c-safe','GOOD']; if(v<=40)return[v,'c-warn','CHANGE']; return[v,'c-danger','HIGH']; }
+function tapStatus(v) { if(v===null)return['—','c-muted','']; if(v<=20)return[v,'c-safe','LOW']; if(v<=40)return[v,'c-warn','MED']; return[v,'c-danger','HIGH']; }
+function statusClass(v,type) {
+  if(v===null||v===undefined)return'c-muted';
+  if(type==='ph') return phStatus(v)[1]; if(type==='nh3')return nh3Status(v)[1];
+  if(type==='no2')return no2Status(v)[1]; if(type==='no3')return no3Status(v)[1];
+  if(type==='tap')return tapStatus(v)[1]; return'c-muted';
+}
+
+// ── Status pills ──
+function updateStatus() {
+  if(readings.length>0) {
+    const last=readings[readings.length-1];
+    const pills=document.querySelectorAll('#statusBar .stat-pill');
+    [[last.ph,phStatus,'pH',last.ph!==null?last.ph.toFixed(1):'—'],
+     [last.nh3,nh3Status,'NH₃',last.nh3!==null?last.nh3+' ppm':'—'],
+     [last.no2,no2Status,'NO₂',last.no2!==null?last.no2+' ppm':'—'],
+     [last.no3,no3Status,'NO₃',last.no3!==null?last.no3+' ppm':'—']
+    ].forEach(([val,fn,label,display],i)=>{
+      const[,cls,status]=fn(val);
+      pills[i].innerHTML=`<div class="stat-label">${label}</div><div class="stat-value ${cls}">${display}</div><div class="stat-status ${cls}">${status}</div>`;
+    });
+  }
+  const tapPills=document.querySelectorAll('#tapStatusBar .stat-pill');
+  if(tapReadings.length>0) {
+    const last=tapReadings[tapReadings.length-1];
+    const[,cls,status]=tapStatus(last.no3);
+    tapPills[0].innerHTML=`<div class="stat-label">Latest Filtered Tap NO₃</div><div class="stat-value ${cls}">${last.no3} ppm</div><div class="stat-status ${cls}">${status}</div>`;
+    const d=new Date(last.date);
+    tapPills[1].innerHTML=`<div class="stat-label">Last Tested</div><div class="stat-value c-muted" style="font-size:13px">${d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})}</div>`;
+  }
+}
+
+// ── Time-scaled chart ──
+function drawChart(canvasId, ndId, pts, color, yMin, yMax, safeMin, safeMax, secondary, secColor) {
+  const canvas=document.getElementById(canvasId);
+  const nd=document.getElementById(ndId);
+  // pts = [{t, v}] sorted by t
+  const valid=pts.filter(p=>p.v!==null&&p.v!==undefined);
+  if(valid.length===0){canvas.style.display='none';nd.style.display='flex';return;}
+  canvas.style.display='block';nd.style.display='none';
+
+  const dpr=window.devicePixelRatio||1;
+  const w=canvas.offsetWidth||400;
+  const h=110;
+  canvas.width=w*dpr; canvas.height=h*dpr;
+  const ctx=canvas.getContext('2d');
+  ctx.scale(dpr,dpr);
+
+  const pad={t:10,b:22,l:38,r:10};
+  const pw=w-pad.l-pad.r;
+  const ph=h-pad.t-pad.b;
+
+  // Time range from ALL points including secondary
+  let allT=[...valid.map(p=>p.t)];
+  let allV=[...valid.map(p=>p.v)];
+  if(secondary&&secondary.length>0){allT=[...allT,...secondary.map(p=>p.t)];allV=[...allV,...secondary.map(p=>p.v)];}
+  const tMin=Math.min(...allT);
+  const tMax=Math.max(...allT);
+  const tRange=tMax-tMin||1;
+
+  // Value range
+  const dMin=Math.min(...allV);
+  const dMax=Math.max(...allV);
+  const rMin=Math.min(yMin,dMin);
+  const rMax=Math.max(yMax,dMax)||1;
+
+  const xPos=t=>pad.l+(tRange===0?pw/2:((t-tMin)/tRange)*pw);
+  const yPos=v=>pad.t+ph-((v-rMin)/(rMax-rMin||1))*ph;
+
+  // Safe zone
+  if(safeMin!==undefined){
+    const y1=yPos(Math.min(safeMax,rMax));
+    const y2=yPos(Math.max(safeMin,rMin));
+    ctx.fillStyle='rgba(16,185,129,0.07)';
+    ctx.fillRect(pad.l,y1,pw,y2-y1);
+  }
+
+  // Grid lines
+  ctx.strokeStyle='rgba(255,255,255,0.05)';ctx.lineWidth=1;
+  for(let i=0;i<=4;i++){
+    const y=pad.t+(i/4)*ph;
+    ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(w-pad.r,y);ctx.stroke();
+  }
+
+  function drawSeries(series,col){
+    if(!series||series.length===0)return;
+    const grad=ctx.createLinearGradient(0,pad.t,0,h-pad.b);
+    grad.addColorStop(0,col+'44');grad.addColorStop(1,col+'00');
+    // Fill
+    ctx.beginPath();
+    ctx.moveTo(xPos(series[0].t),yPos(series[0].v));
+    series.forEach((p,i)=>{if(i>0)ctx.lineTo(xPos(p.t),yPos(p.v));});
+    ctx.lineTo(xPos(series[series.length-1].t),h-pad.b);
+    ctx.lineTo(xPos(series[0].t),h-pad.b);
+    ctx.closePath();ctx.fillStyle=grad;ctx.fill();
+    // Line
+    ctx.beginPath();
+    ctx.moveTo(xPos(series[0].t),yPos(series[0].v));
+    series.forEach((p,i)=>{if(i>0)ctx.lineTo(xPos(p.t),yPos(p.v));});
+    ctx.strokeStyle=col;ctx.lineWidth=2;ctx.lineJoin='round';ctx.stroke();
+    // Dots — one per point
+    series.forEach(p=>{
+      ctx.beginPath();
+      ctx.arc(xPos(p.t),yPos(p.v),4,0,Math.PI*2);
+      ctx.fillStyle=col;ctx.fill();
+      ctx.beginPath();
+      ctx.arc(xPos(p.t),yPos(p.v),2,0,Math.PI*2);
+      ctx.fillStyle='#0c0f14';ctx.fill();
+    });
+    // Value labels above each dot
+    ctx.fillStyle=col;
+    ctx.font=`bold 9px var(--mono,'Courier New')`;
+    ctx.textAlign='center';
+    series.forEach(p=>{
+      const label=Number.isInteger(p.v)?p.v:p.v.toFixed(1);
+      ctx.fillText(label,xPos(p.t),yPos(p.v)-7);
+    });
+  }
+
+  drawSeries(valid,color);
+  if(secondary&&secondary.length>0)drawSeries(secondary,secColor);
+
+  // Y axis labels
+  ctx.fillStyle='rgba(255,255,255,0.3)';
+  ctx.font=`9px var(--mono,'Courier New')`;
+  ctx.textAlign='right';
+  const ySteps=[rMin,rMax];
+  ySteps.forEach(v=>ctx.fillText(Number.isInteger(v)?v:v.toFixed(1),pad.l-4,yPos(v)+3));
+
+  // X axis date labels — one per unique date
+  ctx.textAlign='center';ctx.fillStyle='rgba(255,255,255,0.25)';
+  ctx.font=`9px var(--mono,'Courier New')`;
+  // deduplicate by date string
+  const seen=new Set();
+  valid.forEach(p=>{
+    const d=new Date(p.t);
+    const key=`${d.getDate()}/${d.getMonth()+1}`;
+    if(!seen.has(key)){
+      seen.add(key);
+      ctx.fillText(key,xPos(p.t),h-5);
+    }
+  });
+}
+
+// ── Build chart data ──
+function renderCharts() {
+  const toPts=(arr,key)=>arr.filter(r=>r[key]!==null&&r[key]!==undefined).map(r=>({t:new Date(r.date).getTime(),v:r[key]}));
+
+  drawChart('chart-ph', 'nd-ph', toPts(readings,'ph'), '#a78bfa', 6, 8, 6.5, 7.2);
+  drawChart('chart-nh3','nd-nh3',toPts(readings,'nh3'),'#f87171', 0, 2, 0, 0.25);
+  drawChart('chart-no2','nd-no2',toPts(readings,'no2'),'#fb923c', 0, 2, 0, 0.25);
+  drawChart('chart-no3','nd-no3',toPts(readings,'no3'),'#facc15', 0,100, 0, 20, toPts(tapReadings,'no3'),'#34d399');
+}
+
+// ── Render tank log ──
+function renderLog() {
+  const body=document.getElementById('logBody');
+  const count=document.getElementById('logCount');
+  count.textContent=`${readings.length} reading${readings.length!==1?'s':''}`;
+  if(readings.length===0){body.innerHTML='<div class="log-empty">No readings logged yet</div>';return;}
+  const rows=[...readings].reverse().map((r,ri)=>{
+    const idx=readings.length-1-ri;
+    const d=new Date(r.date);
+    const ds=d.toLocaleDateString('en-GB',{day:'2-digit',month:'short'});
+    const ts=d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+    const fmt=(v,type)=>v!==null&&v!==undefined?`<span class="${statusClass(v,type)}">${type==='ph'?Number(v).toFixed(1):v}</span>`:'<span class="c-muted">—</span>';
+    return`<tr>
+      <td style="color:var(--muted);font-size:11px">${ds}<br>${ts}</td>
+      <td>${fmt(r.ph,'ph')}</td><td>${fmt(r.nh3,'nh3')}</td>
+      <td>${fmt(r.no2,'no2')}</td><td>${fmt(r.no3,'no3')}</td>
+      <td><button class="del-btn" onclick="deleteReading(${idx})">×</button></td>
+    </tr>`;
+  }).join('');
+  body.innerHTML=`<table class="log-table"><thead><tr>
+    <th>Date</th><th class="ph-label">pH</th><th class="nh3-label">NH₃</th>
+    <th class="no2-label">NO₂</th><th class="no3-label">NO₃</th><th></th>
+  </tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+// ── Render tap log ──
+function renderTapLog() {
+  const body=document.getElementById('tapLogBody');
+  const count=document.getElementById('tapLogCount');
+  count.textContent=`${tapReadings.length} reading${tapReadings.length!==1?'s':''}`;
+  if(tapReadings.length===0){body.innerHTML='<div class="log-empty">No tap tests logged yet</div>';return;}
+  const rows=[...tapReadings].reverse().map((r,ri)=>{
+    const idx=tapReadings.length-1-ri;
+    const d=new Date(r.date);
+    const ds=d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+    const[,cls]=tapStatus(r.no3);
+    return`<tr>
+      <td style="color:var(--muted);font-size:11px">${ds}</td>
+      <td><span class="${cls}">${r.no3} ppm</span></td>
+      <td style="color:var(--muted);font-size:11px">${r.note||''}</td>
+      <td><button class="del-btn" onclick="deleteTapReading(${idx})">×</button></td>
+    </tr>`;
+  }).join('');
+  body.innerHTML=`<table class="log-table"><thead><tr>
+    <th>Date</th><th class="tap-label">Filtered Tap NO₃</th><th>Notes</th><th></th>
+  </tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+// ── Add readings ──
+function addReading() {
+  const get=id=>{const v=document.getElementById(id).value;return v===''?null:parseFloat(v);};
+  const date=document.getElementById('f-date').value||nowLocal();
+  const r={date,ph:get('f-ph'),nh3:get('f-nh3'),no2:get('f-no2'),no3:get('f-no3')};
+  if([r.ph,r.nh3,r.no2,r.no3].every(v=>v===null))return;
+  readings.push(r);
+  readings.sort((a,b)=>new Date(a.date)-new Date(b.date));
+  render();
+  ['f-ph','f-nh3','f-no2','f-no3'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('f-date').value=nowLocal();
+}
+function addTapReading() {
+  const v=document.getElementById('t-no3').value;
+  if(v==='')return;
+  const date=document.getElementById('t-date').value||nowLocal();
+  const note=document.getElementById('t-note').value.trim();
+  tapReadings.push({date,no3:parseFloat(v),note});
+  tapReadings.sort((a,b)=>new Date(a.date)-new Date(b.date));
+  render();
+  document.getElementById('t-no3').value='';
+  document.getElementById('t-note').value='';
+  document.getElementById('t-date').value=nowLocal();
+}
+function deleteReading(idx){readings.splice(idx,1);render();}
+function deleteTapReading(idx){tapReadings.splice(idx,1);render();}
+
+// ── Download updated file ──
+function downloadFile() {
+  const html=document.documentElement.outerHTML;
+  // Replace the embedded data arrays with current state
+  const rStr=JSON.stringify(readings,null,2).replace(/"/g,"'").replace(/'/g,'"');
+  const tStr=JSON.stringify(tapReadings,null,2).replace(/"/g,"'").replace(/'/g,'"');
+  // Inject updated data into the script block
+  const updated=html
+    .replace(/var readings = \[[\s\S]*?\];/, `var readings = ${rStr};`)
+    .replace(/var tapReadings = \[[\s\S]*?\];/, `var tapReadings = ${tStr};`);
+  const blob=new Blob([updated],{type:'text/html'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='water-tracker.html';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+// ── Full render ──
+function render(){updateStatus();renderCharts();renderLog();renderTapLog();}
+
+// Only render if already authenticated (session already set above)
+if (sessionStorage.getItem('wqt_auth') === '1') render();
+window.addEventListener('resize', renderCharts);
+</script>
+</body>
+</html>
