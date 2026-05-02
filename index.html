@@ -183,10 +183,6 @@ canvas.chart { width: 100%; height: 110px; display: block; }
     <h1>Water Quality Tracker</h1>
     <p>Fluval Flex 2.0 · 57L · Nitrogen Cycle Log</p>
   </div>
-  <div>
-    <button class="save-btn" onclick="downloadFile()">⬇ Save Updated File</button>
-    <div class="save-note">Download after adding readings</div>
-  </div>
 </div>
 
 <!-- Tank form -->
@@ -304,6 +300,18 @@ canvas.chart { width: 100%; height: 110px; display: block; }
 const PASSWORD_HASH = '65457dba64001716cd0aaa2791e8fe1253ce80166f228e64fd23dff5ad85bfc6';
 // ═════════════════════════════════════════════════════════════
 
+// ══ API CONFIG ════════════════════════════════════════════════
+const API_BASE_URL = 'https://n37ygsigfl.execute-api.eu-west-1.amazonaws.com/prod';
+const API_KEY      = '8lpMzm6DCL1dgipDrSaJs4LGozq0X64a3QGwMgfU';
+// ═════════════════════════════════════════════════════════════
+
+function apiFetch(path, options = {}) {
+  return fetch(API_BASE_URL + path, {
+    ...options,
+    headers: { 'Content-Type': 'application/json', 'x-api-key': API_KEY, ...(options.headers ?? {}) },
+  });
+}
+
 async function hashString(str) {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
   return [...new Uint8Array(buf)].map(x => x.toString(16).padStart(2,'0')).join('');
@@ -319,7 +327,7 @@ async function unlock() {
     sessionStorage.setItem('wqt_auth', '1');
     document.getElementById('gate').style.display = 'none';
     document.getElementById('app').style.display = 'block';
-    render();
+    loadData();
   } else {
     error.textContent = 'Incorrect password';
     input.classList.add('error');
@@ -332,21 +340,14 @@ async function unlock() {
 if (sessionStorage.getItem('wqt_auth') === '1') {
   document.getElementById('gate').style.display = 'none';
   document.getElementById('app').style.display = 'block';
+  loadData();
 }
 </script>
 
 <script>
-// ══ EMBEDDED DATA — edit here to seed readings ══
-var readings = [
-  { date:'2025-04-13T15:00', ph:6.4,  nh3:0.5, no2:0.5, no3:80 },
-  { date:'2025-04-18T10:00', ph:6.4,  nh3:0,   no2:0,   no3:40 },
-  { date:'2025-05-02T09:32', ph:6.4,  nh3:0,   no2:0,   no3:40 }
-];
-var tapReadings = [
-  { date:'2025-04-18T09:00', no3:50,  note:'mains tap — baseline' },
-  { date:'2025-05-02T09:00', no3:25,  note:'filtered tap — first test' }
-];
-// ══════════════════════════════════════════════
+// ── Live data — populated from API on unlock ──
+var readings    = [];
+var tapReadings = [];
 
 function nowLocal() {
   const d = new Date();
@@ -512,7 +513,7 @@ function renderCharts() {
   drawChart('chart-ph', 'nd-ph', toPts(readings,'ph'), '#a78bfa', 6.0, 7.5, 6.5, 7.2);
   drawChart('chart-nh3','nd-nh3',toPts(readings,'nh3'),'#f87171', 0, 1, 0, 0.25);
   drawChart('chart-no2','nd-no2',toPts(readings,'no2'),'#fb923c', 0, 1, 0, 0.25);
-  drawChart('chart-no3','nd-no3',toPts(readings,'no3'),'#facc15', 0,100, 0, 20, toPts(tapReadings,'no3'),'#34d399');
+  drawChart('chart-no3','nd-no3',toPts(readings,'no3'),'#facc15', 0,100, 0, 20, toPts(tapReadings,'no3'),'#22d3ee');
 }
 
 // ── Render tank log ──
@@ -521,8 +522,7 @@ function renderLog() {
   const count=document.getElementById('logCount');
   count.textContent=`${readings.length} reading${readings.length!==1?'s':''}`;
   if(readings.length===0){body.innerHTML='<div class="log-empty">No readings logged yet</div>';return;}
-  const rows=[...readings].reverse().map((r,ri)=>{
-    const idx=readings.length-1-ri;
+  const rows=[...readings].reverse().map((r)=>{
     const d=new Date(r.date);
     const ds=d.toLocaleDateString('en-GB',{day:'2-digit',month:'short'});
     const ts=d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
@@ -531,7 +531,7 @@ function renderLog() {
       <td style="color:var(--muted);font-size:11px">${ds}<br>${ts}</td>
       <td>${fmt(r.ph,'ph')}</td><td>${fmt(r.nh3,'nh3')}</td>
       <td>${fmt(r.no2,'no2')}</td><td>${fmt(r.no3,'no3')}</td>
-      <td><button class="del-btn" onclick="deleteReading(${idx})">×</button></td>
+      <td><button class="del-btn" onclick="deleteReading('${r.id}')">×</button></td>
     </tr>`;
   }).join('');
   body.innerHTML=`<table class="log-table"><thead><tr>
@@ -546,8 +546,7 @@ function renderTapLog() {
   const count=document.getElementById('tapLogCount');
   count.textContent=`${tapReadings.length} reading${tapReadings.length!==1?'s':''}`;
   if(tapReadings.length===0){body.innerHTML='<div class="log-empty">No tap tests logged yet</div>';return;}
-  const rows=[...tapReadings].reverse().map((r,ri)=>{
-    const idx=tapReadings.length-1-ri;
+  const rows=[...tapReadings].reverse().map((r)=>{
     const d=new Date(r.date);
     const ds=d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
     const[,cls]=tapStatus(r.no3);
@@ -555,7 +554,7 @@ function renderTapLog() {
       <td style="color:var(--muted);font-size:11px">${ds}</td>
       <td><span class="${cls}">${r.no3} ppm</span></td>
       <td style="color:var(--muted);font-size:11px">${r.note||''}</td>
-      <td><button class="del-btn" onclick="deleteTapReading(${idx})">×</button></td>
+      <td><button class="del-btn" onclick="deleteTapReading('${r.id}')">×</button></td>
     </tr>`;
   }).join('');
   body.innerHTML=`<table class="log-table"><thead><tr>
@@ -563,11 +562,27 @@ function renderTapLog() {
   </tr></thead><tbody>${rows}</tbody></table>`;
 }
 
+// ── Load data from API ──
+async function loadData() {
+  document.getElementById('logBody').innerHTML    = '<div class="log-empty">Loading…</div>';
+  document.getElementById('tapLogBody').innerHTML = '<div class="log-empty">Loading…</div>';
+  try {
+    const [tankRes, tapRes] = await Promise.all([apiFetch('/readings'), apiFetch('/tap')]);
+    if (!tankRes.ok || !tapRes.ok) throw new Error('Fetch failed');
+    readings    = (await tankRes.json()).sort((a,b) => new Date(a.date) - new Date(b.date));
+    tapReadings = (await tapRes.json()).sort((a,b) => new Date(a.date) - new Date(b.date));
+  } catch(err) {
+    console.error('loadData failed', err);
+    showToast('⚠ Could not load data — check connection');
+  }
+  render();
+}
+
 // ── Add readings ──
-function addReading() {
+async function addReading() {
   const get=id=>{const v=document.getElementById(id).value;return v===''?null:parseFloat(v);};
   const date=document.getElementById('f-date').value||nowLocal();
-  const r={date,ph:get('f-ph'),nh3:get('f-nh3'),no2:get('f-no2'),no3:get('f-no3')};
+  const r={id:crypto.randomUUID(),date,ph:get('f-ph'),nh3:get('f-nh3'),no2:get('f-no2'),no3:get('f-no3')};
   if([r.ph,r.nh3,r.no2,r.no3].every(v=>v===null))return;
   readings.push(r);
   readings.sort((a,b)=>new Date(a.date)-new Date(b.date));
@@ -575,22 +590,65 @@ function addReading() {
   ['f-ph','f-nh3','f-no2','f-no3'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('f-date').value=nowLocal();
   showToast('Reading added ✓');
+  try {
+    const res = await apiFetch('/readings', {method:'POST', body:JSON.stringify(r)});
+    if (!res.ok) throw new Error('POST failed');
+  } catch(err) {
+    console.error('addReading sync failed', err);
+    readings = readings.filter(x => x.id !== r.id);
+    render();
+    showToast('⚠ Sync failed — reading not saved');
+  }
 }
-function addTapReading() {
+async function addTapReading() {
   const v=document.getElementById('t-no3').value;
   if(v==='')return;
   const date=document.getElementById('t-date').value||nowLocal();
   const note=document.getElementById('t-note').value.trim();
-  tapReadings.push({date,no3:parseFloat(v),note});
+  const r={id:crypto.randomUUID(),date,no3:parseFloat(v),note};
+  tapReadings.push(r);
   tapReadings.sort((a,b)=>new Date(a.date)-new Date(b.date));
   render();
   document.getElementById('t-no3').value='';
   document.getElementById('t-note').value='';
   document.getElementById('t-date').value=nowLocal();
   showToast('Tap test added ✓');
+  try {
+    const res = await apiFetch('/tap', {method:'POST', body:JSON.stringify(r)});
+    if (!res.ok) throw new Error('POST failed');
+  } catch(err) {
+    console.error('addTapReading sync failed', err);
+    tapReadings = tapReadings.filter(x => x.id !== r.id);
+    render();
+    showToast('⚠ Sync failed — reading not saved');
+  }
 }
-function deleteReading(idx){readings.splice(idx,1);render();}
-function deleteTapReading(idx){tapReadings.splice(idx,1);render();}
+async function deleteReading(id) {
+  const removed = readings.find(x => x.id === id);
+  readings = readings.filter(x => x.id !== id);
+  render();
+  try {
+    const res = await apiFetch(`/readings/${encodeURIComponent(id)}`, {method:'DELETE'});
+    if (!res.ok) throw new Error('DELETE failed');
+  } catch(err) {
+    console.error('deleteReading sync failed', err);
+    if (removed) { readings.push(removed); readings.sort((a,b)=>new Date(a.date)-new Date(b.date)); render(); }
+    showToast('⚠ Delete failed — please retry');
+  }
+}
+async function deleteTapReading(id) {
+  const removed = tapReadings.find(x => x.id === id);
+  tapReadings = tapReadings.filter(x => x.id !== id);
+  render();
+  try {
+    const res = await apiFetch(`/tap/${encodeURIComponent(id)}`, {method:'DELETE'});
+    if (!res.ok) throw new Error('DELETE failed');
+  } catch(err) {
+    console.error('deleteTapReading sync failed', err);
+    if (removed) { tapReadings.push(removed); tapReadings.sort((a,b)=>new Date(a.date)-new Date(b.date)); render(); }
+    showToast('⚠ Delete failed — please retry');
+  }
+}
 
 let toastTimer;
 function showToast(msg) {
@@ -601,29 +659,8 @@ function showToast(msg) {
   toastTimer = setTimeout(() => el.classList.remove('show'), 5000);
 }
 
-// ── Download updated file ──
-function downloadFile() {
-  const html=document.documentElement.outerHTML;
-  // Replace the embedded data arrays with current state
-  const rStr=JSON.stringify(readings,null,2).replace(/"/g,"'").replace(/'/g,'"');
-  const tStr=JSON.stringify(tapReadings,null,2).replace(/"/g,"'").replace(/'/g,'"');
-  // Inject updated data into the script block
-  const updated=html
-    .replace(/var readings = \[[\s\S]*?\];/, `var readings = ${rStr};`)
-    .replace(/var tapReadings = \[[\s\S]*?\];/, `var tapReadings = ${tStr};`);
-  const blob=new Blob([updated],{type:'text/html'});
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(blob);
-  a.download='water-tracker.html';
-  a.click();
-  URL.revokeObjectURL(a.href);
-}
-
 // ── Full render ──
 function render(){updateStatus();renderCharts();renderLog();renderTapLog();}
-
-// Only render if already authenticated (session already set above)
-if (sessionStorage.getItem('wqt_auth') === '1') render();
 window.addEventListener('resize', renderCharts);
 </script>
 </body>
