@@ -1,0 +1,429 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Aquarium Tracker - serverless backend (DynamoDB + Lambda + API Gateway)
+
+Resources:
+
+  # ── CloudWatch Log Group (7-day retention) ────────────────────
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /aws/lambda/aquarium-api
+      RetentionInDays: 7
+
+  # ── DynamoDB ──────────────────────────────────────────────────
+  ReadingsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: aquarium-readings
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: type
+          AttributeType: S
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: type
+          KeyType: HASH
+        - AttributeName: id
+          KeyType: RANGE
+
+  # ── IAM Role ──────────────────────────────────────────────────
+  LambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: aquarium-lambda-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: aquarium-lambda-policy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:Query
+                  - dynamodb:PutItem
+                  - dynamodb:DeleteItem
+                Resource: !GetAtt ReadingsTable.Arn
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/aquarium-api:*
+
+  # ── Lambda ────────────────────────────────────────────────────
+  AquariumFunction:
+    Type: AWS::Lambda::Function
+    DependsOn: LogGroup
+    Properties:
+      FunctionName: aquarium-api
+      Runtime: nodejs22.x
+      Architectures:
+        - arm64
+      Handler: index.handler
+      Role: !GetAtt LambdaRole.Arn
+      Timeout: 10
+      MemorySize: 128
+      Code:
+        ZipFile: |
+          const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
+          const { DynamoDBDocumentClient, QueryCommand, PutCommand, DeleteCommand } = require('@aws-sdk/lib-dynamodb');
+          const client = DynamoDBDocumentClient.from(new DynamoDBClient({}));
+          const TABLE = 'aquarium-readings';
+          const ORIGIN = 'https://aquarium.vibeai.software';
+          const cors = {
+            'Access-Control-Allow-Origin': ORIGIN,
+            'Access-Control-Allow-Headers': 'Content-Type,x-api-key',
+            'Access-Control-Allow-Methods': 'GET,POST,DELETE,OPTIONS',
+          };
+          function resp(statusCode, body) {
+            return { statusCode, headers: { ...cors, 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
+          }
+          exports.handler = async (event) => {
+            const method = event.httpMethod;
+            const resource = event.resource;
+            const pathId = event.pathParameters ? event.pathParameters.id : null;
+            const type = resource.startsWith('/tap') ? 'tap' : 'tank';
+            if (method === 'OPTIONS') return resp(200, {});
+            try {
+              if (method === 'GET' && !pathId) {
+                const result = await client.send(new QueryCommand({
+                  TableName: TABLE,
+                  KeyConditionExpression: '#t = :t',
+                  ExpressionAttributeNames: { '#t': 'type' },
+                  ExpressionAttributeValues: { ':t': type },
+                }));
+                return resp(200, result.Items || []);
+              }
+              if (method === 'POST' && !pathId) {
+                const body = JSON.parse(event.body || '{}');
+                await client.send(new PutCommand({ TableName: TABLE, Item: { type, ...body } }));
+                return resp(201, { ok: true });
+              }
+              if (method === 'DELETE' && pathId) {
+                await client.send(new DeleteCommand({ TableName: TABLE, Key: { type, id: pathId } }));
+                return resp(200, { ok: true });
+              }
+              return resp(405, { error: 'Method not allowed' });
+            } catch (err) {
+              console.error(err);
+              return resp(500, { error: 'Internal error' });
+            }
+          };
+
+  # ── Lambda Permission (API Gateway invoke) ────────────────────
+  AquariumApiPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt AquariumFunction.Arn
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${AquariumApi}/*/*
+
+  # ── API Gateway REST API ──────────────────────────────────────
+  AquariumApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: aquarium-api
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+
+  # Resources
+  ReadingsResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref AquariumApi
+      ParentId: !GetAtt AquariumApi.RootResourceId
+      PathPart: readings
+
+  ReadingsIdResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref AquariumApi
+      ParentId: !Ref ReadingsResource
+      PathPart: '{id}'
+
+  TapResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref AquariumApi
+      ParentId: !GetAtt AquariumApi.RootResourceId
+      PathPart: tap
+
+  TapIdResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref AquariumApi
+      ParentId: !Ref TapResource
+      PathPart: '{id}'
+
+  # GET /readings
+  ReadingsGet:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref AquariumApi
+      ResourceId: !Ref ReadingsResource
+      HttpMethod: GET
+      AuthorizationType: NONE
+      ApiKeyRequired: true
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AquariumFunction.Arn}/invocations
+
+  # POST /readings
+  ReadingsPost:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref AquariumApi
+      ResourceId: !Ref ReadingsResource
+      HttpMethod: POST
+      AuthorizationType: NONE
+      ApiKeyRequired: true
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AquariumFunction.Arn}/invocations
+
+  # OPTIONS /readings
+  ReadingsOptions:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref AquariumApi
+      ResourceId: !Ref ReadingsResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      ApiKeyRequired: false
+      Integration:
+        Type: MOCK
+        RequestTemplates:
+          application/json: '{"statusCode":200}'
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,x-api-key'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,POST,DELETE,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: "'https://aquarium.vibeai.software'"
+            ResponseTemplates:
+              application/json: ''
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Origin: true
+
+  # DELETE /readings/{id}
+  ReadingsIdDelete:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref AquariumApi
+      ResourceId: !Ref ReadingsIdResource
+      HttpMethod: DELETE
+      AuthorizationType: NONE
+      ApiKeyRequired: true
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AquariumFunction.Arn}/invocations
+
+  # OPTIONS /readings/{id}
+  ReadingsIdOptions:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref AquariumApi
+      ResourceId: !Ref ReadingsIdResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      ApiKeyRequired: false
+      Integration:
+        Type: MOCK
+        RequestTemplates:
+          application/json: '{"statusCode":200}'
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,x-api-key'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,POST,DELETE,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: "'https://aquarium.vibeai.software'"
+            ResponseTemplates:
+              application/json: ''
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Origin: true
+
+  # GET /tap
+  TapGet:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref AquariumApi
+      ResourceId: !Ref TapResource
+      HttpMethod: GET
+      AuthorizationType: NONE
+      ApiKeyRequired: true
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AquariumFunction.Arn}/invocations
+
+  # POST /tap
+  TapPost:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref AquariumApi
+      ResourceId: !Ref TapResource
+      HttpMethod: POST
+      AuthorizationType: NONE
+      ApiKeyRequired: true
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AquariumFunction.Arn}/invocations
+
+  # OPTIONS /tap
+  TapOptions:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref AquariumApi
+      ResourceId: !Ref TapResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      ApiKeyRequired: false
+      Integration:
+        Type: MOCK
+        RequestTemplates:
+          application/json: '{"statusCode":200}'
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,x-api-key'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,POST,DELETE,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: "'https://aquarium.vibeai.software'"
+            ResponseTemplates:
+              application/json: ''
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Origin: true
+
+  # DELETE /tap/{id}
+  TapIdDelete:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref AquariumApi
+      ResourceId: !Ref TapIdResource
+      HttpMethod: DELETE
+      AuthorizationType: NONE
+      ApiKeyRequired: true
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AquariumFunction.Arn}/invocations
+
+  # OPTIONS /tap/{id}
+  TapIdOptions:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref AquariumApi
+      ResourceId: !Ref TapIdResource
+      HttpMethod: OPTIONS
+      AuthorizationType: NONE
+      ApiKeyRequired: false
+      Integration:
+        Type: MOCK
+        RequestTemplates:
+          application/json: '{"statusCode":200}'
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,x-api-key'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,POST,DELETE,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: "'https://aquarium.vibeai.software'"
+            ResponseTemplates:
+              application/json: ''
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Origin: true
+
+  # ── Deployment & Stage ────────────────────────────────────────
+  ApiDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn:
+      - ReadingsGet
+      - ReadingsPost
+      - ReadingsOptions
+      - ReadingsIdDelete
+      - ReadingsIdOptions
+      - TapGet
+      - TapPost
+      - TapOptions
+      - TapIdDelete
+      - TapIdOptions
+    Properties:
+      RestApiId: !Ref AquariumApi
+
+  ApiStage:
+    Type: AWS::ApiGateway::Stage
+    Properties:
+      RestApiId: !Ref AquariumApi
+      DeploymentId: !Ref ApiDeployment
+      StageName: prod
+
+  # ── API Key & Usage Plan ──────────────────────────────────────
+  AquariumApiKey:
+    Type: AWS::ApiGateway::ApiKey
+    DependsOn: ApiStage
+    Properties:
+      Name: aquarium-app-key
+      Enabled: true
+      StageKeys:
+        - RestApiId: !Ref AquariumApi
+          StageName: prod
+
+  AquariumUsagePlan:
+    Type: AWS::ApiGateway::UsagePlan
+    DependsOn: ApiStage
+    Properties:
+      UsagePlanName: aquarium-plan
+      ApiStages:
+        - ApiId: !Ref AquariumApi
+          Stage: prod
+      Throttle:
+        RateLimit: 10
+        BurstLimit: 20
+      Quota:
+        Limit: 1000
+        Period: DAY
+
+  AquariumUsagePlanKey:
+    Type: AWS::ApiGateway::UsagePlanKey
+    Properties:
+      KeyId: !Ref AquariumApiKey
+      KeyType: API_KEY
+      UsagePlanId: !Ref AquariumUsagePlan
+
+Outputs:
+
+  ApiBaseUrl:
+    Description: Paste this into index.html as API_BASE_URL
+    Value: !Sub https://${AquariumApi}.execute-api.${AWS::Region}.amazonaws.com/prod
+
+  ApiKeyId:
+    Description: >
+      API Key ID — to get the key value go to:
+      AWS Console > API Gateway > API Keys > aquarium-app-key > Show
+    Value: !Ref AquariumApiKey
