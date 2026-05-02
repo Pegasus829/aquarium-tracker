@@ -1,0 +1,16 @@
+{
+  "name": "aquarium-api",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "bundle": "esbuild index.mjs --bundle --platform=node --target=node22 --format=cjs --outfile=bundle.cjs"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.726.0",
+    "@aws-sdk/lib-dynamodb": "^3.726.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
+  }
+}

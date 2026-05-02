@@ -183,10 +183,6 @@ canvas.chart { width: 100%; height: 110px; display: block; }
     <h1>Water Quality Tracker</h1>
     <p>Fluval Flex 2.0 · 57L · Nitrogen Cycle Log</p>
   </div>
-  <div>
-    <button class="save-btn" onclick="downloadFile()">⬇ Save Updated File</button>
-    <div class="save-note">Download after adding readings</div>
-  </div>
 </div>
 
 <!-- Tank form -->
@@ -296,17 +292,82 @@ canvas.chart { width: 100%; height: 110px; display: block; }
 <div id="toast"></div>
 
 <script>
-// ══ PASSWORD CONFIG ══════════════════════════════════════════
-// SHA-256 hash of the password. Default password: aquarium2025
-// To change: run this in browser console and paste result below:
-// crypto.subtle.digest('SHA-256', new TextEncoder().encode('yourpassword'))
-//   .then(b => console.log([...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')))
-const PASSWORD_HASH = '65457dba64001716cd0aaa2791e8fe1253ce80166f228e64fd23dff5ad85bfc6';
-// ═════════════════════════════════════════════════════════════
+// API Gateway base URL (no trailing slash). Password verified on Lambda; set PASSWORD_HASH and JWT_SECRET there. Data requires JWT (Authorization: Bearer).
+const API_BASE_URL = 'https://gnewkvhgwd.execute-api.eu-west-1.amazonaws.com/prod';
+// Usage plan requires this header on protected routes (login route does not).
+const API_KEY = '8lpMzm6DCL1dgipDrSaJs4LGozq0X64a3QGwMgfU';
 
-async function hashString(str) {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
-  return [...new Uint8Array(buf)].map(x => x.toString(16).padStart(2,'0')).join('');
+function parseJwtPayload(token) {
+  try {
+    const p = token.split('.')[1];
+    if (!p) return null;
+    let b64 = p.replace(/-/g, '+').replace(/_/g, '/');
+    while (b64.length % 4) b64 += '=';
+    const payload = JSON.parse(atob(b64));
+    if (payload.exp && payload.exp * 1000 <= Date.now()) return null;
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
+function getValidToken() {
+  const t = sessionStorage.getItem('wqt_token');
+  if (!t || !parseJwtPayload(t)) {
+    sessionStorage.removeItem('wqt_token');
+    return null;
+  }
+  return t;
+}
+
+function apiFetch(path, options = {}) {
+  const token = sessionStorage.getItem('wqt_token');
+  const key = API_KEY.trim();
+  return fetch(API_BASE_URL + path, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: 'Bearer ' + token } : {}),
+      ...(key ? { 'x-api-key': key } : {}),
+      ...(options.headers ?? {}),
+    },
+  });
+}
+
+let toastTimer;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 5000);
+}
+
+async function loadData() {
+  if (!API_BASE_URL.trim()) {
+    sessionStorage.removeItem('wqt_token');
+    document.getElementById('gate').style.display = 'flex';
+    document.getElementById('app').style.display = 'none';
+    showToast('Set API_BASE_URL in index.html');
+    return;
+  }
+  const [rRes, tRes] = await Promise.all([apiFetch('/readings'), apiFetch('/tap')]);
+  if (rRes.status === 401 || tRes.status === 401) {
+    sessionStorage.removeItem('wqt_token');
+    document.getElementById('gate').style.display = 'flex';
+    document.getElementById('app').style.display = 'none';
+    showToast('Session expired — sign in again');
+    return;
+  }
+  if (!rRes.ok || !tRes.ok) {
+    showToast('Could not load readings');
+    return;
+  }
+  readings = await rRes.json();
+  tapReadings = await tRes.json();
+  readings.sort((a, b) => new Date(a.date) - new Date(b.date));
+  tapReadings.sort((a, b) => new Date(a.date) - new Date(b.date));
+  render();
 }
 
 async function unlock() {
@@ -314,39 +375,54 @@ async function unlock() {
   const error = document.getElementById('gateError');
   const val = input.value;
   if (!val) return;
-  const hash = await hashString(val);
-  if (hash === PASSWORD_HASH) {
-    sessionStorage.setItem('wqt_auth', '1');
+  if (!API_BASE_URL.trim()) {
+    error.textContent = 'Set API_BASE_URL in index.html';
+    return;
+  }
+  error.textContent = '';
+  try {
+    const loginHeaders = { 'Content-Type': 'application/json' };
+    if (API_KEY.trim()) loginHeaders['x-api-key'] = API_KEY.trim();
+    const res = await fetch(API_BASE_URL + '/auth/login', {
+      method: 'POST',
+      headers: loginHeaders,
+      body: JSON.stringify({ password: val }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      error.textContent = data.error || 'Sign-in failed';
+      input.classList.add('error');
+      input.value = '';
+      setTimeout(() => { input.classList.remove('error'); error.textContent = ''; }, 2000);
+      return;
+    }
+    if (!data.token) {
+      error.textContent = 'Invalid server response';
+      return;
+    }
+    sessionStorage.setItem('wqt_token', data.token);
+    input.value = '';
     document.getElementById('gate').style.display = 'none';
     document.getElementById('app').style.display = 'block';
-    render();
-  } else {
-    error.textContent = 'Incorrect password';
+    await loadData();
+  } catch {
+    error.textContent = 'Cannot reach API';
     input.classList.add('error');
-    input.value = '';
-    setTimeout(() => { input.classList.remove('error'); error.textContent = ''; }, 1500);
+    setTimeout(() => { input.classList.remove('error'); error.textContent = ''; }, 2000);
   }
 }
 
-// Check session — skip gate if already authenticated this session
-if (sessionStorage.getItem('wqt_auth') === '1') {
-  document.getElementById('gate').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
-}
-</script>
+var readings = [];
+var tapReadings = [];
 
-<script>
-// ══ EMBEDDED DATA — edit here to seed readings ══
-var readings = [
-  { date:'2025-04-13T15:00', ph:6.4,  nh3:0.5, no2:0.5, no3:80 },
-  { date:'2025-04-18T10:00', ph:6.4,  nh3:0,   no2:0,   no3:40 },
-  { date:'2025-05-02T09:32', ph:6.4,  nh3:0,   no2:0,   no3:40 }
-];
-var tapReadings = [
-  { date:'2025-04-18T09:00', no3:50,  note:'mains tap — baseline' },
-  { date:'2025-05-02T09:00', no3:25,  note:'filtered tap — first test' }
-];
-// ══════════════════════════════════════════════
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 
 function nowLocal() {
   const d = new Date();
@@ -512,7 +588,7 @@ function renderCharts() {
   drawChart('chart-ph', 'nd-ph', toPts(readings,'ph'), '#a78bfa', 6.0, 7.5, 6.5, 7.2);
   drawChart('chart-nh3','nd-nh3',toPts(readings,'nh3'),'#f87171', 0, 1, 0, 0.25);
   drawChart('chart-no2','nd-no2',toPts(readings,'no2'),'#fb923c', 0, 1, 0, 0.25);
-  drawChart('chart-no3','nd-no3',toPts(readings,'no3'),'#facc15', 0,100, 0, 20, toPts(tapReadings,'no3'),'#34d399');
+  drawChart('chart-no3','nd-no3',toPts(readings,'no3'),'#facc15', 0,100, 0, 20, toPts(tapReadings,'no3'),'#22d3ee');
 }
 
 // ── Render tank log ──
@@ -521,8 +597,7 @@ function renderLog() {
   const count=document.getElementById('logCount');
   count.textContent=`${readings.length} reading${readings.length!==1?'s':''}`;
   if(readings.length===0){body.innerHTML='<div class="log-empty">No readings logged yet</div>';return;}
-  const rows=[...readings].reverse().map((r,ri)=>{
-    const idx=readings.length-1-ri;
+  const rows=[...readings].reverse().map((r)=>{
     const d=new Date(r.date);
     const ds=d.toLocaleDateString('en-GB',{day:'2-digit',month:'short'});
     const ts=d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
@@ -531,7 +606,7 @@ function renderLog() {
       <td style="color:var(--muted);font-size:11px">${ds}<br>${ts}</td>
       <td>${fmt(r.ph,'ph')}</td><td>${fmt(r.nh3,'nh3')}</td>
       <td>${fmt(r.no2,'no2')}</td><td>${fmt(r.no3,'no3')}</td>
-      <td><button class="del-btn" onclick="deleteReading(${idx})">×</button></td>
+      <td><button class="del-btn" onclick="deleteReading(${JSON.stringify(r.id)})">×</button></td>
     </tr>`;
   }).join('');
   body.innerHTML=`<table class="log-table"><thead><tr>
@@ -546,16 +621,15 @@ function renderTapLog() {
   const count=document.getElementById('tapLogCount');
   count.textContent=`${tapReadings.length} reading${tapReadings.length!==1?'s':''}`;
   if(tapReadings.length===0){body.innerHTML='<div class="log-empty">No tap tests logged yet</div>';return;}
-  const rows=[...tapReadings].reverse().map((r,ri)=>{
-    const idx=tapReadings.length-1-ri;
+  const rows=[...tapReadings].reverse().map((r)=>{
     const d=new Date(r.date);
     const ds=d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
     const[,cls]=tapStatus(r.no3);
     return`<tr>
       <td style="color:var(--muted);font-size:11px">${ds}</td>
       <td><span class="${cls}">${r.no3} ppm</span></td>
-      <td style="color:var(--muted);font-size:11px">${r.note||''}</td>
-      <td><button class="del-btn" onclick="deleteTapReading(${idx})">×</button></td>
+      <td style="color:var(--muted);font-size:11px">${escapeHtml(r.note||'')}</td>
+      <td><button class="del-btn" onclick="deleteTapReading(${JSON.stringify(r.id)})">×</button></td>
     </tr>`;
   }).join('');
   body.innerHTML=`<table class="log-table"><thead><tr>
@@ -564,66 +638,85 @@ function renderTapLog() {
 }
 
 // ── Add readings ──
-function addReading() {
-  const get=id=>{const v=document.getElementById(id).value;return v===''?null:parseFloat(v);};
+async function addReading() {
+  const get=fid=>{const v=document.getElementById(fid).value;return v===''?null:parseFloat(v);};
   const date=document.getElementById('f-date').value||nowLocal();
-  const r={date,ph:get('f-ph'),nh3:get('f-nh3'),no2:get('f-no2'),no3:get('f-no3')};
+  const newId=crypto.randomUUID();
+  const r={id:newId,date,ph:get('f-ph'),nh3:get('f-nh3'),no2:get('f-no2'),no3:get('f-no3')};
   if([r.ph,r.nh3,r.no2,r.no3].every(v=>v===null))return;
   readings.push(r);
   readings.sort((a,b)=>new Date(a.date)-new Date(b.date));
   render();
-  ['f-ph','f-nh3','f-no2','f-no3'].forEach(id=>document.getElementById(id).value='');
+  ['f-ph','f-nh3','f-no2','f-no3'].forEach(fid=>document.getElementById(fid).value='');
   document.getElementById('f-date').value=nowLocal();
+  const res=await apiFetch('/readings',{method:'POST',body:JSON.stringify(r)});
+  if(!res.ok){
+    readings=readings.filter(x=>x.id!==newId);
+    render();
+    showToast(res.status===401?'Session expired':'Could not save reading');
+    return;
+  }
   showToast('Reading added ✓');
 }
-function addTapReading() {
+async function addTapReading() {
   const v=document.getElementById('t-no3').value;
   if(v==='')return;
   const date=document.getElementById('t-date').value||nowLocal();
   const note=document.getElementById('t-note').value.trim();
-  tapReadings.push({date,no3:parseFloat(v),note});
+  const newId=crypto.randomUUID();
+  const row={id:newId,date,no3:parseFloat(v),note};
+  tapReadings.push(row);
   tapReadings.sort((a,b)=>new Date(a.date)-new Date(b.date));
   render();
   document.getElementById('t-no3').value='';
   document.getElementById('t-note').value='';
   document.getElementById('t-date').value=nowLocal();
+  const res=await apiFetch('/tap',{method:'POST',body:JSON.stringify(row)});
+  if(!res.ok){
+    tapReadings=tapReadings.filter(x=>x.id!==newId);
+    render();
+    showToast(res.status===401?'Session expired':'Could not save tap test');
+    return;
+  }
   showToast('Tap test added ✓');
 }
-function deleteReading(idx){readings.splice(idx,1);render();}
-function deleteTapReading(idx){tapReadings.splice(idx,1);render();}
-
-let toastTimer;
-function showToast(msg) {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.classList.add('show');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.classList.remove('show'), 5000);
+async function deleteReading(readingId){
+  const item=readings.find(x=>x.id===readingId);
+  const idx=readings.findIndex(x=>x.id===readingId);
+  if(idx===-1)return;
+  readings.splice(idx,1);
+  render();
+  const res=await apiFetch('/readings/'+encodeURIComponent(readingId),{method:'DELETE'});
+  if(!res.ok){
+    if(item)readings.splice(idx,0,item);
+    readings.sort((a,b)=>new Date(a.date)-new Date(b.date));
+    render();
+    showToast(res.status===401?'Session expired':'Could not delete');
+  }
 }
-
-// ── Download updated file ──
-function downloadFile() {
-  const html=document.documentElement.outerHTML;
-  // Replace the embedded data arrays with current state
-  const rStr=JSON.stringify(readings,null,2).replace(/"/g,"'").replace(/'/g,'"');
-  const tStr=JSON.stringify(tapReadings,null,2).replace(/"/g,"'").replace(/'/g,'"');
-  // Inject updated data into the script block
-  const updated=html
-    .replace(/var readings = \[[\s\S]*?\];/, `var readings = ${rStr};`)
-    .replace(/var tapReadings = \[[\s\S]*?\];/, `var tapReadings = ${tStr};`);
-  const blob=new Blob([updated],{type:'text/html'});
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(blob);
-  a.download='water-tracker.html';
-  a.click();
-  URL.revokeObjectURL(a.href);
+async function deleteTapReading(readingId){
+  const item=tapReadings.find(x=>x.id===readingId);
+  const idx=tapReadings.findIndex(x=>x.id===readingId);
+  if(idx===-1)return;
+  tapReadings.splice(idx,1);
+  render();
+  const res=await apiFetch('/tap/'+encodeURIComponent(readingId),{method:'DELETE'});
+  if(!res.ok){
+    if(item)tapReadings.splice(idx,0,item);
+    tapReadings.sort((a,b)=>new Date(a.date)-new Date(b.date));
+    render();
+    showToast(res.status===401?'Session expired':'Could not delete');
+  }
 }
 
 // ── Full render ──
 function render(){updateStatus();renderCharts();renderLog();renderTapLog();}
 
-// Only render if already authenticated (session already set above)
-if (sessionStorage.getItem('wqt_auth') === '1') render();
+if (getValidToken() && API_BASE_URL.trim()) {
+  document.getElementById('gate').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  loadData();
+}
 window.addEventListener('resize', renderCharts);
 </script>
 </body>

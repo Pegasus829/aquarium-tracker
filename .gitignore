@@ -1,0 +1,8 @@
+lambda/node_modules/
+lambda/bundle.cjs
+lambda/bundle.mjs
+deploy/api-url-and-key.txt
+deploy/.jwt_secret_once
+deploy/aquarium-full.zip
+deploy/aquarium-api.zip
+deploy/.deploy_output.txt
