@@ -93,6 +93,18 @@ canvas.chart { width: 100%; height: 110px; display: block; }
 
 .c-safe { color: var(--safe); } .c-warn { color: var(--warn); } .c-danger { color: var(--danger); } .c-muted { color: var(--muted); }
 
+/* ── Toast ── */
+#toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(16px);
+  background: var(--safe); color: #0a1f14;
+  font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 10px 20px; border-radius: 999px;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 999;
+}
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
 /* ── Password gate ── */
 #gate {
   position: fixed; inset: 0; z-index: 1000;
@@ -279,6 +291,8 @@ canvas.chart { width: 100%; height: 110px; display: block; }
 </div>
 
 </div><!-- /app -->
+
+<div id="toast"></div>
 
 <script>
 // ══ PASSWORD CONFIG ══════════════════════════════════════════
@@ -559,6 +573,7 @@ function addReading() {
   render();
   ['f-ph','f-nh3','f-no2','f-no3'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('f-date').value=nowLocal();
+  showToast('Reading added ✓');
 }
 function addTapReading() {
   const v=document.getElementById('t-no3').value;
@@ -571,9 +586,19 @@ function addTapReading() {
   document.getElementById('t-no3').value='';
   document.getElementById('t-note').value='';
   document.getElementById('t-date').value=nowLocal();
+  showToast('Tap test added ✓');
 }
 function deleteReading(idx){readings.splice(idx,1);render();}
 function deleteTapReading(idx){tapReadings.splice(idx,1);render();}
+
+let toastTimer;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 5000);
+}
 
 // ── Download updated file ──
 function downloadFile() {
