@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "bundle": "esbuild index.mjs --bundle --platform=node --target=node22 --format=cjs --outfile=bundle.cjs"
+    "bundle": "esbuild index.mjs --bundle --platform=node --target=node22 --format=cjs --outfile=bundle.js"
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.726.0",
