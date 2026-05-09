@@ -42,7 +42,35 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
 .section-label-line { flex: 1; height: 1px; background: var(--border); }
 .section-toggle-controls { flex: 1; display: flex; align-items: center; gap: 10px; min-width: 0; }
 .section-toggle { display: flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 10px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); user-select: none; cursor: pointer; white-space: nowrap; }
-.section-toggle input { accent-color: var(--tap-toggle); width: 14px; height: 14px; }
+.section-toggle input {
+  width: 14px;
+  height: 14px;
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1.5px solid var(--tap-toggle);
+  border-radius: 3px;
+  background: transparent;
+  display: inline-grid;
+  place-content: center;
+  cursor: pointer;
+}
+.section-toggle input::before {
+  content: '';
+  width: 7px;
+  height: 4px;
+  border: 2px solid #e8fbff;
+  border-top: 0;
+  border-right: 0;
+  transform: rotate(-45deg) scale(0);
+  transform-origin: center;
+  transition: transform 0.12s ease-in-out;
+}
+.section-toggle input:checked { background: var(--tap-toggle); }
+.section-toggle input:checked::before { transform: rotate(-45deg) scale(1); }
+.section-toggle input:focus-visible {
+  outline: 2px solid rgba(34, 211, 238, 0.45);
+  outline-offset: 2px;
+}
 
 .form-card { max-width: 860px; margin: 0 auto 10px; background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 18px; }
 .form-card.tap-card { border-color: rgba(34,211,238,0.2); margin-bottom: 28px; }
