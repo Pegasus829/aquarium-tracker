@@ -718,7 +718,7 @@ function drawChart(canvasId, ndId, pts, color, yMin, yMax, safeMin, safeMax, sec
   });
 }
 
-function renderMetricChart(chartKey, canvasId, ndId, pts, color, yMin, yMax, safeMin, safeMax) {
+function renderMetricChart(chartKey, canvasId, ndId, pts, color, yMin, yMax, safeMin, safeMax, warnMin, warnMax) {
   if (typeof Chart === 'undefined') {
     drawChart(canvasId, ndId, pts, color, yMin, yMax, safeMin, safeMax);
     return;
@@ -753,19 +753,26 @@ function renderMetricChart(chartKey, canvasId, ndId, pts, color, yMin, yMax, saf
   const safeBandPlugin = {
     id: `${chartKey}-safe-band`,
     beforeDatasetsDraw(chart) {
-      if (safeMin === undefined || safeMax === undefined) return;
       const { ctx, chartArea, scales } = chart;
       if (!chartArea || !scales?.y) return;
       const yScale = scales.y;
-      const bandTop = Math.min(safeMax, yScale.max);
-      const bandBottom = Math.max(safeMin, yScale.min);
-      if (bandTop > bandBottom) return;
-      const yTop = yScale.getPixelForValue(bandTop);
-      const yBottom = yScale.getPixelForValue(bandBottom);
-      ctx.save();
-      ctx.fillStyle = 'rgba(16,185,129,0.18)';
-      ctx.fillRect(chartArea.left, yTop, chartArea.right - chartArea.left, yBottom - yTop);
-      ctx.restore();
+      const drawBand = (min, max, fillColor) => {
+        const bandTop = Math.min(max, yScale.max);
+        const bandBottom = Math.max(min, yScale.min);
+        if (bandTop > bandBottom) return;
+        const yTop = yScale.getPixelForValue(bandTop);
+        const yBottom = yScale.getPixelForValue(bandBottom);
+        ctx.save();
+        ctx.fillStyle = fillColor;
+        ctx.fillRect(chartArea.left, yTop, chartArea.right - chartArea.left, yBottom - yTop);
+        ctx.restore();
+      };
+      if (warnMin !== undefined && warnMax !== undefined) {
+        drawBand(warnMin, warnMax, 'rgba(245,158,11,0.16)');
+      }
+      if (safeMin !== undefined && safeMax !== undefined) {
+        drawBand(safeMin, safeMax, 'rgba(16,185,129,0.18)');
+      }
     },
   };
 
@@ -1010,7 +1017,7 @@ function renderCharts() {
   const no3Pts = toPts(readings,'no3');
   const tapNo3Pts = tapFeatureEnabled ? toPts(tapReadings,'no3') : [];
 
-  renderMetricChart('ph', 'chart-ph', 'nd-ph', phPts, '#a78bfa', 6.0, 7.5, 6.5, 7.0);
+  renderMetricChart('ph', 'chart-ph', 'nd-ph', phPts, '#a78bfa', 6.0, 7.5, 6.5, 7.0, 6.2, 7.5);
   renderMetricChart('nh3','chart-nh3','nd-nh3',nh3Pts,'#f87171', 0, 1, 0, 0.25);
   renderMetricChart('no2','chart-no2','nd-no2',no2Pts,'#fb923c', 0, 1, 0, 0.25);
   renderNo3Chart(no3Pts, tapNo3Pts);
