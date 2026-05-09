@@ -33,6 +33,23 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
 .header { max-width: 860px; margin: 0 auto 28px; display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .header-left h1 { font-family: var(--display); font-size: clamp(20px,5vw,28px); font-weight: 800; color: var(--white); letter-spacing: -0.02em; line-height: 1.1; }
 .header-left p { font-size: 11px; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; margin-top: 4px; font-family: var(--mono); }
+.header-right { margin-left: auto; }
+.profile-btn {
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card);
+  color: var(--white);
+  font-size: 18px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.profile-btn:active { opacity: 0.8; }
 .save-btn { background: var(--safe); color: #0a1f14; border: none; border-radius: 8px; padding: 9px 16px; font-family: var(--display); font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; transition: opacity 0.15s; flex-shrink: 0; }
 .save-btn:active { opacity: 0.8; }
 .save-note { font-size: 10px; color: var(--muted); font-family: var(--mono); margin-top: 4px; text-align: right; }
@@ -192,6 +209,83 @@ canvas.chart { width: 100%; height: 110px; display: block; }
   letter-spacing: 0.06em; margin-top: 16px; line-height: 1.6;
 }
 #app { display: none; }
+body.profile-open { overflow: hidden; }
+
+#profilePage {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  background: rgba(6, 10, 18, 0.88);
+  display: none;
+  align-items: flex-start;
+  justify-content: center;
+  overflow-y: auto;
+  padding: 20px 12px 32px;
+}
+#profilePage.show { display: flex; }
+.profile-card {
+  width: 100%;
+  max-width: 860px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+}
+.profile-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.profile-title {
+  font-family: var(--display);
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--white);
+}
+.profile-close-btn {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.profile-section-title {
+  margin: 14px 0 10px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--white);
+}
+.profile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+.profile-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+.profile-save-btn {
+  border: none;
+  border-radius: 8px;
+  background: var(--cta);
+  color: #0b1b2f;
+  padding: 10px 16px;
+  font-family: var(--display);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
 </style>
 </head>
 <body>
@@ -201,7 +295,7 @@ canvas.chart { width: 100%; height: 110px; display: block; }
   <div class="gate-card">
     <div class="gate-icon">🐠</div>
     <div class="gate-title">Aquarium Tracker</div>
-    <div class="gate-sub">Fluval Flex 2.0 · 57L</div>
+    <div class="gate-sub" id="gateSub">Fluval Flex 2.0 · 57L</div>
     <input class="gate-input" type="password" id="gateInput" placeholder="••••••••••••"
       autocomplete="current-password" onkeydown="if(event.key==='Enter')unlock()">
     <button class="gate-btn" onclick="unlock()">Unlock</button>
@@ -216,7 +310,10 @@ canvas.chart { width: 100%; height: 110px; display: block; }
 <div class="header">
   <div class="header-left">
     <h1>Aquarium Tracker</h1>
-    <p>Fluval Flex 2.0 · 57L</p>
+    <p id="headerSub">Fluval Flex 2.0 · 57L</p>
+  </div>
+  <div class="header-right">
+    <button class="profile-btn" onclick="openProfilePage()" aria-label="Open profile">👤</button>
   </div>
 </div>
 
@@ -281,7 +378,7 @@ canvas.chart { width: 100%; height: 110px; display: block; }
     <div class="chart-header">
       <div class="chart-dot" style="background:var(--ph)"></div>
       <div class="chart-name">pH</div>
-      <div class="chart-range">Target: 6.5–7.0</div>
+      <div class="chart-range" id="range-ph">Target: 6.5–7.0</div>
     </div>
     <div class="chart-canvas-wrap"><canvas class="chart" id="chart-ph"></canvas><div class="chart-no-data" id="nd-ph">No readings yet</div></div>
   </div>
@@ -289,7 +386,7 @@ canvas.chart { width: 100%; height: 110px; display: block; }
     <div class="chart-header">
       <div class="chart-dot" style="background:var(--nh3)"></div>
       <div class="chart-name">Ammonia</div>
-      <div class="chart-range">Target: 0 ppm</div>
+      <div class="chart-range" id="range-nh3">Target: 0 ppm</div>
     </div>
     <div class="chart-canvas-wrap"><canvas class="chart" id="chart-nh3"></canvas><div class="chart-no-data" id="nd-nh3">No readings yet</div></div>
   </div>
@@ -297,7 +394,7 @@ canvas.chart { width: 100%; height: 110px; display: block; }
     <div class="chart-header">
       <div class="chart-dot" style="background:var(--no2)"></div>
       <div class="chart-name">Nitrite</div>
-      <div class="chart-range">Target: 0 ppm</div>
+      <div class="chart-range" id="range-no2">Target: 0 ppm</div>
     </div>
     <div class="chart-canvas-wrap"><canvas class="chart" id="chart-no2"></canvas><div class="chart-no-data" id="nd-no2">No readings yet</div></div>
   </div>
@@ -305,7 +402,7 @@ canvas.chart { width: 100%; height: 110px; display: block; }
     <div class="chart-header">
       <div class="chart-dot" style="background:var(--no3)"></div>
       <div class="chart-name">Nitrate</div>
-      <div class="chart-range">Safe: 0-20 ppm · Warning: 20-40 ppm</div>
+      <div class="chart-range" id="range-no3">Safe: 0-20 ppm · Warning: 20-40 ppm</div>
       <div class="chart-legend">
         <div class="legend-item"><div class="legend-dot" style="background:var(--no3)"></div>Tank</div>
         <div class="legend-item" id="tapLegendItem"><div class="legend-dot" style="background:var(--tap)"></div>Filtered Tap</div>
@@ -337,6 +434,52 @@ canvas.chart { width: 100%; height: 110px; display: block; }
 
 </div><!-- /app -->
 
+<div id="profilePage" onclick="onProfileBackdropClick(event)">
+  <div class="profile-card">
+    <div class="profile-header">
+      <div class="profile-title">Profile</div>
+      <button class="profile-close-btn" onclick="closeProfilePage()">Close</button>
+    </div>
+
+    <div class="profile-section-title">Aquarist</div>
+    <div class="profile-grid">
+      <div class="field"><label>Name</label><input type="text" id="profileUserName" placeholder="Your name"></div>
+    </div>
+
+    <div class="profile-section-title">Aquarium</div>
+    <div class="profile-grid">
+      <div class="field"><label>Aquarium Name</label><input type="text" id="profileAquariumName" placeholder="Aquarium"></div>
+      <div class="field"><label>Aquarium Size</label><input type="number" id="profileAquariumSize" step="0.1" min="0" placeholder="57"></div>
+      <div class="field">
+        <label>Units</label>
+        <select id="profileAquariumUnits" class="gate-input" style="margin:0;height:38px;padding:8px 10px;font-size:14px;letter-spacing:0;background:var(--surface);text-align:left;">
+          <option value="litres">Litres</option>
+          <option value="gallons">Gallons</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="profile-section-title">Chart Safe Zones</div>
+    <div class="profile-grid">
+      <div class="field"><label>pH Min</label><input type="number" id="profileSafePhMin" step="0.1" min="0" max="14"></div>
+      <div class="field"><label>pH Max</label><input type="number" id="profileSafePhMax" step="0.1" min="0" max="14"></div>
+
+      <div class="field"><label>Ammonia Min (ppm)</label><input type="number" id="profileSafeNh3Min" step="0.01" min="0"></div>
+      <div class="field"><label>Ammonia Max (ppm)</label><input type="number" id="profileSafeNh3Max" step="0.01" min="0"></div>
+
+      <div class="field"><label>Nitrite Min (ppm)</label><input type="number" id="profileSafeNo2Min" step="0.01" min="0"></div>
+      <div class="field"><label>Nitrite Max (ppm)</label><input type="number" id="profileSafeNo2Max" step="0.01" min="0"></div>
+
+      <div class="field"><label>Nitrate Min (ppm)</label><input type="number" id="profileSafeNo3Min" step="1" min="0"></div>
+      <div class="field"><label>Nitrate Max (ppm)</label><input type="number" id="profileSafeNo3Max" step="1" min="0"></div>
+    </div>
+
+    <div class="profile-actions">
+      <button class="profile-save-btn" onclick="saveProfile()">Save Profile</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
@@ -345,6 +488,190 @@ canvas.chart { width: 100%; height: 110px; display: block; }
 const API_BASE_URL = 'https://gnewkvhgwd.execute-api.eu-west-1.amazonaws.com/prod';
 // Usage plan requires this header on protected routes (login route does not).
 const API_KEY = '8lpMzm6DCL1dgipDrSaJs4LGozq0X64a3QGwMgfU';
+const PROFILE_STORAGE_KEY = 'wqt_profile';
+
+function defaultProfile() {
+  return {
+    userName: 'Aquarist',
+    aquariumName: 'Fluval Flex 2.0',
+    aquariumSize: 57,
+    aquariumUnits: 'litres',
+    safeZones: {
+      ph: { min: 6.5, max: 7.0 },
+      nh3: { min: 0, max: 0.25 },
+      no2: { min: 0, max: 0.25 },
+      no3: { min: 0, max: 20 },
+    },
+  };
+}
+
+function sanitizeRange(raw, fallback, minCap, maxCap) {
+  const rawMin = Number(raw?.min);
+  const rawMax = Number(raw?.max);
+  let min = Number.isFinite(rawMin) ? rawMin : fallback.min;
+  let max = Number.isFinite(rawMax) ? rawMax : fallback.max;
+  min = Math.max(minCap, Math.min(maxCap, min));
+  max = Math.max(minCap, Math.min(maxCap, max));
+  if (min > max) [min, max] = [max, min];
+  return { min, max };
+}
+
+function loadProfile() {
+  const defaults = defaultProfile();
+  try {
+    const raw = JSON.parse(localStorage.getItem(PROFILE_STORAGE_KEY) || 'null');
+    if (!raw || typeof raw !== 'object') return defaults;
+    return {
+      userName: typeof raw.userName === 'string' && raw.userName.trim() ? raw.userName.trim() : defaults.userName,
+      aquariumName: typeof raw.aquariumName === 'string' && raw.aquariumName.trim() ? raw.aquariumName.trim() : defaults.aquariumName,
+      aquariumSize: Number.isFinite(Number(raw.aquariumSize)) ? Number(raw.aquariumSize) : defaults.aquariumSize,
+      aquariumUnits: raw.aquariumUnits === 'gallons' ? 'gallons' : 'litres',
+      safeZones: {
+        ph: sanitizeRange(raw.safeZones?.ph, defaults.safeZones.ph, 0, 14),
+        nh3: sanitizeRange(raw.safeZones?.nh3, defaults.safeZones.nh3, 0, 500),
+        no2: sanitizeRange(raw.safeZones?.no2, defaults.safeZones.no2, 0, 500),
+        no3: sanitizeRange(raw.safeZones?.no3, defaults.safeZones.no3, 0, 500),
+      },
+    };
+  } catch {
+    return defaults;
+  }
+}
+
+function saveProfileState() {
+  localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile));
+}
+
+function formatRangeValue(value, decimals = 2) {
+  if (!Number.isFinite(value)) return '0';
+  if (Number.isInteger(value)) return String(value);
+  return value.toFixed(decimals).replace(/\.?0+$/, '');
+}
+
+function getNo3WarningRange(safeZone = profile.safeZones.no3) {
+  const min = safeZone.max;
+  const max = Math.max(min + 20, min * 2);
+  return { min, max };
+}
+
+function getPhWarningRange(safeZone = profile.safeZones.ph) {
+  return {
+    min: Math.max(0, safeZone.min - 0.3),
+    max: Math.min(14, safeZone.max + 0.5),
+  };
+}
+
+function updateChartRangeLabels() {
+  const ph = profile.safeZones.ph;
+  const nh3 = profile.safeZones.nh3;
+  const no2 = profile.safeZones.no2;
+  const no3 = profile.safeZones.no3;
+  const no3Warn = getNo3WarningRange(no3);
+
+  const rangePh = document.getElementById('range-ph');
+  if (rangePh) rangePh.textContent = `Target: ${formatRangeValue(ph.min, 1)}-${formatRangeValue(ph.max, 1)}`;
+
+  const rangeNh3 = document.getElementById('range-nh3');
+  if (rangeNh3) {
+    rangeNh3.textContent = nh3.min === 0 && nh3.max === 0
+      ? 'Target: 0 ppm'
+      : `Safe: ${formatRangeValue(nh3.min)}-${formatRangeValue(nh3.max)} ppm`;
+  }
+
+  const rangeNo2 = document.getElementById('range-no2');
+  if (rangeNo2) {
+    rangeNo2.textContent = no2.min === 0 && no2.max === 0
+      ? 'Target: 0 ppm'
+      : `Safe: ${formatRangeValue(no2.min)}-${formatRangeValue(no2.max)} ppm`;
+  }
+
+  const rangeNo3 = document.getElementById('range-no3');
+  if (rangeNo3) {
+    rangeNo3.textContent = `Safe: ${formatRangeValue(no3.min)}-${formatRangeValue(no3.max)} ppm · Warning: ${formatRangeValue(no3Warn.min)}-${formatRangeValue(no3Warn.max)} ppm`;
+  }
+}
+
+function updateHeaderMeta() {
+  const unitLabel = profile.aquariumUnits === 'gallons' ? 'gal' : 'L';
+  const size = Number.isFinite(profile.aquariumSize) ? formatRangeValue(profile.aquariumSize, 1) : '';
+  const subtitle = `${profile.aquariumName} · ${size}${unitLabel === 'L' ? 'L' : ` ${unitLabel}`}`;
+  const gateSub = document.getElementById('gateSub');
+  if (gateSub) gateSub.textContent = subtitle;
+  const headerSub = document.getElementById('headerSub');
+  if (headerSub) headerSub.textContent = subtitle;
+}
+
+function applyProfileToUI() {
+  updateHeaderMeta();
+  updateChartRangeLabels();
+}
+
+function populateProfileForm() {
+  document.getElementById('profileUserName').value = profile.userName;
+  document.getElementById('profileAquariumName').value = profile.aquariumName;
+  document.getElementById('profileAquariumSize').value = profile.aquariumSize;
+  document.getElementById('profileAquariumUnits').value = profile.aquariumUnits;
+
+  document.getElementById('profileSafePhMin').value = profile.safeZones.ph.min;
+  document.getElementById('profileSafePhMax').value = profile.safeZones.ph.max;
+  document.getElementById('profileSafeNh3Min').value = profile.safeZones.nh3.min;
+  document.getElementById('profileSafeNh3Max').value = profile.safeZones.nh3.max;
+  document.getElementById('profileSafeNo2Min').value = profile.safeZones.no2.min;
+  document.getElementById('profileSafeNo2Max').value = profile.safeZones.no2.max;
+  document.getElementById('profileSafeNo3Min').value = profile.safeZones.no3.min;
+  document.getElementById('profileSafeNo3Max').value = profile.safeZones.no3.max;
+}
+
+function openProfilePage() {
+  populateProfileForm();
+  const page = document.getElementById('profilePage');
+  if (page) page.classList.add('show');
+  document.body.classList.add('profile-open');
+}
+
+function closeProfilePage() {
+  const page = document.getElementById('profilePage');
+  if (page) page.classList.remove('show');
+  document.body.classList.remove('profile-open');
+}
+
+function onProfileBackdropClick(event) {
+  if (event.target.id === 'profilePage') closeProfilePage();
+}
+
+function saveProfile() {
+  const nextProfile = {
+    userName: document.getElementById('profileUserName').value.trim() || profile.userName,
+    aquariumName: document.getElementById('profileAquariumName').value.trim() || profile.aquariumName,
+    aquariumSize: Number(document.getElementById('profileAquariumSize').value),
+    aquariumUnits: document.getElementById('profileAquariumUnits').value === 'gallons' ? 'gallons' : 'litres',
+    safeZones: {
+      ph: { min: Number(document.getElementById('profileSafePhMin').value), max: Number(document.getElementById('profileSafePhMax').value) },
+      nh3: { min: Number(document.getElementById('profileSafeNh3Min').value), max: Number(document.getElementById('profileSafeNh3Max').value) },
+      no2: { min: Number(document.getElementById('profileSafeNo2Min').value), max: Number(document.getElementById('profileSafeNo2Max').value) },
+      no3: { min: Number(document.getElementById('profileSafeNo3Min').value), max: Number(document.getElementById('profileSafeNo3Max').value) },
+    },
+  };
+  const defaults = defaultProfile();
+  profile = {
+    userName: nextProfile.userName,
+    aquariumName: nextProfile.aquariumName,
+    aquariumSize: Number.isFinite(nextProfile.aquariumSize) ? nextProfile.aquariumSize : defaults.aquariumSize,
+    aquariumUnits: nextProfile.aquariumUnits,
+    safeZones: {
+      ph: sanitizeRange(nextProfile.safeZones.ph, defaults.safeZones.ph, 0, 14),
+      nh3: sanitizeRange(nextProfile.safeZones.nh3, defaults.safeZones.nh3, 0, 500),
+      no2: sanitizeRange(nextProfile.safeZones.no2, defaults.safeZones.no2, 0, 500),
+      no3: sanitizeRange(nextProfile.safeZones.no3, defaults.safeZones.no3, 0, 500),
+    },
+  };
+
+  saveProfileState();
+  applyProfileToUI();
+  render();
+  closeProfilePage();
+  showToast('Profile updated ✓');
+}
 
 function parseJwtPayload(token) {
   try {
@@ -507,6 +834,7 @@ async function unlock() {
   }
 }
 
+var profile = loadProfile();
 var readings = [];
 var tapReadings = [];
 var tapFeatureEnabled = true;
@@ -853,9 +1181,10 @@ function renderMetricChart(chartKey, canvasId, ndId, pts, color, yMin, yMax, saf
   metricCharts[chartKey].update('none');
 }
 
-function renderNo3Chart(tankPts, tapPts) {
+function renderNo3Chart(tankPts, tapPts, safeZone, warningZone) {
   if (typeof Chart === 'undefined') {
-    drawChart('chart-no3', 'nd-no3', tankPts, '#facc15', 0, 100, 0, 20, tapPts, '#22d3ee', 20, 40);
+    const chartMax = Math.max(100, warningZone.max);
+    drawChart('chart-no3', 'nd-no3', tankPts, '#facc15', 0, chartMax, safeZone.min, safeZone.max, tapPts, '#22d3ee', warningZone.min, warningZone.max);
     return;
   }
 
@@ -935,8 +1264,8 @@ function renderNo3Chart(tankPts, tapPts) {
         ctx.fillRect(chartArea.left, yTop, width, yBottom - yTop);
         ctx.restore();
       };
-      drawBand(20, 40, 'rgba(245,158,11,0.16)');
-      drawBand(0, 20, 'rgba(16,185,129,0.18)');
+      drawBand(warningZone.min, warningZone.max, 'rgba(245,158,11,0.16)');
+      drawBand(safeZone.min, safeZone.max, 'rgba(16,185,129,0.18)');
     },
   };
 
@@ -1011,16 +1340,23 @@ function renderNo3Chart(tankPts, tapPts) {
 // ── Build chart data ──
 function renderCharts() {
   const toPts=(arr,key)=>arr.filter(r=>r[key]!==null&&r[key]!==undefined).map(r=>({t:new Date(r.date).getTime(),v:r[key]}));
+  const phSafe = profile.safeZones.ph;
+  const nh3Safe = profile.safeZones.nh3;
+  const no2Safe = profile.safeZones.no2;
+  const no3Safe = profile.safeZones.no3;
+  const phWarning = getPhWarningRange(phSafe);
+  const no3Warning = getNo3WarningRange(no3Safe);
+
   const phPts = toPts(readings,'ph');
   const nh3Pts = toPts(readings,'nh3');
   const no2Pts = toPts(readings,'no2');
   const no3Pts = toPts(readings,'no3');
   const tapNo3Pts = tapFeatureEnabled ? toPts(tapReadings,'no3') : [];
 
-  renderMetricChart('ph', 'chart-ph', 'nd-ph', phPts, '#a78bfa', 6.0, 7.5, 6.5, 7.0, 6.2, 7.5);
-  renderMetricChart('nh3','chart-nh3','nd-nh3',nh3Pts,'#f87171', 0, 1, 0, 0.25);
-  renderMetricChart('no2','chart-no2','nd-no2',no2Pts,'#fb923c', 0, 1, 0, 0.25);
-  renderNo3Chart(no3Pts, tapNo3Pts);
+  renderMetricChart('ph', 'chart-ph', 'nd-ph', phPts, '#a78bfa', 6.0, 7.5, phSafe.min, phSafe.max, phWarning.min, phWarning.max);
+  renderMetricChart('nh3','chart-nh3','nd-nh3',nh3Pts,'#f87171', 0, 1, nh3Safe.min, nh3Safe.max);
+  renderMetricChart('no2','chart-no2','nd-no2',no2Pts,'#fb923c', 0, 1, no2Safe.min, no2Safe.max);
+  renderNo3Chart(no3Pts, tapNo3Pts, no3Safe, no3Warning);
 }
 
 // ── Render tank log ──
@@ -1143,6 +1479,7 @@ async function deleteTapReading(readingId){
 // ── Full render ──
 function render(){updateStatus();renderCharts();renderLog();renderTapLog();}
 
+applyProfileToUI();
 if (getValidToken() && API_BASE_URL.trim()) {
   document.getElementById('gate').style.display = 'none';
   document.getElementById('app').style.display = 'block';
