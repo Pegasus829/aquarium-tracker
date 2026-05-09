@@ -205,7 +205,6 @@ canvas.chart { width: 100%; height: 110px; display: block; }
     <div class="field"><label class="no3-label">Nitrate (ppm)</label><input type="number" id="f-no3" step="5" min="0" placeholder="0"></div>
   </div>
   <div class="form-row">
-    <div class="field date-field"><label style="color:var(--muted)">Date &amp; Time</label><input type="datetime-local" id="f-date"></div>
     <button class="btn-add" onclick="addReading()">Add Reading</button>
   </div>
 </div>
@@ -445,7 +444,6 @@ function nowLocal() {
   d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
   return d.toISOString().slice(0,16);
 }
-document.getElementById('f-date').value = nowLocal();
 document.getElementById('t-date').value = nowLocal();
 
 function setTapFeatureEnabled(enabled, persist = true) {
@@ -687,7 +685,7 @@ function renderTapLog() {
 // ── Add readings ──
 async function addReading() {
   const get=fid=>{const v=document.getElementById(fid).value;return v===''?null:parseFloat(v);};
-  const date=document.getElementById('f-date').value||nowLocal();
+  const date=nowLocal();
   const newId=crypto.randomUUID();
   const r={id:newId,date,ph:get('f-ph'),nh3:get('f-nh3'),no2:get('f-no2'),no3:get('f-no3')};
   if([r.ph,r.nh3,r.no2,r.no3].every(v=>v===null))return;
@@ -695,7 +693,6 @@ async function addReading() {
   readings.sort((a,b)=>new Date(a.date)-new Date(b.date));
   render();
   ['f-ph','f-nh3','f-no2','f-no3'].forEach(fid=>document.getElementById(fid).value='');
-  document.getElementById('f-date').value=nowLocal();
   const res=await apiFetch('/readings',{method:'POST',body:JSON.stringify(r)});
   if(!res.ok){
     readings=readings.filter(x=>x.id!==newId);
