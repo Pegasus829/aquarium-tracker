@@ -1150,6 +1150,21 @@ function setLoadingState(loading) {
   if (tapLogBody) tapLogBody.innerHTML = '<div class="log-empty">Loading tap tests...</div>';
 }
 
+function showSessionExpired() {
+  sessionStorage.removeItem('wqt_token');
+  document.getElementById('gate').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+  showToast('Session expired — sign in again');
+}
+
+async function loadJsonResource(path) {
+  const res = await apiFetch(path);
+  if (res.status === 401) return { unauthorized: true };
+  if (!res.ok) return { ok: false };
+  const data = await res.json();
+  return { ok: true, data };
+}
+
 async function loadData() {
   if (!API_BASE_URL.trim()) {
     sessionStorage.removeItem('wqt_token');
@@ -1160,23 +1175,19 @@ async function loadData() {
   }
   setLoadingState(true);
   try {
-    const [rRes, tRes] = await Promise.all([apiFetch('/readings'), apiFetch('/tap')]);
-    if (rRes.status === 401 || tRes.status === 401) {
-      sessionStorage.removeItem('wqt_token');
-      document.getElementById('gate').style.display = 'flex';
-      document.getElementById('app').style.display = 'none';
-      showToast('Session expired — sign in again');
+    const readingsResult = await loadJsonResource('/readings');
+    if (readingsResult.unauthorized) {
+      showSessionExpired();
       return;
     }
-    if (!rRes.ok || !tRes.ok) {
+    if (!readingsResult.ok || !Array.isArray(readingsResult.data)) {
       showToast('Could not load readings');
       return;
     }
-    readings = await rRes.json();
-    tapReadings = await tRes.json();
-    await loadProfileSettings();
+    readings = readingsResult.data;
     readings.sort((a, b) => new Date(a.date) - new Date(b.date));
-    tapReadings.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    await Promise.all([loadTapReadings(), loadProfileSettings()]);
   } catch {
     showToast('Could not load readings');
   } finally {
@@ -1185,22 +1196,40 @@ async function loadData() {
   }
 }
 
-async function loadProfileSettings() {
+async function loadTapReadings() {
   try {
-    const pRes = await apiFetch('/profile');
-    if (pRes.status === 401) {
-      sessionStorage.removeItem('wqt_token');
-      document.getElementById('gate').style.display = 'flex';
-      document.getElementById('app').style.display = 'none';
-      showToast('Session expired — sign in again');
+    const tapResult = await loadJsonResource('/tap');
+    if (tapResult.unauthorized) {
+      showSessionExpired();
       return false;
     }
-    if (!pRes.ok) {
+    if (!tapResult.ok || !Array.isArray(tapResult.data)) {
+      tapReadings = [];
+      showToast('Could not load tap tests');
+      return false;
+    }
+    tapReadings = tapResult.data;
+    tapReadings.sort((a, b) => new Date(a.date) - new Date(b.date));
+    return true;
+  } catch {
+    tapReadings = [];
+    showToast('Could not load tap tests');
+    return false;
+  }
+}
+
+async function loadProfileSettings() {
+  try {
+    const profileResult = await loadJsonResource('/profile');
+    if (profileResult.unauthorized) {
+      showSessionExpired();
+      return false;
+    }
+    if (!profileResult.ok) {
       showToast('Could not load profile settings');
       return false;
     }
-    const loadedProfile = await pRes.json().catch(() => null);
-    profile = normalizeProfile(loadedProfile || {});
+    profile = normalizeProfile(profileResult.data || {});
     applyProfileToUI();
     setTapFeatureEnabled(profile.settings.trackTapWater !== false, false);
     return true;
