@@ -15,7 +15,7 @@ const JWT_EXPIRY_SEC = Number.parseInt(process.env.JWT_EXPIRY_SEC || '86400', 10
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': 'https://aquarium.vibeai.software',
   'Access-Control-Allow-Headers': 'Content-Type,Authorization,x-api-key',
-  'Access-Control-Allow-Methods': 'GET,POST,DELETE,OPTIONS',
+  'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
 };
 
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}), {
@@ -131,6 +131,61 @@ function validateTapItem(o) {
   return { type: 'tap', id, date, no3, note };
 }
 
+const DEFAULT_PROFILE = {
+  userName: 'Aquarist',
+  aquariumName: 'Fluval Flex 2.0',
+  aquariumSize: 57,
+  aquariumUnits: 'litres',
+  settings: { trackTapWater: true },
+  safeZones: {
+    ph: { min: 6.5, max: 7.0 },
+    nh3: { min: 0, max: 0.25 },
+    no2: { min: 0, max: 0.25 },
+    no3: { min: 0, max: 20 },
+  },
+};
+
+function sanitizeRange(raw, fallback, minCap, maxCap) {
+  let min = Number.isFinite(Number(raw?.min)) ? Number(raw.min) : fallback.min;
+  let max = Number.isFinite(Number(raw?.max)) ? Number(raw.max) : fallback.max;
+  min = Math.max(minCap, Math.min(maxCap, min));
+  max = Math.max(minCap, Math.min(maxCap, max));
+  if (min > max) [min, max] = [max, min];
+  return { min, max };
+}
+
+function normalizeProfile(raw = {}) {
+  return {
+    userName: typeof raw.userName === 'string' && raw.userName.trim() ? raw.userName.trim() : DEFAULT_PROFILE.userName,
+    aquariumName: typeof raw.aquariumName === 'string' && raw.aquariumName.trim() ? raw.aquariumName.trim() : DEFAULT_PROFILE.aquariumName,
+    aquariumSize: Number.isFinite(Number(raw.aquariumSize)) ? Number(raw.aquariumSize) : DEFAULT_PROFILE.aquariumSize,
+    aquariumUnits: raw.aquariumUnits === 'gallons' ? 'gallons' : 'litres',
+    settings: {
+      trackTapWater: typeof raw.settings?.trackTapWater === 'boolean' ? raw.settings.trackTapWater : DEFAULT_PROFILE.settings.trackTapWater,
+    },
+    safeZones: {
+      ph: sanitizeRange(raw.safeZones?.ph, DEFAULT_PROFILE.safeZones.ph, 0, 14),
+      nh3: sanitizeRange(raw.safeZones?.nh3, DEFAULT_PROFILE.safeZones.nh3, 0, 500),
+      no2: sanitizeRange(raw.safeZones?.no2, DEFAULT_PROFILE.safeZones.no2, 0, 500),
+      no3: sanitizeRange(raw.safeZones?.no3, DEFAULT_PROFILE.safeZones.no3, 0, 500),
+    },
+  };
+}
+
+function profileToItem(profile) {
+  return {
+    type: 'profile',
+    id: 'default',
+    ...normalizeProfile(profile),
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+function itemToProfile(item) {
+  if (!item || typeof item !== 'object') return normalizeProfile();
+  return normalizeProfile(item);
+}
+
 export async function handler(event) {
   const method = event.httpMethod;
   const resource = event.resource || '';
@@ -224,6 +279,27 @@ export async function handler(event) {
         }),
       );
       return json(204, '');
+    }
+
+    if (resource === '/profile' && method === 'GET') {
+      const out = await ddb.send(
+        new QueryCommand({
+          TableName: TABLE_NAME,
+          KeyConditionExpression: '#t = :profileType',
+          ExpressionAttributeNames: { '#t': 'type' },
+          ExpressionAttributeValues: { ':profileType': 'profile' },
+        }),
+      );
+      const found = (out.Items || []).find((x) => x.id === 'default') || (out.Items || [])[0];
+      return json(200, itemToProfile(found));
+    }
+
+    if (resource === '/profile' && method === 'PUT') {
+      const body = parseBody(event);
+      if (!body) return json(400, { error: 'Invalid JSON' });
+      const item = profileToItem(body);
+      await ddb.send(new PutCommand({ TableName: TABLE_NAME, Item: item }));
+      return json(200, itemToProfile(item));
     }
 
     return json(404, { error: 'Not found' });

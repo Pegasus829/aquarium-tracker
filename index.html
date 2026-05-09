@@ -488,7 +488,6 @@ body.profile-open { overflow: hidden; }
 const API_BASE_URL = 'https://gnewkvhgwd.execute-api.eu-west-1.amazonaws.com/prod';
 // Usage plan requires this header on protected routes (login route does not).
 const API_KEY = '8lpMzm6DCL1dgipDrSaJs4LGozq0X64a3QGwMgfU';
-const PROFILE_STORAGE_KEY = 'wqt_profile';
 
 function defaultProfile() {
   return {
@@ -496,6 +495,7 @@ function defaultProfile() {
     aquariumName: 'Fluval Flex 2.0',
     aquariumSize: 57,
     aquariumUnits: 'litres',
+    settings: { trackTapWater: true },
     safeZones: {
       ph: { min: 6.5, max: 7.0 },
       nh3: { min: 0, max: 0.25 },
@@ -516,30 +516,44 @@ function sanitizeRange(raw, fallback, minCap, maxCap) {
   return { min, max };
 }
 
-function loadProfile() {
+function normalizeProfile(raw = {}) {
   const defaults = defaultProfile();
-  try {
-    const raw = JSON.parse(localStorage.getItem(PROFILE_STORAGE_KEY) || 'null');
-    if (!raw || typeof raw !== 'object') return defaults;
-    return {
-      userName: typeof raw.userName === 'string' && raw.userName.trim() ? raw.userName.trim() : defaults.userName,
-      aquariumName: typeof raw.aquariumName === 'string' && raw.aquariumName.trim() ? raw.aquariumName.trim() : defaults.aquariumName,
-      aquariumSize: Number.isFinite(Number(raw.aquariumSize)) ? Number(raw.aquariumSize) : defaults.aquariumSize,
-      aquariumUnits: raw.aquariumUnits === 'gallons' ? 'gallons' : 'litres',
-      safeZones: {
-        ph: sanitizeRange(raw.safeZones?.ph, defaults.safeZones.ph, 0, 14),
-        nh3: sanitizeRange(raw.safeZones?.nh3, defaults.safeZones.nh3, 0, 500),
-        no2: sanitizeRange(raw.safeZones?.no2, defaults.safeZones.no2, 0, 500),
-        no3: sanitizeRange(raw.safeZones?.no3, defaults.safeZones.no3, 0, 500),
-      },
-    };
-  } catch {
-    return defaults;
-  }
+  return {
+    userName: typeof raw.userName === 'string' && raw.userName.trim() ? raw.userName.trim() : defaults.userName,
+    aquariumName: typeof raw.aquariumName === 'string' && raw.aquariumName.trim() ? raw.aquariumName.trim() : defaults.aquariumName,
+    aquariumSize: Number.isFinite(Number(raw.aquariumSize)) ? Number(raw.aquariumSize) : defaults.aquariumSize,
+    aquariumUnits: raw.aquariumUnits === 'gallons' ? 'gallons' : 'litres',
+    settings: {
+      trackTapWater: typeof raw.settings?.trackTapWater === 'boolean' ? raw.settings.trackTapWater : defaults.settings.trackTapWater,
+    },
+    safeZones: {
+      ph: sanitizeRange(raw.safeZones?.ph, defaults.safeZones.ph, 0, 14),
+      nh3: sanitizeRange(raw.safeZones?.nh3, defaults.safeZones.nh3, 0, 500),
+      no2: sanitizeRange(raw.safeZones?.no2, defaults.safeZones.no2, 0, 500),
+      no3: sanitizeRange(raw.safeZones?.no3, defaults.safeZones.no3, 0, 500),
+    },
+  };
 }
 
-function saveProfileState() {
-  localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile));
+async function saveProfileToApi(silent = false) {
+  try {
+    const res = await apiFetch('/profile', {
+      method: 'PUT',
+      body: JSON.stringify(profile),
+    });
+    if (!res.ok) {
+      if (!silent) showToast('Could not save profile');
+      return false;
+    }
+    const saved = await res.json().catch(() => null);
+    if (saved && typeof saved === 'object') {
+      profile = normalizeProfile(saved);
+    }
+    return true;
+  } catch {
+    if (!silent) showToast('Could not save profile');
+    return false;
+  }
 }
 
 function formatRangeValue(value, decimals = 2) {
@@ -639,7 +653,7 @@ function onProfileBackdropClick(event) {
   if (event.target.id === 'profilePage') closeProfilePage();
 }
 
-function saveProfile() {
+async function saveProfile() {
   const nextProfile = {
     userName: document.getElementById('profileUserName').value.trim() || profile.userName,
     aquariumName: document.getElementById('profileAquariumName').value.trim() || profile.aquariumName,
@@ -658,6 +672,9 @@ function saveProfile() {
     aquariumName: nextProfile.aquariumName,
     aquariumSize: Number.isFinite(nextProfile.aquariumSize) ? nextProfile.aquariumSize : defaults.aquariumSize,
     aquariumUnits: nextProfile.aquariumUnits,
+    settings: {
+      trackTapWater: profile.settings?.trackTapWater !== false,
+    },
     safeZones: {
       ph: sanitizeRange(nextProfile.safeZones.ph, defaults.safeZones.ph, 0, 14),
       nh3: sanitizeRange(nextProfile.safeZones.nh3, defaults.safeZones.nh3, 0, 500),
@@ -666,8 +683,10 @@ function saveProfile() {
     },
   };
 
-  saveProfileState();
+  const saved = await saveProfileToApi();
+  if (!saved) return;
   applyProfileToUI();
+  setTapFeatureEnabled(profile.settings.trackTapWater !== false, false);
   render();
   closeProfilePage();
   showToast('Profile updated ✓');
@@ -768,8 +787,8 @@ async function loadData() {
   }
   setLoadingState(true);
   try {
-    const [rRes, tRes] = await Promise.all([apiFetch('/readings'), apiFetch('/tap')]);
-    if (rRes.status === 401 || tRes.status === 401) {
+    const [rRes, tRes, pRes] = await Promise.all([apiFetch('/readings'), apiFetch('/tap'), apiFetch('/profile')]);
+    if (rRes.status === 401 || tRes.status === 401 || pRes.status === 401) {
       sessionStorage.removeItem('wqt_token');
       document.getElementById('gate').style.display = 'flex';
       document.getElementById('app').style.display = 'none';
@@ -782,6 +801,14 @@ async function loadData() {
     }
     readings = await rRes.json();
     tapReadings = await tRes.json();
+    if (pRes.ok) {
+      const loadedProfile = await pRes.json().catch(() => null);
+      profile = normalizeProfile(loadedProfile || {});
+      applyProfileToUI();
+      setTapFeatureEnabled(profile.settings.trackTapWater !== false, false);
+    } else {
+      showToast('Could not load profile settings');
+    }
     readings.sort((a, b) => new Date(a.date) - new Date(b.date));
     tapReadings.sort((a, b) => new Date(a.date) - new Date(b.date));
   } catch {
@@ -834,7 +861,7 @@ async function unlock() {
   }
 }
 
-var profile = loadProfile();
+var profile = defaultProfile();
 var readings = [];
 var tapReadings = [];
 var tapFeatureEnabled = true;
@@ -860,6 +887,8 @@ document.getElementById('t-date').value = nowLocal();
 
 function setTapFeatureEnabled(enabled, persist = true) {
   tapFeatureEnabled = enabled;
+  if (!profile.settings) profile.settings = {};
+  profile.settings.trackTapWater = enabled;
   const tapHeader = document.getElementById('tapSectionHeader');
   const panel = document.getElementById('tapEntryPanel');
   const legend = document.getElementById('tapLegendItem');
@@ -874,14 +903,12 @@ function setTapFeatureEnabled(enabled, persist = true) {
   if (tapStatusCards) tapStatusCards.style.display = enabled ? '' : 'none';
   if (tapLogWrap) tapLogWrap.style.display = enabled ? '' : 'none';
   if (toggle && toggle.checked !== enabled) toggle.checked = enabled;
-  if (persist) localStorage.setItem('wqt_tap_feature_enabled', enabled ? 'true' : 'false');
+  if (persist) saveProfileToApi(true);
   renderCharts();
 }
 
 function initTapFeatureToggle() {
-  const saved = localStorage.getItem('wqt_tap_feature_enabled');
-  const enabled = saved === null ? true : saved === 'true';
-  setTapFeatureEnabled(enabled, false);
+  setTapFeatureEnabled(profile.settings?.trackTapWater !== false, false);
 }
 
 // ── Status helpers ──
