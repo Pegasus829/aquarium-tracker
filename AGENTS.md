@@ -1,6 +1,8 @@
 ## Cursor Cloud specific instructions
 
-This is a zero-dependency static web application (single `index.html` file) — a Water Quality Tracker for aquarium monitoring.
+This repo contains a Water Quality Tracker with:
+- a static frontend (`index.html`, embedded CSS/JS)
+- a serverless backend (`lambda/`) and IAM/deploy policy artifacts (`deploy/`)
 
 ### Running the app
 
@@ -10,20 +12,27 @@ Serve with any static HTTP server from the repo root:
 python3 -m http.server 8000
 ```
 
-Then open http://localhost:8000/ in a browser. The Web Crypto API (used for password hashing) requires an HTTP origin (not `file://`), so always use a local server.
+Then open http://localhost:8000/ in a browser.
+Use HTTP (not `file://`) so browser APIs and API requests work correctly.
 
 ### Authentication
 
-The app has a client-side password gate. Default password: `aquarium2025`
+The app shows a client-side password gate UI, but password verification is server-side:
+- login call: `POST /auth/login` on `API_BASE_URL`
+- JWT is stored in `sessionStorage` (`wqt_token`) and sent as `Authorization: Bearer ...`
+- protected API calls include `x-api-key` from `API_KEY` in `index.html`
 
 ### Architecture
 
-- **No build step, no package manager, no dependencies.** The entire app is a single `index.html` with embedded CSS and JS.
-- Data is stored in-memory as JS arrays embedded in the HTML. The "Save" feature downloads an updated copy of the HTML file with current data.
+- **Frontend:** no build step; UI logic lives in a single `index.html`.
+- **Data flow:** frontend loads and mutates readings via backend endpoints (`/readings`, `/tap`) using `fetch`.
+- `readings` and `tapReadings` arrays are runtime client caches, hydrated from the API.
+- **Backend code/artifacts:** `lambda/index.mjs`, `lambda/package.json`, and `deploy/*.json`.
 - No automated tests or linting infrastructure exist in this repo.
 
 ### Key notes
 
-- There is no backend — all logic is client-side vanilla JavaScript.
-- Changes to the app are made by editing `index.html` directly.
-- The site is deployed to GitHub Pages via the `CNAME` file (`aquarium.vibeai.software`).
+- Frontend changes are primarily made by editing `index.html`.
+- The app is no longer backend-free; it depends on the configured AWS API backend at runtime.
+- If `API_BASE_URL` is missing/unreachable, data/auth operations fail and the app shows error toasts/gate state.
+- The static site is deployed to GitHub Pages via the `CNAME` file (`aquarium.vibeai.software`).
