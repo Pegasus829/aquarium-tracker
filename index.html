@@ -38,13 +38,13 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
 .section-label { max-width: 860px; margin: 0 auto 10px; display: flex; align-items: center; gap: 10px; }
 .section-label-text { font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
 .section-label-line { flex: 1; height: 1px; background: var(--border); }
+.tap-section-controls { flex: 1; display: flex; align-items: center; gap: 10px; min-width: 0; }
+.tap-section-toggle { display: flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); user-select: none; cursor: pointer; white-space: nowrap; }
+.tap-section-toggle input { accent-color: var(--tap); width: 14px; height: 14px; }
 
 .form-card { max-width: 860px; margin: 0 auto 10px; background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 18px; }
 .form-card.tap-card { border-color: rgba(34,211,238,0.2); margin-bottom: 28px; }
 .form-title { font-family: var(--mono); font-size: 11px; font-weight: 600; color: var(--white); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 14px; }
-.toggle-card { max-width: 860px; margin: 0 auto 14px; background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px; }
-.toggle-control { display: flex; align-items: center; gap: 10px; font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); user-select: none; cursor: pointer; }
-.toggle-control input { accent-color: var(--tap); width: 16px; height: 16px; }
 .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px,1fr)); gap: 10px; margin-bottom: 12px; }
 .form-grid-tap { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
 .field label { display: block; font-family: var(--mono); font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 5px; }
@@ -207,19 +207,19 @@ canvas.chart { width: 100%; height: 110px; display: block; }
   </div>
 </div>
 
-<div class="toggle-card">
-  <label class="toggle-control">
-    <input type="checkbox" id="tap-feature-toggle" checked onchange="setTapFeatureEnabled(this.checked)">
-    <span>Enable Tap Water Entry Panel + Chart Series</span>
-  </label>
+<div class="section-label">
+  <div class="section-label-text">🚰 Filtered Tap Water</div>
+  <div class="tap-section-controls">
+    <div class="section-label-line"></div>
+    <label class="tap-section-toggle">
+      <input type="checkbox" id="tap-feature-toggle" checked onchange="setTapFeatureEnabled(this.checked)">
+      <span>Enabled</span>
+    </label>
+  </div>
 </div>
 
 <!-- Tap form -->
 <div id="tapEntryPanel">
-<div class="section-label">
-  <div class="section-label-text">🚰 Filtered Tap Water</div>
-  <div class="section-label-line"></div>
-</div>
 <div class="form-card tap-card">
   <div class="form-title">+ Log Tap Water Test</div>
   <div class="form-grid-tap">
