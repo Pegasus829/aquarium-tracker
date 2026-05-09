@@ -237,6 +237,11 @@ body.profile-open { overflow: hidden; }
   justify-content: space-between;
   margin-bottom: 12px;
 }
+.profile-header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
 .profile-title {
   font-family: var(--display);
   font-size: 18px;
@@ -305,11 +310,6 @@ body.profile-open { overflow: hidden; }
 @media (max-width: 560px) {
   .safe-zone-row { grid-template-columns: 1fr; }
 }
-.profile-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 16px;
-}
 .profile-save-btn {
   border: none;
   border-radius: 8px;
@@ -322,6 +322,10 @@ body.profile-open { overflow: hidden; }
   letter-spacing: 0.06em;
   text-transform: uppercase;
   cursor: pointer;
+}
+.profile-header-actions .profile-save-btn {
+  padding: 8px 12px;
+  font-size: 11px;
 }
 </style>
 </head>
@@ -475,7 +479,10 @@ body.profile-open { overflow: hidden; }
   <div class="profile-card">
     <div class="profile-header">
       <div class="profile-title">Profile</div>
-      <button class="profile-close-btn" onclick="closeProfilePage()">Close</button>
+      <div class="profile-header-actions">
+        <button class="profile-save-btn" onclick="saveProfile()">Save</button>
+        <button class="profile-close-btn" onclick="closeProfilePage()">Close</button>
+      </div>
     </div>
 
     <div class="profile-section-title">Aquarist</div>
@@ -528,9 +535,6 @@ body.profile-open { overflow: hidden; }
       </div>
     </div>
 
-    <div class="profile-actions">
-      <button class="profile-save-btn" onclick="saveProfile()">Save Profile</button>
-    </div>
   </div>
 </div>
 
