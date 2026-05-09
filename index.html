@@ -1160,8 +1160,8 @@ async function loadData() {
   }
   setLoadingState(true);
   try {
-    const [rRes, tRes, pRes] = await Promise.all([apiFetch('/readings'), apiFetch('/tap'), apiFetch('/profile')]);
-    if (rRes.status === 401 || tRes.status === 401 || pRes.status === 401) {
+    const [rRes, tRes] = await Promise.all([apiFetch('/readings'), apiFetch('/tap')]);
+    if (rRes.status === 401 || tRes.status === 401) {
       sessionStorage.removeItem('wqt_token');
       document.getElementById('gate').style.display = 'flex';
       document.getElementById('app').style.display = 'none';
@@ -1174,14 +1174,7 @@ async function loadData() {
     }
     readings = await rRes.json();
     tapReadings = await tRes.json();
-    if (pRes.ok) {
-      const loadedProfile = await pRes.json().catch(() => null);
-      profile = normalizeProfile(loadedProfile || {});
-      applyProfileToUI();
-      setTapFeatureEnabled(profile.settings.trackTapWater !== false, false);
-    } else {
-      showToast('Could not load profile settings');
-    }
+    await loadProfileSettings();
     readings.sort((a, b) => new Date(a.date) - new Date(b.date));
     tapReadings.sort((a, b) => new Date(a.date) - new Date(b.date));
   } catch {
@@ -1189,6 +1182,31 @@ async function loadData() {
   } finally {
     setLoadingState(false);
     if (document.getElementById('app').style.display !== 'none') render();
+  }
+}
+
+async function loadProfileSettings() {
+  try {
+    const pRes = await apiFetch('/profile');
+    if (pRes.status === 401) {
+      sessionStorage.removeItem('wqt_token');
+      document.getElementById('gate').style.display = 'flex';
+      document.getElementById('app').style.display = 'none';
+      showToast('Session expired — sign in again');
+      return false;
+    }
+    if (!pRes.ok) {
+      showToast('Could not load profile settings');
+      return false;
+    }
+    const loadedProfile = await pRes.json().catch(() => null);
+    profile = normalizeProfile(loadedProfile || {});
+    applyProfileToUI();
+    setTapFeatureEnabled(profile.settings.trackTapWater !== false, false);
+    return true;
+  } catch {
+    showToast('Could not load profile settings');
+    return false;
   }
 }
 
