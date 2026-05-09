@@ -272,7 +272,7 @@ canvas.chart { width: 100%; height: 110px; display: block; }
     <div class="chart-header">
       <div class="chart-dot" style="background:var(--no3)"></div>
       <div class="chart-name">Tank Nitrate vs Filtered Tap</div>
-      <div class="chart-range">Tank target: &lt;20 ppm</div>
+      <div class="chart-range">Safe: 0-20 ppm · Warning: 20-40 ppm</div>
       <div class="chart-legend">
         <div class="legend-item"><div class="legend-dot" style="background:var(--no3)"></div>Tank</div>
         <div class="legend-item" id="tapLegendItem"><div class="legend-dot" style="background:var(--tap)"></div>Filtered Tap</div>
@@ -504,7 +504,7 @@ function updateStatus() {
 }
 
 // ── Evenly-spaced chart ──
-function drawChart(canvasId, ndId, pts, color, yMin, yMax, safeMin, safeMax, secondary, secColor) {
+function drawChart(canvasId, ndId, pts, color, yMin, yMax, safeMin, safeMax, secondary, secColor, warnMin, warnMax) {
   const canvas=document.getElementById(canvasId);
   const nd=document.getElementById(ndId);
   // pts = [{t, v}] sorted by t
@@ -542,6 +542,14 @@ function drawChart(canvasId, ndId, pts, color, yMin, yMax, safeMin, safeMax, sec
     return pad.l+(idx/(allT.length-1))*pw;
   };
   const yPos=v=>pad.t+ph-((v-rMin)/(rMax-rMin||1))*ph;
+
+  // Warning zone
+  if(warnMin!==undefined&&warnMax!==undefined){
+    const y1=yPos(Math.min(warnMax,rMax));
+    const y2=yPos(Math.max(warnMin,rMin));
+    ctx.fillStyle='rgba(245,158,11,0.16)';
+    ctx.fillRect(pad.l,y1,pw,y2-y1);
+  }
 
   // Safe zone
   if(safeMin!==undefined){
@@ -627,7 +635,7 @@ function renderCharts() {
   drawChart('chart-ph', 'nd-ph', toPts(readings,'ph'), '#a78bfa', 6.0, 7.5, 6.5, 7.2);
   drawChart('chart-nh3','nd-nh3',toPts(readings,'nh3'),'#f87171', 0, 1, 0, 0.25);
   drawChart('chart-no2','nd-no2',toPts(readings,'no2'),'#fb923c', 0, 1, 0, 0.25);
-  drawChart('chart-no3','nd-no3',toPts(readings,'no3'),'#facc15', 0,100, 0, 20, tapNo3Pts,'#22d3ee');
+  drawChart('chart-no3','nd-no3',toPts(readings,'no3'),'#facc15', 0,100, 0, 20, tapNo3Pts,'#22d3ee', 20, 40);
 }
 
 // ── Render tank log ──
