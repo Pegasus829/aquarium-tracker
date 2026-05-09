@@ -268,6 +268,43 @@ body.profile-open { overflow: hidden; }
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 10px;
 }
+.safe-zone-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.safe-zone-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 180px) 1fr;
+  gap: 10px;
+  align-items: end;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: rgba(255,255,255,0.015);
+}
+.safe-zone-category {
+  font-family: var(--display);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--white);
+  letter-spacing: 0.02em;
+}
+.safe-zone-inputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.safe-zone-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+@media (max-width: 560px) {
+  .safe-zone-row { grid-template-columns: 1fr; }
+}
 .profile-actions {
   display: flex;
   justify-content: flex-end;
@@ -460,18 +497,35 @@ body.profile-open { overflow: hidden; }
     </div>
 
     <div class="profile-section-title">Chart Safe Zones</div>
-    <div class="profile-grid">
-      <div class="field"><label>pH Min</label><input type="number" id="profileSafePhMin" step="0.1" min="0" max="14"></div>
-      <div class="field"><label>pH Max</label><input type="number" id="profileSafePhMax" step="0.1" min="0" max="14"></div>
-
-      <div class="field"><label>Ammonia Min (ppm)</label><input type="number" id="profileSafeNh3Min" step="0.01" min="0"></div>
-      <div class="field"><label>Ammonia Max (ppm)</label><input type="number" id="profileSafeNh3Max" step="0.01" min="0"></div>
-
-      <div class="field"><label>Nitrite Min (ppm)</label><input type="number" id="profileSafeNo2Min" step="0.01" min="0"></div>
-      <div class="field"><label>Nitrite Max (ppm)</label><input type="number" id="profileSafeNo2Max" step="0.01" min="0"></div>
-
-      <div class="field"><label>Nitrate Min (ppm)</label><input type="number" id="profileSafeNo3Min" step="1" min="0"></div>
-      <div class="field"><label>Nitrate Max (ppm)</label><input type="number" id="profileSafeNo3Max" step="1" min="0"></div>
+    <div class="safe-zone-list">
+      <div class="safe-zone-row">
+        <div class="safe-zone-category">pH</div>
+        <div class="safe-zone-inputs">
+          <div class="field"><label class="safe-zone-label">Min</label><input type="number" id="profileSafePhMin" step="0.1" min="0" max="14"></div>
+          <div class="field"><label class="safe-zone-label">Max</label><input type="number" id="profileSafePhMax" step="0.1" min="0" max="14"></div>
+        </div>
+      </div>
+      <div class="safe-zone-row">
+        <div class="safe-zone-category">Ammonia (ppm)</div>
+        <div class="safe-zone-inputs">
+          <div class="field"><label class="safe-zone-label">Min</label><input type="number" id="profileSafeNh3Min" step="0.01" min="0"></div>
+          <div class="field"><label class="safe-zone-label">Max</label><input type="number" id="profileSafeNh3Max" step="0.01" min="0"></div>
+        </div>
+      </div>
+      <div class="safe-zone-row">
+        <div class="safe-zone-category">Nitrite (ppm)</div>
+        <div class="safe-zone-inputs">
+          <div class="field"><label class="safe-zone-label">Min</label><input type="number" id="profileSafeNo2Min" step="0.01" min="0"></div>
+          <div class="field"><label class="safe-zone-label">Max</label><input type="number" id="profileSafeNo2Max" step="0.01" min="0"></div>
+        </div>
+      </div>
+      <div class="safe-zone-row">
+        <div class="safe-zone-category">Nitrate (ppm)</div>
+        <div class="safe-zone-inputs">
+          <div class="field"><label class="safe-zone-label">Min</label><input type="number" id="profileSafeNo3Min" step="1" min="0"></div>
+          <div class="field"><label class="safe-zone-label">Max</label><input type="number" id="profileSafeNo3Max" step="1" min="0"></div>
+        </div>
+      </div>
     </div>
 
     <div class="profile-actions">
