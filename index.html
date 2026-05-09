@@ -42,6 +42,9 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
 .form-card { max-width: 860px; margin: 0 auto 10px; background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 18px; }
 .form-card.tap-card { border-color: rgba(34,211,238,0.2); margin-bottom: 28px; }
 .form-title { font-family: var(--mono); font-size: 11px; font-weight: 600; color: var(--white); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 14px; }
+.toggle-card { max-width: 860px; margin: 0 auto 14px; background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px; }
+.toggle-control { display: flex; align-items: center; gap: 10px; font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); user-select: none; cursor: pointer; }
+.toggle-control input { accent-color: var(--tap); width: 16px; height: 16px; }
 .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px,1fr)); gap: 10px; margin-bottom: 12px; }
 .form-grid-tap { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
 .field label { display: block; font-family: var(--mono); font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 5px; }
@@ -204,7 +207,15 @@ canvas.chart { width: 100%; height: 110px; display: block; }
   </div>
 </div>
 
+<div class="toggle-card">
+  <label class="toggle-control">
+    <input type="checkbox" id="tap-feature-toggle" checked onchange="setTapFeatureEnabled(this.checked)">
+    <span>Enable Tap Water Entry Panel + Chart Series</span>
+  </label>
+</div>
+
 <!-- Tap form -->
+<div id="tapEntryPanel">
 <div class="section-label">
   <div class="section-label-text">🚰 Filtered Tap Water</div>
   <div class="section-label-line"></div>
@@ -219,6 +230,7 @@ canvas.chart { width: 100%; height: 110px; display: block; }
     <div class="field date-field"><label style="color:var(--muted)">Date &amp; Time</label><input type="datetime-local" id="t-date"></div>
     <button class="btn-add tap-btn" onclick="addTapReading()">Add Tap Test</button>
   </div>
+</div>
 </div>
 
 <div class="status-bar" id="statusBar">
@@ -260,7 +272,7 @@ canvas.chart { width: 100%; height: 110px; display: block; }
       <div class="chart-range">Tank target: &lt;20 ppm</div>
       <div class="chart-legend">
         <div class="legend-item"><div class="legend-dot" style="background:var(--no3)"></div>Tank</div>
-        <div class="legend-item"><div class="legend-dot" style="background:var(--tap)"></div>Filtered Tap</div>
+        <div class="legend-item" id="tapLegendItem"><div class="legend-dot" style="background:var(--tap)"></div>Filtered Tap</div>
       </div>
     </div>
     <div class="chart-canvas-wrap"><canvas class="chart" id="chart-no3"></canvas><div class="chart-no-data" id="nd-no3">No readings yet</div></div>
@@ -414,6 +426,7 @@ async function unlock() {
 
 var readings = [];
 var tapReadings = [];
+var tapFeatureEnabled = true;
 
 function escapeHtml(s) {
   return String(s)
@@ -431,6 +444,24 @@ function nowLocal() {
 }
 document.getElementById('f-date').value = nowLocal();
 document.getElementById('t-date').value = nowLocal();
+
+function setTapFeatureEnabled(enabled, persist = true) {
+  tapFeatureEnabled = enabled;
+  const panel = document.getElementById('tapEntryPanel');
+  const legend = document.getElementById('tapLegendItem');
+  const toggle = document.getElementById('tap-feature-toggle');
+  if (panel) panel.style.display = enabled ? '' : 'none';
+  if (legend) legend.style.display = enabled ? '' : 'none';
+  if (toggle && toggle.checked !== enabled) toggle.checked = enabled;
+  if (persist) localStorage.setItem('wqt_tap_feature_enabled', enabled ? 'true' : 'false');
+  renderCharts();
+}
+
+function initTapFeatureToggle() {
+  const saved = localStorage.getItem('wqt_tap_feature_enabled');
+  const enabled = saved === null ? true : saved === 'true';
+  setTapFeatureEnabled(enabled, false);
+}
 
 // ── Status helpers ──
 function phStatus(v)  { if(v===null)return['—','c-muted','']; if(v>=6.5&&v<=7.2)return[v.toFixed(1),'c-safe','GOOD']; if(v>=6.2&&v<=7.5)return[v.toFixed(1),'c-warn','WATCH']; return[v.toFixed(1),'c-danger','ACT']; }
@@ -588,11 +619,12 @@ function drawChart(canvasId, ndId, pts, color, yMin, yMax, safeMin, safeMax, sec
 // ── Build chart data ──
 function renderCharts() {
   const toPts=(arr,key)=>arr.filter(r=>r[key]!==null&&r[key]!==undefined).map(r=>({t:new Date(r.date).getTime(),v:r[key]}));
+  const tapNo3Pts = tapFeatureEnabled ? toPts(tapReadings,'no3') : [];
 
   drawChart('chart-ph', 'nd-ph', toPts(readings,'ph'), '#a78bfa', 6.0, 7.5, 6.5, 7.2);
   drawChart('chart-nh3','nd-nh3',toPts(readings,'nh3'),'#f87171', 0, 1, 0, 0.25);
   drawChart('chart-no2','nd-no2',toPts(readings,'no2'),'#fb923c', 0, 1, 0, 0.25);
-  drawChart('chart-no3','nd-no3',toPts(readings,'no3'),'#facc15', 0,100, 0, 20, toPts(tapReadings,'no3'),'#22d3ee');
+  drawChart('chart-no3','nd-no3',toPts(readings,'no3'),'#facc15', 0,100, 0, 20, tapNo3Pts,'#22d3ee');
 }
 
 // ── Render tank log ──
@@ -721,6 +753,7 @@ if (getValidToken() && API_BASE_URL.trim()) {
   document.getElementById('app').style.display = 'block';
   loadData();
 }
+initTapFeatureToggle();
 window.addEventListener('resize', renderCharts);
 </script>
 </body>
