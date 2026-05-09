@@ -512,6 +512,7 @@ var tapReadings = [];
 var tapFeatureEnabled = true;
 var isDataLoading = false;
 var no3Chart = null;
+var metricCharts = {};
 
 function escapeHtml(s) {
   return String(s)
@@ -717,6 +718,134 @@ function drawChart(canvasId, ndId, pts, color, yMin, yMax, safeMin, safeMax, sec
   });
 }
 
+function renderMetricChart(chartKey, canvasId, ndId, pts, color, yMin, yMax, safeMin, safeMax) {
+  if (typeof Chart === 'undefined') {
+    drawChart(canvasId, ndId, pts, color, yMin, yMax, safeMin, safeMax);
+    return;
+  }
+
+  const canvas = document.getElementById(canvasId);
+  const nd = document.getElementById(ndId);
+  if (isDataLoading) {
+    canvas.style.display = 'none';
+    nd.style.display = 'flex';
+    return;
+  }
+
+  if (pts.length === 0) {
+    if (metricCharts[chartKey]) {
+      metricCharts[chartKey].destroy();
+      metricCharts[chartKey] = null;
+    }
+    canvas.style.display = 'none';
+    nd.style.display = 'flex';
+    return;
+  }
+
+  canvas.style.display = 'block';
+  nd.style.display = 'none';
+
+  const labels = pts.map((p) => String(p.t));
+  const data = pts.map((p) => p.v);
+  const rangeMin = Math.min(yMin, Math.min(...data));
+  const rangeMax = Math.max(yMax, Math.max(...data)) || 1;
+
+  const safeBandPlugin = {
+    id: `${chartKey}-safe-band`,
+    beforeDatasetsDraw(chart) {
+      if (safeMin === undefined || safeMax === undefined) return;
+      const { ctx, chartArea, scales } = chart;
+      if (!chartArea || !scales?.y) return;
+      const yScale = scales.y;
+      const bandTop = Math.min(safeMax, yScale.max);
+      const bandBottom = Math.max(safeMin, yScale.min);
+      if (bandTop > bandBottom) return;
+      const yTop = yScale.getPixelForValue(bandTop);
+      const yBottom = yScale.getPixelForValue(bandBottom);
+      ctx.save();
+      ctx.fillStyle = 'rgba(16,185,129,0.18)';
+      ctx.fillRect(chartArea.left, yTop, chartArea.right - chartArea.left, yBottom - yTop);
+      ctx.restore();
+    },
+  };
+
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          title(items) {
+            const ts = Number(items[0].label);
+            if (!Number.isFinite(ts)) return '';
+            return new Date(ts).toLocaleString('en-GB', {
+              day: '2-digit',
+              month: 'short',
+              year: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+            });
+          },
+        },
+      },
+    },
+    scales: {
+      x: {
+        type: 'category',
+        grid: { display: false },
+        ticks: {
+          color: 'rgba(255,255,255,0.25)',
+          autoSkip: true,
+          maxTicksLimit: 6,
+          callback(value) {
+            const ts = Number(this.getLabelForValue(value));
+            if (!Number.isFinite(ts)) return '';
+            const d = new Date(ts);
+            return `${d.getDate()}/${d.getMonth() + 1}`;
+          },
+        },
+      },
+      y: {
+        min: rangeMin,
+        max: rangeMax,
+        grid: { color: 'rgba(255,255,255,0.05)' },
+        ticks: { color: 'rgba(255,255,255,0.3)' },
+      },
+    },
+  };
+
+  const dataset = {
+    label: chartKey.toUpperCase(),
+    data,
+    borderColor: color,
+    backgroundColor: color + '33',
+    pointBackgroundColor: color,
+    pointBorderColor: '#0c0f14',
+    pointBorderWidth: 2,
+    pointRadius: 4,
+    tension: 0.25,
+    fill: true,
+  };
+
+  if (!metricCharts[chartKey]) {
+    metricCharts[chartKey] = new Chart(canvas.getContext('2d'), {
+      type: 'line',
+      data: { labels, datasets: [dataset] },
+      options: chartOptions,
+      plugins: [safeBandPlugin],
+    });
+    return;
+  }
+
+  metricCharts[chartKey].data.labels = labels;
+  metricCharts[chartKey].data.datasets = [dataset];
+  metricCharts[chartKey].options.scales.y.min = rangeMin;
+  metricCharts[chartKey].options.scales.y.max = rangeMax;
+  metricCharts[chartKey].update('none');
+}
+
 function renderNo3Chart(tankPts, tapPts) {
   if (typeof Chart === 'undefined') {
     drawChart('chart-no3', 'nd-no3', tankPts, '#facc15', 0, 100, 0, 20, tapPts, '#22d3ee', 20, 40);
@@ -875,12 +1004,16 @@ function renderNo3Chart(tankPts, tapPts) {
 // ── Build chart data ──
 function renderCharts() {
   const toPts=(arr,key)=>arr.filter(r=>r[key]!==null&&r[key]!==undefined).map(r=>({t:new Date(r.date).getTime(),v:r[key]}));
+  const phPts = toPts(readings,'ph');
+  const nh3Pts = toPts(readings,'nh3');
+  const no2Pts = toPts(readings,'no2');
+  const no3Pts = toPts(readings,'no3');
   const tapNo3Pts = tapFeatureEnabled ? toPts(tapReadings,'no3') : [];
 
-  drawChart('chart-ph', 'nd-ph', toPts(readings,'ph'), '#a78bfa', 6.0, 7.5, 6.5, 7.2);
-  drawChart('chart-nh3','nd-nh3',toPts(readings,'nh3'),'#f87171', 0, 1, 0, 0.25);
-  drawChart('chart-no2','nd-no2',toPts(readings,'no2'),'#fb923c', 0, 1, 0, 0.25);
-  renderNo3Chart(toPts(readings,'no3'), tapNo3Pts);
+  renderMetricChart('ph', 'chart-ph', 'nd-ph', phPts, '#a78bfa', 6.0, 7.5, 6.5, 7.2);
+  renderMetricChart('nh3','chart-nh3','nd-nh3',nh3Pts,'#f87171', 0, 1, 0, 0.25);
+  renderMetricChart('no2','chart-no2','nd-no2',no2Pts,'#fb923c', 0, 1, 0, 0.25);
+  renderNo3Chart(no3Pts, tapNo3Pts);
 }
 
 // ── Render tank log ──
