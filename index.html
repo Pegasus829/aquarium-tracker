@@ -214,7 +214,7 @@ canvas.chart { width: 100%; height: 110px; display: block; }
   </div>
 </div>
 
-<div class="section-label">
+<div class="section-label" id="tapSectionHeader">
   <div class="section-label-text">🚰 Filtered Tap Water</div>
   <div class="section-label-line"></div>
 </div>
@@ -452,10 +452,12 @@ document.getElementById('t-date').value = nowLocal();
 
 function setTapFeatureEnabled(enabled, persist = true) {
   tapFeatureEnabled = enabled;
+  const tapHeader = document.getElementById('tapSectionHeader');
   const panel = document.getElementById('tapEntryPanel');
   const legend = document.getElementById('tapLegendItem');
   const statusCards = document.getElementById('statusBar');
   const toggle = document.getElementById('tap-feature-toggle');
+  if (tapHeader) tapHeader.style.display = enabled ? '' : 'none';
   if (panel) panel.style.display = enabled ? '' : 'none';
   if (legend) legend.style.display = enabled ? '' : 'none';
   if (statusCards) statusCards.style.display = enabled ? '' : 'none';
