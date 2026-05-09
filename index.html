@@ -45,6 +45,9 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
 .form-card { max-width: 860px; margin: 0 auto 10px; background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 18px; }
 .form-card.tap-card { border-color: rgba(34,211,238,0.2); margin-bottom: 28px; }
 .form-title { font-family: var(--mono); font-size: 11px; font-weight: 600; color: var(--white); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 14px; }
+.toggle-card { max-width: 860px; margin: 0 auto 14px; background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px; }
+.toggle-control { display: flex; align-items: center; gap: 10px; font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); user-select: none; cursor: pointer; }
+.toggle-control input { accent-color: var(--tap); width: 16px; height: 16px; }
 .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px,1fr)); gap: 10px; margin-bottom: 12px; }
 .form-grid-tap { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
 .field label { display: block; font-family: var(--mono); font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 5px; }
