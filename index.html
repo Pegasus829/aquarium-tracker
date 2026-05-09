@@ -469,7 +469,7 @@ function updateStatus() {
   }
 }
 
-// ── Time-scaled chart ──
+// ── Evenly-spaced chart ──
 function drawChart(canvasId, ndId, pts, color, yMin, yMax, safeMin, safeMax, secondary, secColor) {
   const canvas=document.getElementById(canvasId);
   const nd=document.getElementById(ndId);
@@ -489,13 +489,12 @@ function drawChart(canvasId, ndId, pts, color, yMin, yMax, safeMin, safeMax, sec
   const pw=w-pad.l-pad.r;
   const ph=h-pad.t-pad.b;
 
-  // Time range from ALL points including secondary
-  let allT=[...valid.map(p=>p.t)];
+  // Build x-axis slots from chronological timestamps, but space slots evenly.
+  const allSeries = secondary && secondary.length > 0 ? [...valid, ...secondary] : valid;
+  const allT = Array.from(new Set(allSeries.map(p => p.t))).sort((a, b) => a - b);
+  const tIndex = new Map(allT.map((t, idx) => [t, idx]));
   let allV=[...valid.map(p=>p.v)];
-  if(secondary&&secondary.length>0){allT=[...allT,...secondary.map(p=>p.t)];allV=[...allV,...secondary.map(p=>p.v)];}
-  const tMin=Math.min(...allT);
-  const tMax=Math.max(...allT);
-  const tRange=tMax-tMin||1;
+  if(secondary&&secondary.length>0){allV=[...allV,...secondary.map(p=>p.v)];}
 
   // Value range
   const dMin=Math.min(...allV);
@@ -503,7 +502,11 @@ function drawChart(canvasId, ndId, pts, color, yMin, yMax, safeMin, safeMax, sec
   const rMin=Math.min(yMin,dMin);
   const rMax=Math.max(yMax,dMax)||1;
 
-  const xPos=t=>pad.l+(tRange===0?pw/2:((t-tMin)/tRange)*pw);
+  const xPos=t=>{
+    const idx=tIndex.get(t);
+    if(allT.length<=1||idx===undefined)return pad.l+pw/2;
+    return pad.l+(idx/(allT.length-1))*pw;
+  };
   const yPos=v=>pad.t+ph-((v-rMin)/(rMax-rMin||1))*ph;
 
   // Safe zone
@@ -566,18 +569,19 @@ function drawChart(canvasId, ndId, pts, color, yMin, yMax, safeMin, safeMax, sec
   const ySteps=[rMin,rMax];
   ySteps.forEach(v=>ctx.fillText(Number.isInteger(v)?v:v.toFixed(1),pad.l-4,yPos(v)+3));
 
-  // X axis date labels — one per unique date
+  // X axis date labels — sampled from evenly spaced x slots
   ctx.textAlign='center';ctx.fillStyle='rgba(255,255,255,0.25)';
   ctx.font=`9px var(--mono,'Courier New')`;
-  // deduplicate by date string
-  const seen=new Set();
-  valid.forEach(p=>{
-    const d=new Date(p.t);
+  const maxLabels=6;
+  const step=Math.max(1,Math.ceil(allT.length/maxLabels));
+  let lastLabel='';
+  allT.forEach((t,i)=>{
+    if(i!==allT.length-1&&i%step!==0)return;
+    const d=new Date(t);
     const key=`${d.getDate()}/${d.getMonth()+1}`;
-    if(!seen.has(key)){
-      seen.add(key);
-      ctx.fillText(key,xPos(p.t),h-5);
-    }
+    if(i!==allT.length-1&&key===lastLabel)return;
+    lastLabel=key;
+    ctx.fillText(key,xPos(t),h-5);
   });
 }
 
