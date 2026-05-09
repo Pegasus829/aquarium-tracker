@@ -57,6 +57,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
 .field input::placeholder { color: var(--muted); font-size: 12px; }
 .ph-label { color: var(--ph); } .nh3-label { color: var(--nh3); } .no2-label { color: var(--no2); } .no3-label { color: var(--no3); } .tap-label { color: var(--tap); }
 .form-row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+.form-row-right { justify-content: flex-end; }
 .date-field { flex: 1; min-width: 160px; }
 .date-field input { font-size: 12px; }
 .btn-add { background: var(--cta); color: #0b1b2f; border: none; border-radius: 8px; padding: 10px 20px; font-family: var(--display); font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; transition: opacity 0.15s; -webkit-tap-highlight-color: transparent; flex-shrink: 0; }
@@ -205,7 +206,7 @@ canvas.chart { width: 100%; height: 110px; display: block; }
     <div class="field"><label class="no2-label">Nitrite (ppm)</label><input type="number" id="f-no2" step="0.25" min="0" placeholder="0.0"></div>
     <div class="field"><label class="no3-label">Nitrate (ppm)</label><input type="number" id="f-no3" step="5" min="0" placeholder="0"></div>
   </div>
-  <div class="form-row">
+  <div class="form-row form-row-right">
     <button class="btn-add" onclick="addReading()">Add Reading</button>
   </div>
 </div>
