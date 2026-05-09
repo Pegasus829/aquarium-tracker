@@ -759,7 +759,7 @@ function renderMetricChart(chartKey, canvasId, ndId, pts, color, yMin, yMax, saf
       const drawBand = (min, max, fillColor) => {
         const bandTop = Math.min(max, yScale.max);
         const bandBottom = Math.max(min, yScale.min);
-        if (bandTop > bandBottom) return;
+        if (bandBottom > bandTop) return;
         const yTop = yScale.getPixelForValue(bandTop);
         const yBottom = yScale.getPixelForValue(bandBottom);
         ctx.save();
