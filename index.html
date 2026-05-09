@@ -11,21 +11,21 @@
   --card:    #1a1f2a;
   --border:  rgba(255,255,255,0.07);
   --text:    #c9d4e8;
-  --muted:   #8998b0;
+  --muted:   #9aabc4;
   --white:   #f0f4ff;
   --cta:     #93c5fd;
-  --ph:      #a78bfa;
-  --nh3:     #f87171;
+  --ph:      #c4b5fd;
+  --nh3:     #ff9b9b;
   --no2:     #fb923c;
   --no3:     #facc15;
   --tap:     #22d3ee;
   --tap-toggle: #0e7490;
-  --safe:    #10b981;
+  --safe:    #34d399;
   --warn:    #f59e0b;
-  --danger:  #f05252;
+  --danger:  #ffadad;
   --font:    -apple-system, 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif;
-  --mono:    'SF Mono', 'Fira Code', 'Courier New', monospace;
-  --display: -apple-system, 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif;
+  --mono:    -apple-system, 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif;
+  --display: -apple-system, 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; padding: 24px 16px 80px; }
@@ -1109,14 +1109,14 @@ function drawChart(canvasId, ndId, pts, color, yMin, yMax, safeMin, safeMax, sec
   if(secondary&&secondary.length>0)drawSeries(secondary,secColor);
 
   // Y axis labels
-  ctx.fillStyle='rgba(255,255,255,0.3)';
+  ctx.fillStyle='#9aabc4';
   ctx.font=`10px var(--mono,'Courier New')`;
   ctx.textAlign='right';
   const ySteps=[rMin,rMax];
   ySteps.forEach(v=>ctx.fillText(Number.isInteger(v)?v:v.toFixed(1),pad.l-4,yPos(v)+3));
 
   // X axis date labels — sampled from evenly spaced x slots
-  ctx.textAlign='center';ctx.fillStyle='rgba(255,255,255,0.25)';
+  ctx.textAlign='center';ctx.fillStyle='#9aabc4';
   ctx.font=`10px var(--mono,'Courier New')`;
   const maxLabels=6;
   const step=Math.max(1,Math.ceil(allT.length/maxLabels));
@@ -1216,7 +1216,7 @@ function renderMetricChart(chartKey, canvasId, ndId, pts, color, yMin, yMax, saf
         type: 'category',
         grid: { display: false },
         ticks: {
-          color: 'rgba(255,255,255,0.25)',
+          color: '#9aabc4',
           autoSkip: true,
           maxTicksLimit: 6,
           callback(value) {
@@ -1231,7 +1231,7 @@ function renderMetricChart(chartKey, canvasId, ndId, pts, color, yMin, yMax, saf
         min: rangeMin,
         max: rangeMax,
         grid: { color: 'rgba(255,255,255,0.05)' },
-        ticks: { color: 'rgba(255,255,255,0.3)' },
+        ticks: { color: '#9aabc4' },
       },
     },
   };
@@ -1385,7 +1385,7 @@ function renderNo3Chart(tankPts, tapPts, safeZone, warningZone) {
         type: 'category',
         grid: { display: false },
         ticks: {
-          color: 'rgba(255,255,255,0.25)',
+          color: '#9aabc4',
           autoSkip: true,
           maxTicksLimit: 6,
           callback(value) {
@@ -1400,7 +1400,7 @@ function renderNo3Chart(tankPts, tapPts, safeZone, warningZone) {
         min: yMin,
         max: yMax,
         grid: { color: 'rgba(255,255,255,0.05)' },
-        ticks: { color: 'rgba(255,255,255,0.3)' },
+        ticks: { color: '#9aabc4' },
       },
     },
   };
