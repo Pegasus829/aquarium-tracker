@@ -48,7 +48,16 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
   justify-content: center;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  overflow: hidden;
 }
+.profile-btn img,
+.avatar-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.profile-btn .avatar-emoji { line-height: 1; }
 .profile-btn:active { opacity: 0.8; }
 .save-btn { background: var(--safe); color: #0a1f14; border: none; border-radius: 8px; padding: 9px 16px; font-family: var(--display); font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; transition: opacity 0.15s; flex-shrink: 0; }
 .save-btn:active { opacity: 0.8; }
@@ -273,6 +282,81 @@ body.profile-open { overflow: hidden; }
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 10px;
 }
+.avatar-editor {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 14px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.avatar-preview {
+  width: 84px;
+  height: 84px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--surface);
+  color: var(--white);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40px;
+  line-height: 1;
+  overflow: hidden;
+  cursor: pointer;
+}
+.avatar-controls {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.avatar-options {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.avatar-option,
+.avatar-action-btn {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--white);
+  border-radius: 10px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.avatar-option {
+  width: 38px;
+  height: 38px;
+  font-size: 20px;
+  line-height: 1;
+}
+.avatar-option.active {
+  border-color: var(--cta);
+  box-shadow: 0 0 0 2px rgba(147,197,253,0.18);
+}
+.avatar-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.avatar-action-btn {
+  padding: 8px 10px;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.avatar-action-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.avatar-help {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--muted);
+  line-height: 1.4;
+}
 .safe-zone-list {
   display: flex;
   flex-direction: column;
@@ -309,6 +393,7 @@ body.profile-open { overflow: hidden; }
 }
 @media (max-width: 560px) {
   .safe-zone-row { grid-template-columns: 1fr; }
+  .avatar-editor { grid-template-columns: 1fr; }
 }
 .profile-save-btn {
   border: none;
@@ -354,7 +439,7 @@ body.profile-open { overflow: hidden; }
     <p id="headerSub">Fluval Flex 2.0 · 57L</p>
   </div>
   <div class="header-right">
-    <button class="profile-btn" onclick="openProfilePage()" aria-label="Open profile">👤</button>
+    <button class="profile-btn" id="profileButton" onclick="openProfilePage()" aria-label="Open profile"><span class="avatar-emoji">👤</span></button>
   </div>
 </div>
 
@@ -486,6 +571,28 @@ body.profile-open { overflow: hidden; }
     </div>
 
     <div class="profile-section-title">Aquarist</div>
+    <div class="avatar-editor">
+      <button class="avatar-preview" type="button" onclick="triggerAvatarUpload()" aria-label="Upload custom avatar">
+        <span id="profileAvatarEmoji">👤</span>
+        <img id="profileAvatarImage" alt="" hidden>
+      </button>
+      <div class="avatar-controls">
+        <div class="avatar-options" role="radiogroup" aria-label="Choose avatar icon">
+          <button class="avatar-option" type="button" role="radio" data-avatar-emoji="👤" onclick="selectAvatarEmoji('👤')" aria-label="Person avatar">👤</button>
+          <button class="avatar-option" type="button" role="radio" data-avatar-emoji="🐠" onclick="selectAvatarEmoji('🐠')" aria-label="Tropical fish avatar">🐠</button>
+          <button class="avatar-option" type="button" role="radio" data-avatar-emoji="🐟" onclick="selectAvatarEmoji('🐟')" aria-label="Fish avatar">🐟</button>
+          <button class="avatar-option" type="button" role="radio" data-avatar-emoji="🐡" onclick="selectAvatarEmoji('🐡')" aria-label="Puffer fish avatar">🐡</button>
+          <button class="avatar-option" type="button" role="radio" data-avatar-emoji="🐙" onclick="selectAvatarEmoji('🐙')" aria-label="Octopus avatar">🐙</button>
+          <button class="avatar-option" type="button" role="radio" data-avatar-emoji="🦐" onclick="selectAvatarEmoji('🦐')" aria-label="Shrimp avatar">🦐</button>
+        </div>
+        <div class="avatar-actions">
+          <button class="avatar-action-btn" type="button" onclick="triggerAvatarUpload()">Upload image</button>
+          <button class="avatar-action-btn" id="removeAvatarImageBtn" type="button" onclick="removeAvatarImage()">Use icon</button>
+        </div>
+        <input type="file" id="profileAvatarFile" accept="image/png,image/jpeg,image/webp" hidden onchange="handleAvatarUpload(event)">
+        <div class="avatar-help">Choose an icon or upload a JPG, PNG, or WebP. Images are cropped square and resized before saving.</div>
+      </div>
+    </div>
     <div class="profile-grid">
       <div class="field"><label>Name</label><input type="text" id="profileUserName" placeholder="Your name"></div>
     </div>
@@ -546,6 +653,10 @@ body.profile-open { overflow: hidden; }
 const API_BASE_URL = 'https://gnewkvhgwd.execute-api.eu-west-1.amazonaws.com/prod';
 // Usage plan requires this header on protected routes (login route does not).
 const API_KEY = '8lpMzm6DCL1dgipDrSaJs4LGozq0X64a3QGwMgfU';
+const DEFAULT_AVATAR_EMOJI = '👤';
+const AVATAR_EMOJIS = [DEFAULT_AVATAR_EMOJI, '🐠', '🐟', '🐡', '🐙', '🦐'];
+const AVATAR_UPLOAD_MAX_BYTES = 6 * 1024 * 1024;
+const AVATAR_IMAGE_MAX_CHARS = 220000;
 
 function defaultProfile() {
   return {
@@ -553,6 +664,7 @@ function defaultProfile() {
     aquariumName: 'Fluval Flex 2.0',
     aquariumSize: 57,
     aquariumUnits: 'litres',
+    avatar: { type: 'emoji', emoji: DEFAULT_AVATAR_EMOJI, imageDataUrl: '' },
     settings: { trackTapWater: true },
     safeZones: {
       ph: { min: 6.5, max: 7.0 },
@@ -574,6 +686,22 @@ function sanitizeRange(raw, fallback, minCap, maxCap) {
   return { min, max };
 }
 
+function isSafeAvatarImageDataUrl(value) {
+  return typeof value === 'string'
+    && value.length <= AVATAR_IMAGE_MAX_CHARS
+    && /^data:image\/(?:png|jpe?g|webp);base64,[A-Za-z0-9+/=]+$/.test(value);
+}
+
+function normalizeAvatar(raw = {}) {
+  const emoji = AVATAR_EMOJIS.includes(raw?.emoji) ? raw.emoji : DEFAULT_AVATAR_EMOJI;
+  const imageDataUrl = isSafeAvatarImageDataUrl(raw?.imageDataUrl) ? raw.imageDataUrl : '';
+  return {
+    type: raw?.type === 'image' && imageDataUrl ? 'image' : 'emoji',
+    emoji,
+    imageDataUrl,
+  };
+}
+
 function normalizeProfile(raw = {}) {
   const defaults = defaultProfile();
   return {
@@ -581,6 +709,7 @@ function normalizeProfile(raw = {}) {
     aquariumName: typeof raw.aquariumName === 'string' && raw.aquariumName.trim() ? raw.aquariumName.trim() : defaults.aquariumName,
     aquariumSize: Number.isFinite(Number(raw.aquariumSize)) ? Number(raw.aquariumSize) : defaults.aquariumSize,
     aquariumUnits: raw.aquariumUnits === 'gallons' ? 'gallons' : 'litres',
+    avatar: normalizeAvatar(raw.avatar),
     settings: {
       trackTapWater: typeof raw.settings?.trackTapWater === 'boolean' ? raw.settings.trackTapWater : defaults.settings.trackTapWater,
     },
@@ -673,12 +802,36 @@ function updateHeaderMeta() {
   if (headerSub) headerSub.textContent = subtitle;
 }
 
+function renderAvatarInto(target, avatar) {
+  if (!target) return;
+  const safeAvatar = normalizeAvatar(avatar);
+  target.replaceChildren();
+  if (safeAvatar.type === 'image') {
+    const img = document.createElement('img');
+    img.src = safeAvatar.imageDataUrl;
+    img.alt = '';
+    target.appendChild(img);
+    return;
+  }
+  const span = document.createElement('span');
+  span.className = 'avatar-emoji';
+  span.textContent = safeAvatar.emoji;
+  target.appendChild(span);
+}
+
+function updateHeaderAvatar() {
+  renderAvatarInto(document.getElementById('profileButton'), profile.avatar);
+}
+
 function applyProfileToUI() {
   updateHeaderMeta();
+  updateHeaderAvatar();
   updateChartRangeLabels();
 }
 
 function populateProfileForm() {
+  profileAvatarDraft = normalizeAvatar(profile.avatar);
+  updateProfileAvatarPreview();
   document.getElementById('profileUserName').value = profile.userName;
   document.getElementById('profileAquariumName').value = profile.aquariumName;
   document.getElementById('profileAquariumSize').value = profile.aquariumSize;
@@ -705,10 +858,128 @@ function closeProfilePage() {
   const page = document.getElementById('profilePage');
   if (page) page.classList.remove('show');
   document.body.classList.remove('profile-open');
+  profileAvatarDraft = null;
 }
 
 function onProfileBackdropClick(event) {
   if (event.target.id === 'profilePage') closeProfilePage();
+}
+
+function updateProfileAvatarPreview() {
+  const avatar = normalizeAvatar(profileAvatarDraft || profile.avatar);
+  const emojiEl = document.getElementById('profileAvatarEmoji');
+  const imageEl = document.getElementById('profileAvatarImage');
+  if (emojiEl) {
+    emojiEl.textContent = avatar.emoji;
+    emojiEl.hidden = avatar.type === 'image';
+  }
+  if (imageEl) {
+    imageEl.src = avatar.type === 'image' ? avatar.imageDataUrl : '';
+    imageEl.hidden = avatar.type !== 'image';
+  }
+  document.querySelectorAll('.avatar-option').forEach((button) => {
+    const isActive = button.dataset.avatarEmoji === avatar.emoji && avatar.type !== 'image';
+    button.classList.toggle('active', isActive);
+    button.setAttribute('aria-checked', isActive ? 'true' : 'false');
+  });
+  const removeBtn = document.getElementById('removeAvatarImageBtn');
+  if (removeBtn) removeBtn.disabled = avatar.type !== 'image';
+}
+
+function selectAvatarEmoji(emoji) {
+  const safeEmoji = AVATAR_EMOJIS.includes(emoji) ? emoji : DEFAULT_AVATAR_EMOJI;
+  profileAvatarDraft = { type: 'emoji', emoji: safeEmoji, imageDataUrl: '' };
+  updateProfileAvatarPreview();
+}
+
+function removeAvatarImage() {
+  const avatar = normalizeAvatar(profileAvatarDraft || profile.avatar);
+  profileAvatarDraft = { type: 'emoji', emoji: avatar.emoji, imageDataUrl: '' };
+  updateProfileAvatarPreview();
+}
+
+function triggerAvatarUpload() {
+  const input = document.getElementById('profileAvatarFile');
+  if (input) input.click();
+}
+
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error('Could not read image'));
+    reader.readAsDataURL(file);
+  });
+}
+
+function loadAvatarImage(src) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error('Could not load image'));
+    image.src = src;
+  });
+}
+
+async function resizeAvatarImage(file) {
+  const source = await readFileAsDataUrl(file);
+  const image = await loadAvatarImage(source);
+  const sourceWidth = image.naturalWidth || image.width;
+  const sourceHeight = image.naturalHeight || image.height;
+  const sourceSize = Math.min(sourceWidth, sourceHeight);
+  if (!sourceSize) throw new Error('Invalid image dimensions');
+
+  const outputSize = 256;
+  const canvas = document.createElement('canvas');
+  canvas.width = outputSize;
+  canvas.height = outputSize;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('Canvas is unavailable');
+
+  ctx.drawImage(
+    image,
+    (sourceWidth - sourceSize) / 2,
+    (sourceHeight - sourceSize) / 2,
+    sourceSize,
+    sourceSize,
+    0,
+    0,
+    outputSize,
+    outputSize,
+  );
+
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+  if (!isSafeAvatarImageDataUrl(dataUrl)) throw new Error('Avatar image is too large');
+  return dataUrl;
+}
+
+async function handleAvatarUpload(event) {
+  const input = event.target;
+  const file = input.files?.[0];
+  input.value = '';
+  if (!file) return;
+
+  if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+    showToast('Use a JPG, PNG, or WebP image');
+    return;
+  }
+  if (file.size > AVATAR_UPLOAD_MAX_BYTES) {
+    showToast('Avatar image must be under 6 MB');
+    return;
+  }
+
+  try {
+    const avatar = normalizeAvatar(profileAvatarDraft || profile.avatar);
+    profileAvatarDraft = {
+      type: 'image',
+      emoji: avatar.emoji,
+      imageDataUrl: await resizeAvatarImage(file),
+    };
+    updateProfileAvatarPreview();
+    showToast('Avatar ready to save');
+  } catch {
+    showToast('Could not use avatar image');
+  }
 }
 
 async function saveProfile() {
@@ -717,6 +988,7 @@ async function saveProfile() {
     aquariumName: document.getElementById('profileAquariumName').value.trim() || profile.aquariumName,
     aquariumSize: Number(document.getElementById('profileAquariumSize').value),
     aquariumUnits: document.getElementById('profileAquariumUnits').value === 'gallons' ? 'gallons' : 'litres',
+    avatar: normalizeAvatar(profileAvatarDraft || profile.avatar),
     safeZones: {
       ph: { min: Number(document.getElementById('profileSafePhMin').value), max: Number(document.getElementById('profileSafePhMax').value) },
       nh3: { min: Number(document.getElementById('profileSafeNh3Min').value), max: Number(document.getElementById('profileSafeNh3Max').value) },
@@ -730,6 +1002,7 @@ async function saveProfile() {
     aquariumName: nextProfile.aquariumName,
     aquariumSize: Number.isFinite(nextProfile.aquariumSize) ? nextProfile.aquariumSize : defaults.aquariumSize,
     aquariumUnits: nextProfile.aquariumUnits,
+    avatar: nextProfile.avatar,
     settings: {
       trackTapWater: profile.settings?.trackTapWater !== false,
     },
@@ -920,6 +1193,7 @@ async function unlock() {
 }
 
 var profile = defaultProfile();
+var profileAvatarDraft = null;
 var readings = [];
 var tapReadings = [];
 var tapFeatureEnabled = true;

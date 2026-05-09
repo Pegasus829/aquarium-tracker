@@ -17,6 +17,9 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Headers': 'Content-Type,Authorization,x-api-key',
   'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
 };
+const DEFAULT_AVATAR_EMOJI = '👤';
+const AVATAR_EMOJIS = [DEFAULT_AVATAR_EMOJI, '🐠', '🐟', '🐡', '🐙', '🦐'];
+const AVATAR_IMAGE_MAX_CHARS = 220000;
 
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}), {
   marshallOptions: { removeUndefinedValues: true },
@@ -136,6 +139,7 @@ const DEFAULT_PROFILE = {
   aquariumName: 'Fluval Flex 2.0',
   aquariumSize: 57,
   aquariumUnits: 'litres',
+  avatar: { type: 'emoji', emoji: DEFAULT_AVATAR_EMOJI, imageDataUrl: '' },
   settings: { trackTapWater: true },
   safeZones: {
     ph: { min: 6.5, max: 7.0 },
@@ -154,12 +158,29 @@ function sanitizeRange(raw, fallback, minCap, maxCap) {
   return { min, max };
 }
 
+function isSafeAvatarImageDataUrl(value) {
+  return typeof value === 'string'
+    && value.length <= AVATAR_IMAGE_MAX_CHARS
+    && /^data:image\/(?:png|jpe?g|webp);base64,[A-Za-z0-9+/=]+$/.test(value);
+}
+
+function normalizeAvatar(raw = {}) {
+  const emoji = AVATAR_EMOJIS.includes(raw?.emoji) ? raw.emoji : DEFAULT_AVATAR_EMOJI;
+  const imageDataUrl = isSafeAvatarImageDataUrl(raw?.imageDataUrl) ? raw.imageDataUrl : '';
+  return {
+    type: raw?.type === 'image' && imageDataUrl ? 'image' : 'emoji',
+    emoji,
+    imageDataUrl,
+  };
+}
+
 function normalizeProfile(raw = {}) {
   return {
     userName: typeof raw.userName === 'string' && raw.userName.trim() ? raw.userName.trim() : DEFAULT_PROFILE.userName,
     aquariumName: typeof raw.aquariumName === 'string' && raw.aquariumName.trim() ? raw.aquariumName.trim() : DEFAULT_PROFILE.aquariumName,
     aquariumSize: Number.isFinite(Number(raw.aquariumSize)) ? Number(raw.aquariumSize) : DEFAULT_PROFILE.aquariumSize,
     aquariumUnits: raw.aquariumUnits === 'gallons' ? 'gallons' : 'litres',
+    avatar: normalizeAvatar(raw.avatar),
     settings: {
       trackTapWater: typeof raw.settings?.trackTapWater === 'boolean' ? raw.settings.trackTapWater : DEFAULT_PROFILE.settings.trackTapWater,
     },
