@@ -281,7 +281,7 @@ canvas.chart { width: 100%; height: 110px; display: block; }
     <div class="chart-header">
       <div class="chart-dot" style="background:var(--ph)"></div>
       <div class="chart-name">pH</div>
-      <div class="chart-range">Target: 6.5–7.2</div>
+      <div class="chart-range">Target: 6.5–7.0</div>
     </div>
     <div class="chart-canvas-wrap"><canvas class="chart" id="chart-ph"></canvas><div class="chart-no-data" id="nd-ph">No readings yet</div></div>
   </div>
@@ -1010,7 +1010,7 @@ function renderCharts() {
   const no3Pts = toPts(readings,'no3');
   const tapNo3Pts = tapFeatureEnabled ? toPts(tapReadings,'no3') : [];
 
-  renderMetricChart('ph', 'chart-ph', 'nd-ph', phPts, '#a78bfa', 6.0, 7.5, 6.5, 7.2);
+  renderMetricChart('ph', 'chart-ph', 'nd-ph', phPts, '#a78bfa', 6.0, 7.5, 6.5, 7.0);
   renderMetricChart('nh3','chart-nh3','nd-nh3',nh3Pts,'#f87171', 0, 1, 0, 0.25);
   renderMetricChart('no2','chart-no2','nd-no2',no2Pts,'#fb923c', 0, 1, 0, 0.25);
   renderNo3Chart(no3Pts, tapNo3Pts);
