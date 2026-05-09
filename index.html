@@ -412,6 +412,28 @@ body.profile-open { overflow: hidden; }
   padding: 8px 12px;
   font-size: 11px;
 }
+.profile-footer {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+}
+.profile-logout-btn {
+  border: 1px solid rgba(240,82,82,0.35);
+  border-radius: 8px;
+  background: rgba(240,82,82,0.1);
+  color: #fecaca;
+  padding: 10px 14px;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.profile-logout-btn:active { opacity: 0.8; }
 </style>
 </head>
 <body>
@@ -642,6 +664,9 @@ body.profile-open { overflow: hidden; }
       </div>
     </div>
 
+    <div class="profile-footer">
+      <button class="profile-logout-btn" type="button" onclick="logOut()">Log Out</button>
+    </div>
   </div>
 </div>
 
@@ -863,6 +888,23 @@ function closeProfilePage() {
 
 function onProfileBackdropClick(event) {
   if (event.target.id === 'profilePage') closeProfilePage();
+}
+
+function logOut() {
+  sessionStorage.removeItem('wqt_token');
+  closeProfilePage();
+  readings = [];
+  tapReadings = [];
+  profile = defaultProfile();
+  applyProfileToUI();
+  initTapFeatureToggle();
+  const gateInput = document.getElementById('gateInput');
+  if (gateInput) gateInput.value = '';
+  const gateError = document.getElementById('gateError');
+  if (gateError) gateError.textContent = '';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('gate').style.display = 'flex';
+  showToast('Logged out');
 }
 
 function updateProfileAvatarPreview() {
