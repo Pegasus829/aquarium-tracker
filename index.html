@@ -61,6 +61,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
 .btn-add { background: var(--cta); color: #0b1b2f; border: none; border-radius: 8px; padding: 10px 20px; font-family: var(--display); font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; transition: opacity 0.15s; -webkit-tap-highlight-color: transparent; flex-shrink: 0; }
 .btn-add.tap-btn { background: var(--tap); color: #0a1f14; }
 .btn-add:active { opacity: 0.8; }
+.btn-add:disabled { opacity: 0.55; cursor: not-allowed; }
 
 .status-bar { max-width: 860px; margin: 0 auto 24px; display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; }
 .tap-status-bar { max-width: 860px; margin: 0 auto 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -362,6 +363,45 @@ function showToast(msg) {
   toastTimer = setTimeout(() => el.classList.remove('show'), 5000);
 }
 
+function setLoadingState(loading) {
+  isDataLoading = loading;
+
+  ['nd-ph','nd-nh3','nd-no2','nd-no3'].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = loading ? 'Loading…' : 'No readings yet';
+  });
+
+  document.querySelectorAll('.btn-add').forEach((btn) => {
+    btn.disabled = loading;
+  });
+
+  if (!loading) return;
+
+  const tankPills = document.querySelectorAll('#statusBar .stat-pill');
+  const tankLabels = ['pH', 'Ammonia', 'Nitrite', 'Nitrate'];
+  tankPills.forEach((pill, idx) => {
+    pill.innerHTML = `<div class="stat-label">${tankLabels[idx]}</div><div class="stat-value c-muted">Loading…</div><div class="stat-status c-muted">Sync</div>`;
+  });
+
+  const tapPills = document.querySelectorAll('#tapStatusBar .stat-pill');
+  if (tapPills[0]) {
+    tapPills[0].innerHTML = '<div class="stat-label">Latest Filtered Tap NO₃</div><div class="stat-value c-muted">Loading…</div><div class="stat-status c-muted">Sync</div>';
+  }
+  if (tapPills[1]) {
+    tapPills[1].innerHTML = '<div class="stat-label">Last Tested</div><div class="stat-value c-muted" style="font-size:13px">Loading…</div>';
+  }
+
+  const logCount = document.getElementById('logCount');
+  if (logCount) logCount.textContent = 'Loading…';
+  const tapLogCount = document.getElementById('tapLogCount');
+  if (tapLogCount) tapLogCount.textContent = 'Loading…';
+
+  const logBody = document.getElementById('logBody');
+  if (logBody) logBody.innerHTML = '<div class="log-empty">Loading readings...</div>';
+  const tapLogBody = document.getElementById('tapLogBody');
+  if (tapLogBody) tapLogBody.innerHTML = '<div class="log-empty">Loading tap tests...</div>';
+}
+
 async function loadData() {
   if (!API_BASE_URL.trim()) {
     sessionStorage.removeItem('wqt_token');
@@ -370,23 +410,30 @@ async function loadData() {
     showToast('Set API_BASE_URL in index.html');
     return;
   }
-  const [rRes, tRes] = await Promise.all([apiFetch('/readings'), apiFetch('/tap')]);
-  if (rRes.status === 401 || tRes.status === 401) {
-    sessionStorage.removeItem('wqt_token');
-    document.getElementById('gate').style.display = 'flex';
-    document.getElementById('app').style.display = 'none';
-    showToast('Session expired — sign in again');
-    return;
-  }
-  if (!rRes.ok || !tRes.ok) {
+  setLoadingState(true);
+  try {
+    const [rRes, tRes] = await Promise.all([apiFetch('/readings'), apiFetch('/tap')]);
+    if (rRes.status === 401 || tRes.status === 401) {
+      sessionStorage.removeItem('wqt_token');
+      document.getElementById('gate').style.display = 'flex';
+      document.getElementById('app').style.display = 'none';
+      showToast('Session expired — sign in again');
+      return;
+    }
+    if (!rRes.ok || !tRes.ok) {
+      showToast('Could not load readings');
+      return;
+    }
+    readings = await rRes.json();
+    tapReadings = await tRes.json();
+    readings.sort((a, b) => new Date(a.date) - new Date(b.date));
+    tapReadings.sort((a, b) => new Date(a.date) - new Date(b.date));
+  } catch {
     showToast('Could not load readings');
-    return;
+  } finally {
+    setLoadingState(false);
+    if (document.getElementById('app').style.display !== 'none') render();
   }
-  readings = await rRes.json();
-  tapReadings = await tRes.json();
-  readings.sort((a, b) => new Date(a.date) - new Date(b.date));
-  tapReadings.sort((a, b) => new Date(a.date) - new Date(b.date));
-  render();
 }
 
 async function unlock() {
@@ -434,6 +481,7 @@ async function unlock() {
 var readings = [];
 var tapReadings = [];
 var tapFeatureEnabled = true;
+var isDataLoading = false;
 
 function escapeHtml(s) {
   return String(s)
@@ -518,6 +566,7 @@ function updateStatus() {
 function drawChart(canvasId, ndId, pts, color, yMin, yMax, safeMin, safeMax, secondary, secColor, warnMin, warnMax) {
   const canvas=document.getElementById(canvasId);
   const nd=document.getElementById(ndId);
+  if(isDataLoading){canvas.style.display='none';nd.style.display='flex';return;}
   // pts = [{t, v}] sorted by t
   const valid=pts.filter(p=>p.v!==null&&p.v!==undefined);
   if(valid.length===0){canvas.style.display='none';nd.style.display='flex';return;}
