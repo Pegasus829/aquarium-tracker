@@ -1,0 +1,24 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "UpdateAquariumLambdaCode",
+      "Effect": "Allow",
+      "Action": [
+        "lambda:GetFunction",
+        "lambda:GetFunctionConfiguration",
+        "lambda:UpdateFunctionCode"
+      ],
+      "Resource": "arn:aws:lambda:eu-west-1:681178750909:function:aquarium-api"
+    },
+    {
+      "Sid": "DeployApiGatewayStage",
+      "Effect": "Allow",
+      "Action": [
+        "apigateway:POST"
+      ],
+      "Resource": "arn:aws:apigateway:eu-west-1::/restapis/gnewkvhgwd/deployments"
+    }
+  ]
+}
+

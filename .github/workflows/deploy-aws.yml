@@ -1,0 +1,73 @@
+name: Deploy to AWS (OIDC)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "lambda/**"
+      - "deploy/**"
+      - ".github/workflows/deploy-aws.yml"
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: deploy-aws-main
+  cancel-in-progress: true
+
+env:
+  AWS_REGION: eu-west-1
+  LAMBDA_FUNCTION_NAME: aquarium-api
+  API_GATEWAY_REST_API_ID: gnewkvhgwd
+  API_GATEWAY_STAGE: prod
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: lambda/package-lock.json
+
+      - name: Install Lambda deps
+        working-directory: lambda
+        run: npm ci
+
+      - name: Bundle Lambda (bundle.js)
+        working-directory: lambda
+        run: npm run bundle
+
+      - name: Create deployment zip
+        run: |
+          mkdir -p deploy
+          rm -f deploy/aquarium-api.zip
+          zip -j deploy/aquarium-api.zip lambda/bundle.js
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: arn:aws:iam::681178750909:role/aquarium-github-deploy-role
+
+      - name: Update Lambda code
+        run: |
+          aws lambda update-function-code \
+            --function-name "${LAMBDA_FUNCTION_NAME}" \
+            --zip-file fileb://deploy/aquarium-api.zip
+          aws lambda wait function-updated --function-name "${LAMBDA_FUNCTION_NAME}"
+
+      - name: Deploy API Gateway stage
+        run: |
+          aws apigateway create-deployment \
+            --rest-api-id "${API_GATEWAY_REST_API_ID}" \
+            --stage-name "${API_GATEWAY_STAGE}" \
+            --description "GitHub Actions deploy $GITHUB_SHA"
+
