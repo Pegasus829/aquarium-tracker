@@ -114,11 +114,9 @@ put_options_method() {
 
 put_cors_gateway_response() {
   local response_type="$1"
-  local status_code="$2"
   aws_cmd apigateway put-gateway-response \
     --rest-api-id "$API_ID" \
     --response-type "$response_type" \
-    --status-code "$status_code" \
     --response-parameters "gatewayresponse.header.Access-Control-Allow-Origin='$ORIGIN',gatewayresponse.header.Access-Control-Allow-Headers='Content-Type,Authorization,x-api-key',gatewayresponse.header.Access-Control-Allow-Methods='GET,POST,PUT,DELETE,OPTIONS'" >/dev/null
 }
 
@@ -170,6 +168,11 @@ if [[ "$SKIP_LAMBDA" != "1" ]]; then
   aws_cmd lambda update-function-code \
     --function-name "$FUNCTION_NAME" \
     --zip-file "fileb://$ZIP_PATH" >/dev/null
+  aws_cmd lambda wait function-updated --function-name "$FUNCTION_NAME"
+  aws_cmd lambda update-function-configuration \
+    --function-name "$FUNCTION_NAME" \
+    --handler bundle.handler >/dev/null
+  aws_cmd lambda wait function-updated --function-name "$FUNCTION_NAME"
 else
   echo "Skipping Lambda code update because SKIP_LAMBDA=1"
 fi
@@ -206,8 +209,8 @@ if ! aws_cmd lambda add-permission \
 fi
 
 echo "Adding CORS headers to default API Gateway error responses"
-put_cors_gateway_response DEFAULT_4XX 400
-put_cors_gateway_response DEFAULT_5XX 500
+put_cors_gateway_response DEFAULT_4XX
+put_cors_gateway_response DEFAULT_5XX
 
 echo "Deploying API Gateway stage: $STAGE"
 DEPLOYMENT_ID="$(aws_cmd apigateway create-deployment \
