@@ -18,6 +18,9 @@ concurrency:
   cancel-in-progress: true
 
 env:
+  # Opt into Node.js 24 for JS-based GitHub Actions (checkout/setup-node/aws-creds)
+  # to avoid the Node 20 deprecation warning.
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   AWS_REGION: eu-west-1
   LAMBDA_FUNCTION_NAME: aquarium-api
   API_GATEWAY_REST_API_ID: gnewkvhgwd
