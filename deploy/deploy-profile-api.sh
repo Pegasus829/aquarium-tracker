@@ -77,9 +77,7 @@ put_lambda_proxy_method() {
 
 put_options_method() {
   local resource_id="$1"
-  local allow_methods="${2:-'GET,PUT,OPTIONS'}"
-  local allow_headers="'Content-Type,Authorization,x-api-key'"
-  local allow_origin="'$ORIGIN'"
+  local allow_methods="${2:-GET,PUT,OPTIONS}"
 
   delete_method_if_exists "$resource_id" OPTIONS
   aws_cmd apigateway put-method \
@@ -109,7 +107,7 @@ put_options_method() {
     --resource-id "$resource_id" \
     --http-method OPTIONS \
     --status-code 200 \
-    --response-parameters "{\"method.response.header.Access-Control-Allow-Headers\":$allow_headers,\"method.response.header.Access-Control-Allow-Methods\":$allow_methods,\"method.response.header.Access-Control-Allow-Origin\":$allow_origin}" >/dev/null
+    --response-parameters "{\"method.response.header.Access-Control-Allow-Headers\":\"'Content-Type,Authorization,x-api-key'\",\"method.response.header.Access-Control-Allow-Methods\":\"'${allow_methods}'\",\"method.response.header.Access-Control-Allow-Origin\":\"'${ORIGIN}'\"}" >/dev/null
 }
 
 put_cors_gateway_response() {
@@ -117,7 +115,7 @@ put_cors_gateway_response() {
   aws_cmd apigateway put-gateway-response \
     --rest-api-id "$API_ID" \
     --response-type "$response_type" \
-    --response-parameters "gatewayresponse.header.Access-Control-Allow-Origin='$ORIGIN',gatewayresponse.header.Access-Control-Allow-Headers='Content-Type,Authorization,x-api-key',gatewayresponse.header.Access-Control-Allow-Methods='GET,POST,PUT,DELETE,OPTIONS'" >/dev/null
+    --response-parameters "gatewayresponse.header.Access-Control-Allow-Origin='${ORIGIN}',gatewayresponse.header.Access-Control-Allow-Headers='Content-Type,Authorization,x-api-key',gatewayresponse.header.Access-Control-Allow-Methods='GET,POST,PUT,DELETE,OPTIONS'" >/dev/null
 }
 
 require_tool "$AWS_CLI"
@@ -238,7 +236,7 @@ fi
 echo "Configuring PUT/DELETE /readings/{id} Lambda proxy methods"
 put_lambda_proxy_method "$READINGS_ID_RESOURCE" PUT "$INTEGRATION_URI" "$API_KEY_REQUIRED"
 put_lambda_proxy_method "$READINGS_ID_RESOURCE" DELETE "$INTEGRATION_URI" "$API_KEY_REQUIRED"
-put_options_method "$READINGS_ID_RESOURCE" "'GET,PUT,DELETE,OPTIONS'"
+put_options_method "$READINGS_ID_RESOURCE" "GET,PUT,DELETE,OPTIONS"
 
 if [[ -n "$TAP_ID" && "$TAP_ID" != "None" ]]; then
   TAP_ID_RESOURCE="$(get_resource_id /tap/{id})"
@@ -251,7 +249,7 @@ if [[ -n "$TAP_ID" && "$TAP_ID" != "None" ]]; then
   echo "Configuring PUT/DELETE /tap/{id} Lambda proxy methods"
   put_lambda_proxy_method "$TAP_ID_RESOURCE" PUT "$INTEGRATION_URI" "$API_KEY_REQUIRED"
   put_lambda_proxy_method "$TAP_ID_RESOURCE" DELETE "$INTEGRATION_URI" "$API_KEY_REQUIRED"
-  put_options_method "$TAP_ID_RESOURCE" "'GET,PUT,DELETE,OPTIONS'"
+  put_options_method "$TAP_ID_RESOURCE" "GET,PUT,DELETE,OPTIONS"
 else
   echo "Skipping /tap/{id} routes because /tap resource was not found"
 fi
