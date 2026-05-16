@@ -1451,14 +1451,12 @@ function setTapFeatureEnabled(enabled, persist = true) {
   const tapHeader = document.getElementById('tapSectionHeader');
   const panel = document.getElementById('tapEntryPanel');
   const legend = document.getElementById('tapLegendItem');
-  const statusCards = document.getElementById('statusBar');
   const tapStatusCards = document.getElementById('tapStatusBar');
   const tapLogWrap = document.getElementById('tapLogWrap');
   const toggle = document.getElementById('tap-feature-toggle');
   if (tapHeader) tapHeader.style.display = enabled ? '' : 'none';
   if (panel) panel.style.display = enabled ? '' : 'none';
   if (legend) legend.style.display = enabled ? '' : 'none';
-  if (statusCards) statusCards.style.display = enabled ? '' : 'none';
   if (tapStatusCards) tapStatusCards.style.display = enabled ? '' : 'none';
   if (tapLogWrap) tapLogWrap.style.display = enabled ? '' : 'none';
   if (toggle && toggle.checked !== enabled) toggle.checked = enabled;
@@ -1472,7 +1470,7 @@ function initTapFeatureToggle() {
 
 // ── Status helpers ──
 function khStatus(v) {
-  if (v === null) return ['—', 'c-muted', ''];
+  if (v == null) return ['—', 'c-muted', ''];
   const { min, max } = profile.safeZones.kh;
   const warnLow = Math.max(0, min - 1);
   const warnHigh = max + 2;
@@ -1498,8 +1496,8 @@ function updateStatus() {
   if(readings.length>0) {
     const last=readings[readings.length-1];
     const pills=document.querySelectorAll('#statusBar .stat-pill');
-    [[last.kh,khStatus,'KH',last.kh!==null?last.kh.toFixed(1)+' dKH':'—'],
-     [last.ph,phStatus,'pH',last.ph!==null?last.ph.toFixed(1):'—'],
+    [[last.kh,khStatus,'KH',last.kh!=null?last.kh.toFixed(1)+' dKH':'—'],
+     [last.ph,phStatus,'pH',last.ph!=null?last.ph.toFixed(1):'—'],
      [last.nh3,nh3Status,'NH₃',last.nh3!==null?last.nh3+' ppm':'—'],
      [last.no2,no2Status,'NO₂',last.no2!==null?last.no2+' ppm':'—'],
      [last.no3,no3Status,'NO₃',last.no3!==null?last.no3+' ppm':'—']
@@ -2078,7 +2076,17 @@ async function deleteTapReading(readingId){
 }
 
 // ── Full render ──
-function render(){updateStatus();renderCharts();renderLog();renderTapLog();}
+function render(){
+  try {
+    updateStatus();
+    renderCharts();
+    renderLog();
+    renderTapLog();
+  } catch (err) {
+    console.error('Render failed', err);
+    showToast('Could not refresh charts');
+  }
+}
 
 document.getElementById('currentYear').textContent = new Date().getFullYear();
 applyProfileToUI();
