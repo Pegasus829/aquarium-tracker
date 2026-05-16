@@ -260,6 +260,17 @@ export async function handler(event) {
       return json(201, item);
     }
 
+    if (resource === '/readings/{id}' && method === 'PUT') {
+      const id = event.pathParameters?.id;
+      if (!id) return json(400, { error: 'Missing id' });
+      const body = parseBody(event);
+      if (!body) return json(400, { error: 'Invalid JSON' });
+      const item = validateTankItem({ ...body, id });
+      if (!item) return json(400, { error: 'Invalid tank reading' });
+      await ddb.send(new PutCommand({ TableName: TABLE_NAME, Item: item }));
+      return json(200, item);
+    }
+
     if (resource === '/readings/{id}' && method === 'DELETE') {
       const id = event.pathParameters?.id;
       if (!id) return json(400, { error: 'Missing id' });
@@ -291,6 +302,17 @@ export async function handler(event) {
       if (!item) return json(400, { error: 'Invalid tap reading' });
       await ddb.send(new PutCommand({ TableName: TABLE_NAME, Item: item }));
       return json(201, item);
+    }
+
+    if (resource === '/tap/{id}' && method === 'PUT') {
+      const id = event.pathParameters?.id;
+      if (!id) return json(400, { error: 'Missing id' });
+      const body = parseBody(event);
+      if (!body) return json(400, { error: 'Invalid JSON' });
+      const item = validateTapItem({ ...body, id });
+      if (!item) return json(400, { error: 'Invalid tap reading' });
+      await ddb.send(new PutCommand({ TableName: TABLE_NAME, Item: item }));
+      return json(200, item);
     }
 
     if (resource === '/tap/{id}' && method === 'DELETE') {

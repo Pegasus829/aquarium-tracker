@@ -156,8 +156,53 @@ canvas.chart { width: 100%; height: 110px; display: block; }
 .log-table td { padding: 9px 12px; font-family: var(--mono); font-size: 12px; border-bottom: 1px solid rgba(255,255,255,0.03); }
 .log-table tr:last-child td { border-bottom: none; }
 .log-table tr:hover td { background: rgba(255,255,255,0.02); }
-.del-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 14px; padding: 2px 4px; border-radius: 4px; -webkit-tap-highlight-color: transparent; transition: color 0.15s; }
-.del-btn:hover { color: var(--danger); }
+.log-actions { display: flex; align-items: center; justify-content: flex-end; gap: 4px; white-space: nowrap; }
+.icon-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 14px; line-height: 1; padding: 4px 6px; border-radius: 6px; -webkit-tap-highlight-color: transparent; transition: color 0.15s, background 0.15s; }
+.icon-btn:hover { background: rgba(255,255,255,0.06); }
+.edit-btn:hover { color: var(--cta); }
+.del-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 16px; line-height: 1; padding: 4px 6px; border-radius: 6px; -webkit-tap-highlight-color: transparent; transition: color 0.15s, background 0.15s; }
+.del-btn:hover { color: var(--danger); background: rgba(255,173,173,0.08); }
+body.modal-open { overflow: hidden; }
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 1300;
+  background: rgba(6, 10, 18, 0.88);
+  display: none; align-items: center; justify-content: center;
+  padding: 20px 16px;
+}
+.modal-overlay.show { display: flex; }
+.modal-card {
+  width: 100%; max-width: 420px;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 16px; padding: 20px;
+}
+.modal-card.modal-card-wide { max-width: 520px; }
+.modal-title {
+  font-family: var(--display); font-size: 17px; font-weight: 800;
+  color: var(--white); margin-bottom: 8px;
+}
+.modal-message {
+  font-family: var(--mono); font-size: 12px; color: var(--muted);
+  line-height: 1.5; margin-bottom: 18px;
+}
+.modal-actions {
+  display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap;
+}
+.modal-btn {
+  border: none; border-radius: 8px; padding: 10px 16px;
+  font-family: var(--display); font-size: 11px; font-weight: 700;
+  letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer;
+}
+.modal-btn-secondary {
+  background: var(--surface); color: var(--muted);
+  border: 1px solid var(--border);
+}
+.modal-btn-danger { background: var(--danger); color: #2a0a0a; }
+.modal-btn-primary { background: var(--cta); color: #0b1b2f; }
+.modal-form-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;
+  margin-bottom: 14px;
+}
+.modal-form-grid .field-date { grid-column: 1 / -1; }
 .log-empty { padding: 20px; text-align: center; font-family: var(--mono); font-size: 11px; color: var(--muted); letter-spacing: 0.08em; }
 .footer { max-width: 860px; margin: 28px auto 0; text-align: center; font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
 
@@ -496,11 +541,11 @@ body.profile-open { overflow: hidden; }
 <div class="form-card">
   <div class="form-title">+ Log Tank Reading</div>
   <div class="form-grid">
-    <div class="field"><label class="kh-label">KH (dKH)</label><input type="number" id="f-kh" step="0.5" min="0" placeholder="4"></div>
     <div class="field"><label class="ph-label">pH</label><input type="number" id="f-ph" step="0.1" min="0" max="14" placeholder="6.8"></div>
     <div class="field"><label class="nh3-label">Ammonia (ppm)</label><input type="number" id="f-nh3" step="0.25" min="0" placeholder="0.0"></div>
     <div class="field"><label class="no2-label">Nitrite (ppm)</label><input type="number" id="f-no2" step="0.25" min="0" placeholder="0.0"></div>
     <div class="field"><label class="no3-label">Nitrate (ppm)</label><input type="number" id="f-no3" step="5" min="0" placeholder="0"></div>
+    <div class="field"><label class="kh-label">KH (dKH)</label><input type="number" id="f-kh" step="0.5" min="0" placeholder="4"></div>
   </div>
   <div class="form-row form-row-right">
     <button class="btn-add" onclick="addReading()">Add Reading</button>
@@ -528,11 +573,11 @@ body.profile-open { overflow: hidden; }
 </div>
 
 <div class="status-bar" id="statusBar">
-  <div class="stat-pill"><div class="stat-label">KH</div><div class="stat-value c-muted">—</div></div>
   <div class="stat-pill"><div class="stat-label">pH</div><div class="stat-value c-muted">—</div></div>
   <div class="stat-pill"><div class="stat-label">Ammonia</div><div class="stat-value c-muted">—</div></div>
   <div class="stat-pill"><div class="stat-label">Nitrite</div><div class="stat-value c-muted">—</div></div>
   <div class="stat-pill"><div class="stat-label">Nitrate</div><div class="stat-value c-muted">—</div></div>
+  <div class="stat-pill"><div class="stat-label">KH</div><div class="stat-value c-muted">—</div></div>
 </div>
 
 <div class="section-label">
@@ -541,14 +586,6 @@ body.profile-open { overflow: hidden; }
 </div>
 
 <div class="charts-wrap">
-  <div class="chart-card">
-    <div class="chart-header">
-      <div class="chart-dot" style="background:var(--kh)"></div>
-      <div class="chart-name">KH (Carbonate)</div>
-      <div class="chart-range" id="range-kh">Target: 2–6 dKH</div>
-    </div>
-    <div class="chart-canvas-wrap"><canvas class="chart" id="chart-kh"></canvas><div class="chart-no-data" id="nd-kh">No readings yet</div></div>
-  </div>
   <div class="chart-card">
     <div class="chart-header">
       <div class="chart-dot" style="background:var(--ph)"></div>
@@ -584,6 +621,14 @@ body.profile-open { overflow: hidden; }
       </div>
     </div>
     <div class="chart-canvas-wrap"><canvas class="chart" id="chart-no3"></canvas><div class="chart-no-data" id="nd-no3">No readings yet</div></div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-header">
+      <div class="chart-dot" style="background:var(--kh)"></div>
+      <div class="chart-name">KH (Carbonate)</div>
+      <div class="chart-range" id="range-kh">Target: 2–6 dKH</div>
+    </div>
+    <div class="chart-canvas-wrap"><canvas class="chart" id="chart-kh"></canvas><div class="chart-no-data" id="nd-kh">No readings yet</div></div>
   </div>
 </div>
 
@@ -664,13 +709,6 @@ body.profile-open { overflow: hidden; }
     <div class="profile-section-title">Chart Safe Zones</div>
     <div class="safe-zone-list">
       <div class="safe-zone-row">
-        <div class="safe-zone-category">KH (dKH)</div>
-        <div class="safe-zone-inputs">
-          <div class="field"><label class="safe-zone-label">Min</label><input type="number" id="profileSafeKhMin" step="0.5" min="0"></div>
-          <div class="field"><label class="safe-zone-label">Max</label><input type="number" id="profileSafeKhMax" step="0.5" min="0"></div>
-        </div>
-      </div>
-      <div class="safe-zone-row">
         <div class="safe-zone-category">pH</div>
         <div class="safe-zone-inputs">
           <div class="field"><label class="safe-zone-label">Min</label><input type="number" id="profileSafePhMin" step="0.1" min="0" max="14"></div>
@@ -698,10 +736,63 @@ body.profile-open { overflow: hidden; }
           <div class="field"><label class="safe-zone-label">Max</label><input type="number" id="profileSafeNo3Max" step="1" min="0"></div>
         </div>
       </div>
+      <div class="safe-zone-row">
+        <div class="safe-zone-category">KH (dKH)</div>
+        <div class="safe-zone-inputs">
+          <div class="field"><label class="safe-zone-label">Min</label><input type="number" id="profileSafeKhMin" step="0.5" min="0"></div>
+          <div class="field"><label class="safe-zone-label">Max</label><input type="number" id="profileSafeKhMax" step="0.5" min="0"></div>
+        </div>
+      </div>
+
     </div>
 
     <div class="profile-footer">
       <button class="profile-logout-btn" type="button" onclick="logOut()">Log Out</button>
+    </div>
+  </div>
+</div>
+
+<div id="confirmModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="confirmModalTitle">
+  <div class="modal-card">
+    <div class="modal-title" id="confirmModalTitle">Delete reading?</div>
+    <p class="modal-message" id="confirmModalMessage">This cannot be undone.</p>
+    <div class="modal-actions">
+      <button type="button" class="modal-btn modal-btn-secondary" onclick="closeConfirmModal()">Cancel</button>
+      <button type="button" class="modal-btn modal-btn-danger" id="confirmModalConfirmBtn" onclick="runConfirmModalAction()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<div id="editTankModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="editTankModalTitle">
+  <div class="modal-card modal-card-wide">
+    <div class="modal-title" id="editTankModalTitle">Edit tank reading</div>
+    <p class="modal-message">Update values and save. Leave fields blank if not measured.</p>
+    <div class="modal-form-grid">
+      <div class="field"><label class="ph-label">pH</label><input type="number" id="edit-ph" step="0.1" min="0" max="14"></div>
+      <div class="field"><label class="nh3-label">Ammonia (ppm)</label><input type="number" id="edit-nh3" step="0.25" min="0"></div>
+      <div class="field"><label class="no2-label">Nitrite (ppm)</label><input type="number" id="edit-no2" step="0.25" min="0"></div>
+      <div class="field"><label class="no3-label">Nitrate (ppm)</label><input type="number" id="edit-no3" step="5" min="0"></div>
+      <div class="field"><label class="kh-label">KH (dKH)</label><input type="number" id="edit-kh" step="0.5" min="0"></div>
+      <div class="field field-date"><label style="color:var(--muted)">Date &amp; Time</label><input type="datetime-local" id="edit-tank-date"></div>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="modal-btn modal-btn-secondary" onclick="closeEditTankModal()">Cancel</button>
+      <button type="button" class="modal-btn modal-btn-primary" onclick="saveEditTankReading()">Save changes</button>
+    </div>
+  </div>
+</div>
+
+<div id="editTapModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="editTapModalTitle">
+  <div class="modal-card">
+    <div class="modal-title" id="editTapModalTitle">Edit tap water test</div>
+    <div class="modal-form-grid">
+      <div class="field"><label class="tap-label">Nitrate (ppm)</label><input type="number" id="edit-tap-no3" step="5" min="0"></div>
+      <div class="field field-date"><label style="color:var(--muted)">Date &amp; Time</label><input type="datetime-local" id="edit-tap-date"></div>
+      <div class="field field-date"><label style="color:var(--muted)">Notes</label><input type="text" id="edit-tap-note" placeholder="Optional"></div>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="modal-btn modal-btn-secondary" onclick="closeEditTapModal()">Cancel</button>
+      <button type="button" class="modal-btn modal-btn-primary" onclick="saveEditTapReading()">Save changes</button>
     </div>
   </div>
 </div>
@@ -1167,7 +1258,7 @@ function showToast(msg) {
 function setLoadingState(loading) {
   isDataLoading = loading;
 
-  ['nd-kh','nd-ph','nd-nh3','nd-no2','nd-no3'].forEach((id) => {
+  ['nd-ph','nd-nh3','nd-no2','nd-no3','nd-kh'].forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.textContent = loading ? 'Loading…' : 'No readings yet';
   });
@@ -1179,7 +1270,7 @@ function setLoadingState(loading) {
   if (!loading) return;
 
   const tankPills = document.querySelectorAll('#statusBar .stat-pill');
-  const tankLabels = ['KH', 'pH', 'Ammonia', 'Nitrite', 'Nitrate'];
+  const tankLabels = ['pH', 'Ammonia', 'Nitrite', 'Nitrate', 'KH'];
   tankPills.forEach((pill, idx) => {
     pill.innerHTML = `<div class="stat-label">${tankLabels[idx]}</div><div class="stat-value c-muted">Loading…</div><div class="stat-status c-muted">Sync</div>`;
   });
@@ -1423,6 +1514,9 @@ var profile = defaultProfile();
 var profileAvatarDraft = null;
 var readings = [];
 var tapReadings = [];
+var confirmModalAction = null;
+var editingTankId = null;
+var editingTapId = null;
 var tapFeatureEnabled = true;
 var isDataLoading = false;
 var no3Chart = null;
@@ -1496,11 +1590,11 @@ function updateStatus() {
   if(readings.length>0) {
     const last=readings[readings.length-1];
     const pills=document.querySelectorAll('#statusBar .stat-pill');
-    [[last.kh,khStatus,'KH',last.kh!=null?last.kh.toFixed(1)+' dKH':'—'],
-     [last.ph,phStatus,'pH',last.ph!=null?last.ph.toFixed(1):'—'],
+    [[last.ph,phStatus,'pH',last.ph!=null?last.ph.toFixed(1):'—'],
      [last.nh3,nh3Status,'NH₃',last.nh3!==null?last.nh3+' ppm':'—'],
      [last.no2,no2Status,'NO₂',last.no2!==null?last.no2+' ppm':'—'],
-     [last.no3,no3Status,'NO₃',last.no3!==null?last.no3+' ppm':'—']
+     [last.no3,no3Status,'NO₃',last.no3!==null?last.no3+' ppm':'—'],
+     [last.kh,khStatus,'KH',last.kh!=null?last.kh.toFixed(1)+' dKH':'—']
     ].forEach(([val,fn,label,display],i)=>{
       const[,cls,status]=fn(val);
       pills[i].innerHTML=`<div class="stat-label">${label}</div><div class="stat-value ${cls}">${display}</div><div class="stat-status ${cls}">${status}</div>`;
@@ -1951,11 +2045,11 @@ function renderCharts() {
   const no3Pts = toPts(readings,'no3');
   const tapNo3Pts = tapFeatureEnabled ? toPts(tapReadings,'no3') : [];
 
-  renderMetricChart('kh', 'chart-kh', 'nd-kh', khPts, '#2dd4bf', 0, 12, khSafe.min, khSafe.max, khWarning.min, khWarning.max);
   renderMetricChart('ph', 'chart-ph', 'nd-ph', phPts, '#a78bfa', 6.0, 7.5, phSafe.min, phSafe.max, phWarning.min, phWarning.max);
   renderMetricChart('nh3','chart-nh3','nd-nh3',nh3Pts,'#f87171', 0, 1, nh3Safe.min, nh3Safe.max);
   renderMetricChart('no2','chart-no2','nd-no2',no2Pts,'#fb923c', 0, 1, no2Safe.min, no2Safe.max);
   renderNo3Chart(no3Pts, tapNo3Pts, no3Safe, no3Warning);
+  renderMetricChart('kh', 'chart-kh', 'nd-kh', khPts, '#2dd4bf', 0, 12, khSafe.min, khSafe.max, khWarning.min, khWarning.max);
 }
 
 // ── Render tank log ──
@@ -1971,14 +2065,17 @@ function renderLog() {
     const fmt=(v,type)=>v!==null&&v!==undefined?`<span class="${statusClass(v,type)}">${type==='ph'||type==='kh'?Number(v).toFixed(1):v}</span>`:'<span class="c-muted">—</span>';
     return`<tr>
       <td style="color:var(--muted);font-size:11px">${ds}<br>${ts}</td>
-      <td>${fmt(r.kh,'kh')}</td><td>${fmt(r.ph,'ph')}</td><td>${fmt(r.nh3,'nh3')}</td>
-      <td>${fmt(r.no2,'no2')}</td><td>${fmt(r.no3,'no3')}</td>
-      <td><button class="del-btn" onclick="deleteReading(${JSON.stringify(r.id)})">×</button></td>
+      <td>${fmt(r.ph,'ph')}</td><td>${fmt(r.nh3,'nh3')}</td>
+      <td>${fmt(r.no2,'no2')}</td><td>${fmt(r.no3,'no3')}</td><td>${fmt(r.kh,'kh')}</td>
+      <td class="log-actions">
+        <button type="button" class="icon-btn edit-btn" data-action="edit-tank" data-id="${escapeHtml(r.id)}" aria-label="Edit reading">✎</button>
+        <button type="button" class="icon-btn del-btn" data-action="delete-tank" data-id="${escapeHtml(r.id)}" aria-label="Delete reading">×</button>
+      </td>
     </tr>`;
   }).join('');
   body.innerHTML=`<table class="log-table"><thead><tr>
-    <th>Date</th><th class="kh-label">KH</th><th class="ph-label">pH</th><th class="nh3-label">NH₃</th>
-    <th class="no2-label">NO₂</th><th class="no3-label">NO₃</th><th></th>
+    <th>Date</th><th class="ph-label">pH</th><th class="nh3-label">NH₃</th>
+    <th class="no2-label">NO₂</th><th class="no3-label">NO₃</th><th class="kh-label">KH</th><th></th>
   </tr></thead><tbody>${rows}</tbody></table>`;
 }
 
@@ -1996,7 +2093,10 @@ function renderTapLog() {
       <td style="color:var(--muted);font-size:11px">${ds}</td>
       <td><span class="${cls}">${r.no3} ppm</span></td>
       <td style="color:var(--muted);font-size:11px">${escapeHtml(r.note||'')}</td>
-      <td><button class="del-btn" onclick="deleteTapReading(${JSON.stringify(r.id)})">×</button></td>
+      <td class="log-actions">
+        <button type="button" class="icon-btn edit-btn" data-action="edit-tap" data-id="${escapeHtml(r.id)}" aria-label="Edit tap test">✎</button>
+        <button type="button" class="icon-btn del-btn" data-action="delete-tap" data-id="${escapeHtml(r.id)}" aria-label="Delete tap test">×</button>
+      </td>
     </tr>`;
   }).join('');
   body.innerHTML=`<table class="log-table"><thead><tr>
@@ -2014,7 +2114,7 @@ async function addReading() {
   readings.push(r);
   readings.sort((a,b)=>new Date(a.date)-new Date(b.date));
   render();
-  ['f-kh','f-ph','f-nh3','f-no2','f-no3'].forEach(fid=>document.getElementById(fid).value='');
+  ['f-ph','f-nh3','f-no2','f-no3','f-kh'].forEach(fid=>document.getElementById(fid).value='');
   const res=await apiFetch('/readings',{method:'POST',body:JSON.stringify(r)});
   if(!res.ok){
     readings=readings.filter(x=>x.id!==newId);
@@ -2046,32 +2146,260 @@ async function addTapReading() {
   }
   showToast('Tap test added ✓');
 }
-async function deleteReading(readingId){
-  const item=readings.find(x=>x.id===readingId);
-  const idx=readings.findIndex(x=>x.id===readingId);
-  if(idx===-1)return;
-  readings.splice(idx,1);
+function formatReadingDateLabel(iso) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return 'this reading';
+  return d.toLocaleString('en-GB', {
+    day: '2-digit', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  });
+}
+
+function openConfirmModal({ title, message, confirmLabel, onConfirm }) {
+  document.getElementById('confirmModalTitle').textContent = title;
+  document.getElementById('confirmModalMessage').textContent = message;
+  document.getElementById('confirmModalConfirmBtn').textContent = confirmLabel || 'Delete';
+  confirmModalAction = onConfirm;
+  document.getElementById('confirmModal').classList.add('show');
+  document.body.classList.add('modal-open');
+}
+
+function closeConfirmModal() {
+  document.getElementById('confirmModal').classList.remove('show');
+  if (!document.getElementById('editTankModal').classList.contains('show')
+      && !document.getElementById('editTapModal').classList.contains('show')) {
+    document.body.classList.remove('modal-open');
+  }
+  confirmModalAction = null;
+}
+
+async function runConfirmModalAction() {
+  const action = confirmModalAction;
+  closeConfirmModal();
+  if (typeof action === 'function') await action();
+}
+
+function promptDeleteTankReading(readingId) {
+  const item = readings.find((x) => x.id === readingId);
+  if (!item) return;
+  openConfirmModal({
+    title: 'Delete tank reading?',
+    message: `Remove the reading from ${formatReadingDateLabel(item.date)}? This cannot be undone.`,
+    confirmLabel: 'Delete',
+    onConfirm: () => deleteTankReading(readingId),
+  });
+}
+
+function promptDeleteTapReading(readingId) {
+  const item = tapReadings.find((x) => x.id === readingId);
+  if (!item) return;
+  openConfirmModal({
+    title: 'Delete tap test?',
+    message: `Remove the tap test from ${formatReadingDateLabel(item.date)}? This cannot be undone.`,
+    confirmLabel: 'Delete',
+    onConfirm: () => deleteTapReading(readingId),
+  });
+}
+
+async function deleteTankReading(readingId) {
+  const item = readings.find((x) => x.id === readingId);
+  const idx = readings.findIndex((x) => x.id === readingId);
+  if (idx === -1) return;
+  readings.splice(idx, 1);
   render();
-  const res=await apiFetch('/readings/'+encodeURIComponent(readingId),{method:'DELETE'});
-  if(!res.ok){
-    if(item)readings.splice(idx,0,item);
-    readings.sort((a,b)=>new Date(a.date)-new Date(b.date));
+  const res = await apiFetch('/readings/' + encodeURIComponent(readingId), { method: 'DELETE' });
+  if (!res.ok) {
+    if (item) readings.splice(idx, 0, item);
+    readings.sort((a, b) => new Date(a.date) - new Date(b.date));
     render();
-    showToast(res.status===401?'Session expired':'Could not delete');
+    showToast(res.status === 401 ? 'Session expired' : 'Could not delete reading');
+    return;
+  }
+  showToast('Reading deleted ✓');
+}
+
+async function deleteTapReading(readingId) {
+  const item = tapReadings.find((x) => x.id === readingId);
+  const idx = tapReadings.findIndex((x) => x.id === readingId);
+  if (idx === -1) return;
+  tapReadings.splice(idx, 1);
+  render();
+  const res = await apiFetch('/tap/' + encodeURIComponent(readingId), { method: 'DELETE' });
+  if (!res.ok) {
+    if (item) tapReadings.splice(idx, 0, item);
+    tapReadings.sort((a, b) => new Date(a.date) - new Date(b.date));
+    render();
+    showToast(res.status === 401 ? 'Session expired' : 'Could not delete tap test');
+    return;
+  }
+  showToast('Tap test deleted ✓');
+}
+
+function setEditInputValue(id, value) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.value = value === null || value === undefined ? '' : value;
+}
+
+function openEditTankModal(readingId) {
+  const r = readings.find((x) => x.id === readingId);
+  if (!r) return;
+  editingTankId = readingId;
+  setEditInputValue('edit-ph', r.ph);
+  setEditInputValue('edit-nh3', r.nh3);
+  setEditInputValue('edit-no2', r.no2);
+  setEditInputValue('edit-no3', r.no3);
+  setEditInputValue('edit-kh', r.kh);
+  document.getElementById('edit-tank-date').value = toDatetimeLocalValue(r.date);
+  document.getElementById('editTankModal').classList.add('show');
+  document.body.classList.add('modal-open');
+}
+
+function closeEditTankModal() {
+  document.getElementById('editTankModal').classList.remove('show');
+  editingTankId = null;
+  if (!document.getElementById('confirmModal').classList.contains('show')
+      && !document.getElementById('editTapModal').classList.contains('show')) {
+    document.body.classList.remove('modal-open');
   }
 }
-async function deleteTapReading(readingId){
-  const item=tapReadings.find(x=>x.id===readingId);
-  const idx=tapReadings.findIndex(x=>x.id===readingId);
-  if(idx===-1)return;
-  tapReadings.splice(idx,1);
+
+function openEditTapModal(readingId) {
+  const r = tapReadings.find((x) => x.id === readingId);
+  if (!r) return;
+  editingTapId = readingId;
+  setEditInputValue('edit-tap-no3', r.no3);
+  document.getElementById('edit-tap-date').value = toDatetimeLocalValue(r.date);
+  document.getElementById('edit-tap-note').value = r.note || '';
+  document.getElementById('editTapModal').classList.add('show');
+  document.body.classList.add('modal-open');
+}
+
+function closeEditTapModal() {
+  document.getElementById('editTapModal').classList.remove('show');
+  editingTapId = null;
+  if (!document.getElementById('confirmModal').classList.contains('show')
+      && !document.getElementById('editTankModal').classList.contains('show')) {
+    document.body.classList.remove('modal-open');
+  }
+}
+
+function toDatetimeLocalValue(iso) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return nowLocal();
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return d.toISOString().slice(0, 16);
+}
+
+async function saveEditTankReading() {
+  const id = editingTankId;
+  const prev = readings.find((x) => x.id === id);
+  if (!prev) return;
+  const get = (fid) => {
+    const v = document.getElementById(fid).value;
+    return v === '' ? null : parseFloat(v);
+  };
+  const date = document.getElementById('edit-tank-date').value || prev.date;
+  const updated = {
+    ...prev,
+    date,
+    ph: get('edit-ph'),
+    nh3: get('edit-nh3'),
+    no2: get('edit-no2'),
+    no3: get('edit-no3'),
+    kh: get('edit-kh'),
+  };
+  if ([updated.ph, updated.nh3, updated.no2, updated.no3, updated.kh].every((v) => v === null)) {
+    showToast('Enter at least one value');
+    return;
+  }
+  const idx = readings.findIndex((x) => x.id === id);
+  readings[idx] = updated;
+  readings.sort((a, b) => new Date(a.date) - new Date(b.date));
+  closeEditTankModal();
   render();
-  const res=await apiFetch('/tap/'+encodeURIComponent(readingId),{method:'DELETE'});
-  if(!res.ok){
-    if(item)tapReadings.splice(idx,0,item);
-    tapReadings.sort((a,b)=>new Date(a.date)-new Date(b.date));
+  const res = await apiFetch('/readings/' + encodeURIComponent(id), {
+    method: 'PUT',
+    body: JSON.stringify(updated),
+  });
+  if (!res.ok) {
+    readings[idx] = prev;
+    readings.sort((a, b) => new Date(a.date) - new Date(b.date));
     render();
-    showToast(res.status===401?'Session expired':'Could not delete');
+    showToast(res.status === 401 ? 'Session expired' : 'Could not save changes');
+    return;
+  }
+  showToast('Reading updated ✓');
+}
+
+async function saveEditTapReading() {
+  const id = editingTapId;
+  const prev = tapReadings.find((x) => x.id === id);
+  if (!prev) return;
+  const no3Val = document.getElementById('edit-tap-no3').value;
+  if (no3Val === '') {
+    showToast('Nitrate is required');
+    return;
+  }
+  const updated = {
+    ...prev,
+    date: document.getElementById('edit-tap-date').value || prev.date,
+    no3: parseFloat(no3Val),
+    note: document.getElementById('edit-tap-note').value.trim(),
+  };
+  const idx = tapReadings.findIndex((x) => x.id === id);
+  tapReadings[idx] = updated;
+  tapReadings.sort((a, b) => new Date(a.date) - new Date(b.date));
+  closeEditTapModal();
+  render();
+  const res = await apiFetch('/tap/' + encodeURIComponent(id), {
+    method: 'PUT',
+    body: JSON.stringify(updated),
+  });
+  if (!res.ok) {
+    tapReadings[idx] = prev;
+    tapReadings.sort((a, b) => new Date(a.date) - new Date(b.date));
+    render();
+    showToast(res.status === 401 ? 'Session expired' : 'Could not save changes');
+    return;
+  }
+  showToast('Tap test updated ✓');
+}
+
+function onLogTableClick(event) {
+  const btn = event.target.closest('[data-action]');
+  if (!btn) return;
+  const id = btn.getAttribute('data-id');
+  const action = btn.getAttribute('data-action');
+  if (!id) return;
+  if (action === 'delete-tank') promptDeleteTankReading(id);
+  else if (action === 'edit-tank') openEditTankModal(id);
+  else if (action === 'delete-tap') promptDeleteTapReading(id);
+  else if (action === 'edit-tap') openEditTapModal(id);
+}
+
+function initLogTableActions() {
+  const logBody = document.getElementById('logBody');
+  const tapLogBody = document.getElementById('tapLogBody');
+  if (logBody) logBody.addEventListener('click', onLogTableClick);
+  if (tapLogBody) tapLogBody.addEventListener('click', onLogTableClick);
+  const confirmModal = document.getElementById('confirmModal');
+  if (confirmModal) {
+    confirmModal.addEventListener('click', (e) => {
+      if (e.target.id === 'confirmModal') closeConfirmModal();
+    });
+  }
+  const editTankModal = document.getElementById('editTankModal');
+  if (editTankModal) {
+    editTankModal.addEventListener('click', (e) => {
+      if (e.target.id === 'editTankModal') closeEditTankModal();
+    });
+  }
+  const editTapModal = document.getElementById('editTapModal');
+  if (editTapModal) {
+    editTapModal.addEventListener('click', (e) => {
+      if (e.target.id === 'editTapModal') closeEditTapModal();
+    });
   }
 }
 
@@ -2097,6 +2425,7 @@ if (getValidToken() && API_BASE_URL.trim()) {
   loadData();
 }
 initTapFeatureToggle();
+initLogTableActions();
 window.addEventListener('resize', renderCharts);
 </script>
 </body>

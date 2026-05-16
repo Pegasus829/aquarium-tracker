@@ -77,7 +77,7 @@ put_lambda_proxy_method() {
 
 put_options_method() {
   local resource_id="$1"
-  local allow_methods="'GET,PUT,OPTIONS'"
+  local allow_methods="${2:-'GET,PUT,OPTIONS'}"
   local allow_headers="'Content-Type,Authorization,x-api-key'"
   local allow_origin="'$ORIGIN'"
 
@@ -206,6 +206,54 @@ if ! aws_cmd lambda add-permission \
   --principal apigateway.amazonaws.com \
   --source-arn "$SOURCE_ARN" >/dev/null 2>&1; then
   echo "Lambda permission may already exist; continuing"
+fi
+
+ensure_child_resource() {
+  local parent_id="$1"
+  local path_part="$2"
+  local full_path="$3"
+  local existing
+  existing="$(get_resource_id "$full_path")"
+  if [[ -n "$existing" && "$existing" != "None" ]]; then
+    echo "$existing"
+    return
+  fi
+  aws_cmd apigateway create-resource \
+    --rest-api-id "$API_ID" \
+    --parent-id "$parent_id" \
+    --path-part "$path_part" \
+    --query id \
+    --output text
+}
+
+TAP_ID="$(get_resource_id /tap)"
+READINGS_ID_RESOURCE="$(get_resource_id /readings/{id})"
+if [[ -z "$READINGS_ID_RESOURCE" || "$READINGS_ID_RESOURCE" == "None" ]]; then
+  echo "Creating /readings/{id} resource"
+  READINGS_ID_RESOURCE="$(ensure_child_resource "$READINGS_ID" '{id}' '/readings/{id}')"
+else
+  echo "Using existing /readings/{id} resource: $READINGS_ID_RESOURCE"
+fi
+
+echo "Configuring PUT/DELETE /readings/{id} Lambda proxy methods"
+put_lambda_proxy_method "$READINGS_ID_RESOURCE" PUT "$INTEGRATION_URI" "$API_KEY_REQUIRED"
+put_lambda_proxy_method "$READINGS_ID_RESOURCE" DELETE "$INTEGRATION_URI" "$API_KEY_REQUIRED"
+put_options_method "$READINGS_ID_RESOURCE" "'GET,PUT,DELETE,OPTIONS'"
+
+if [[ -n "$TAP_ID" && "$TAP_ID" != "None" ]]; then
+  TAP_ID_RESOURCE="$(get_resource_id /tap/{id})"
+  if [[ -z "$TAP_ID_RESOURCE" || "$TAP_ID_RESOURCE" == "None" ]]; then
+    echo "Creating /tap/{id} resource"
+    TAP_ID_RESOURCE="$(ensure_child_resource "$TAP_ID" '{id}' '/tap/{id}')"
+  else
+    echo "Using existing /tap/{id} resource: $TAP_ID_RESOURCE"
+  fi
+  echo "Configuring PUT/DELETE /tap/{id} Lambda proxy methods"
+  put_lambda_proxy_method "$TAP_ID_RESOURCE" PUT "$INTEGRATION_URI" "$API_KEY_REQUIRED"
+  put_lambda_proxy_method "$TAP_ID_RESOURCE" DELETE "$INTEGRATION_URI" "$API_KEY_REQUIRED"
+  put_options_method "$TAP_ID_RESOURCE" "'GET,PUT,DELETE,OPTIONS'"
+else
+  echo "Skipping /tap/{id} routes because /tap resource was not found"
 fi
 
 echo "Adding CORS headers to default API Gateway error responses"
