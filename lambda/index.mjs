@@ -115,6 +115,7 @@ function validateTankItem(o) {
     type: 'tank',
     id,
     date,
+    kh: o.kh ?? null,
     ph: o.ph ?? null,
     nh3: o.nh3 ?? null,
     no2: o.no2 ?? null,
@@ -142,6 +143,7 @@ const DEFAULT_PROFILE = {
   avatar: { type: 'emoji', emoji: DEFAULT_AVATAR_EMOJI, imageDataUrl: '' },
   settings: { trackTapWater: true },
   safeZones: {
+    kh: { min: 2, max: 6 },
     ph: { min: 6.5, max: 7.0 },
     nh3: { min: 0, max: 0.25 },
     no2: { min: 0, max: 0.25 },
@@ -185,6 +187,7 @@ function normalizeProfile(raw = {}) {
       trackTapWater: typeof raw.settings?.trackTapWater === 'boolean' ? raw.settings.trackTapWater : DEFAULT_PROFILE.settings.trackTapWater,
     },
     safeZones: {
+      kh: sanitizeRange(raw.safeZones?.kh, DEFAULT_PROFILE.safeZones.kh, 0, 30),
       ph: sanitizeRange(raw.safeZones?.ph, DEFAULT_PROFILE.safeZones.ph, 0, 14),
       nh3: sanitizeRange(raw.safeZones?.nh3, DEFAULT_PROFILE.safeZones.nh3, 0, 500),
       no2: sanitizeRange(raw.safeZones?.no2, DEFAULT_PROFILE.safeZones.no2, 0, 500),

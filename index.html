@@ -21,6 +21,7 @@
   --muted:   #9aabc4;
   --white:   #f0f4ff;
   --cta:     #93c5fd;
+  --kh:      #5eead4;
   --ph:      #c4b5fd;
   --nh3:     #ff9b9b;
   --no2:     #fb923c;
@@ -114,7 +115,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
 .field input { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 9px 10px; font-family: var(--mono); font-size: 14px; color: var(--white); outline: none; transition: border-color 0.2s; -webkit-tap-highlight-color: transparent; }
 .field input:focus { border-color: rgba(255,255,255,0.25); }
 .field input::placeholder { color: var(--muted); font-size: 12px; }
-.ph-label { color: var(--ph); } .nh3-label { color: var(--nh3); } .no2-label { color: var(--no2); } .no3-label { color: var(--no3); } .tap-label { color: var(--tap); }
+.kh-label { color: var(--kh); } .ph-label { color: var(--ph); } .nh3-label { color: var(--nh3); } .no2-label { color: var(--no2); } .no3-label { color: var(--no3); } .tap-label { color: var(--tap); }
 .form-row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
 .form-row-right { justify-content: flex-end; }
 .date-field { flex: 1; min-width: 160px; }
@@ -124,7 +125,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); min-
 .btn-add:active { opacity: 0.8; }
 .btn-add:disabled { opacity: 0.55; cursor: not-allowed; }
 
-.status-bar { max-width: 860px; margin: 0 auto 24px; display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; }
+.status-bar { max-width: 860px; margin: 0 auto 24px; display: grid; grid-template-columns: repeat(5,1fr); gap: 8px; }
 .tap-status-bar { max-width: 860px; margin: 0 auto 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .stat-pill { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 10px 8px; text-align: center; }
 .stat-pill.tap-pill { border-color: rgba(34,211,238,0.15); }
@@ -495,6 +496,7 @@ body.profile-open { overflow: hidden; }
 <div class="form-card">
   <div class="form-title">+ Log Tank Reading</div>
   <div class="form-grid">
+    <div class="field"><label class="kh-label">KH (dKH)</label><input type="number" id="f-kh" step="0.5" min="0" placeholder="4"></div>
     <div class="field"><label class="ph-label">pH</label><input type="number" id="f-ph" step="0.1" min="0" max="14" placeholder="6.8"></div>
     <div class="field"><label class="nh3-label">Ammonia (ppm)</label><input type="number" id="f-nh3" step="0.25" min="0" placeholder="0.0"></div>
     <div class="field"><label class="no2-label">Nitrite (ppm)</label><input type="number" id="f-no2" step="0.25" min="0" placeholder="0.0"></div>
@@ -526,6 +528,7 @@ body.profile-open { overflow: hidden; }
 </div>
 
 <div class="status-bar" id="statusBar">
+  <div class="stat-pill"><div class="stat-label">KH</div><div class="stat-value c-muted">—</div></div>
   <div class="stat-pill"><div class="stat-label">pH</div><div class="stat-value c-muted">—</div></div>
   <div class="stat-pill"><div class="stat-label">Ammonia</div><div class="stat-value c-muted">—</div></div>
   <div class="stat-pill"><div class="stat-label">Nitrite</div><div class="stat-value c-muted">—</div></div>
@@ -538,6 +541,14 @@ body.profile-open { overflow: hidden; }
 </div>
 
 <div class="charts-wrap">
+  <div class="chart-card">
+    <div class="chart-header">
+      <div class="chart-dot" style="background:var(--kh)"></div>
+      <div class="chart-name">KH (Carbonate)</div>
+      <div class="chart-range" id="range-kh">Target: 2–6 dKH</div>
+    </div>
+    <div class="chart-canvas-wrap"><canvas class="chart" id="chart-kh"></canvas><div class="chart-no-data" id="nd-kh">No readings yet</div></div>
+  </div>
   <div class="chart-card">
     <div class="chart-header">
       <div class="chart-dot" style="background:var(--ph)"></div>
@@ -653,6 +664,13 @@ body.profile-open { overflow: hidden; }
     <div class="profile-section-title">Chart Safe Zones</div>
     <div class="safe-zone-list">
       <div class="safe-zone-row">
+        <div class="safe-zone-category">KH (dKH)</div>
+        <div class="safe-zone-inputs">
+          <div class="field"><label class="safe-zone-label">Min</label><input type="number" id="profileSafeKhMin" step="0.5" min="0"></div>
+          <div class="field"><label class="safe-zone-label">Max</label><input type="number" id="profileSafeKhMax" step="0.5" min="0"></div>
+        </div>
+      </div>
+      <div class="safe-zone-row">
         <div class="safe-zone-category">pH</div>
         <div class="safe-zone-inputs">
           <div class="field"><label class="safe-zone-label">Min</label><input type="number" id="profileSafePhMin" step="0.1" min="0" max="14"></div>
@@ -710,6 +728,7 @@ function defaultProfile() {
     avatar: { type: 'emoji', emoji: DEFAULT_AVATAR_EMOJI, imageDataUrl: '' },
     settings: { trackTapWater: true },
     safeZones: {
+      kh: { min: 2, max: 6 },
       ph: { min: 6.5, max: 7.0 },
       nh3: { min: 0, max: 0.25 },
       no2: { min: 0, max: 0.25 },
@@ -757,6 +776,7 @@ function normalizeProfile(raw = {}) {
       trackTapWater: typeof raw.settings?.trackTapWater === 'boolean' ? raw.settings.trackTapWater : defaults.settings.trackTapWater,
     },
     safeZones: {
+      kh: sanitizeRange(raw.safeZones?.kh, defaults.safeZones.kh, 0, 30),
       ph: sanitizeRange(raw.safeZones?.ph, defaults.safeZones.ph, 0, 14),
       nh3: sanitizeRange(raw.safeZones?.nh3, defaults.safeZones.nh3, 0, 500),
       no2: sanitizeRange(raw.safeZones?.no2, defaults.safeZones.no2, 0, 500),
@@ -798,6 +818,13 @@ function getNo3WarningRange(safeZone = profile.safeZones.no3) {
   return { min, max };
 }
 
+function getKhWarningRange(safeZone = profile.safeZones.kh) {
+  return {
+    min: Math.max(0, safeZone.min - 1),
+    max: safeZone.max + 2,
+  };
+}
+
 function getPhWarningRange(safeZone = profile.safeZones.ph) {
   return {
     min: Math.max(0, safeZone.min - 0.3),
@@ -806,11 +833,15 @@ function getPhWarningRange(safeZone = profile.safeZones.ph) {
 }
 
 function updateChartRangeLabels() {
+  const kh = profile.safeZones.kh;
   const ph = profile.safeZones.ph;
   const nh3 = profile.safeZones.nh3;
   const no2 = profile.safeZones.no2;
   const no3 = profile.safeZones.no3;
   const no3Warn = getNo3WarningRange(no3);
+
+  const rangeKh = document.getElementById('range-kh');
+  if (rangeKh) rangeKh.textContent = `Target: ${formatRangeValue(kh.min, 1)}-${formatRangeValue(kh.max, 1)} dKH`;
 
   const rangePh = document.getElementById('range-ph');
   if (rangePh) rangePh.textContent = `Target: ${formatRangeValue(ph.min, 1)}-${formatRangeValue(ph.max, 1)}`;
@@ -880,6 +911,8 @@ function populateProfileForm() {
   document.getElementById('profileAquariumSize').value = profile.aquariumSize;
   document.getElementById('profileAquariumUnits').value = profile.aquariumUnits;
 
+  document.getElementById('profileSafeKhMin').value = profile.safeZones.kh.min;
+  document.getElementById('profileSafeKhMax').value = profile.safeZones.kh.max;
   document.getElementById('profileSafePhMin').value = profile.safeZones.ph.min;
   document.getElementById('profileSafePhMax').value = profile.safeZones.ph.max;
   document.getElementById('profileSafeNh3Min').value = profile.safeZones.nh3.min;
@@ -1050,6 +1083,7 @@ async function saveProfile() {
     aquariumUnits: document.getElementById('profileAquariumUnits').value === 'gallons' ? 'gallons' : 'litres',
     avatar: normalizeAvatar(profileAvatarDraft || profile.avatar),
     safeZones: {
+      kh: { min: Number(document.getElementById('profileSafeKhMin').value), max: Number(document.getElementById('profileSafeKhMax').value) },
       ph: { min: Number(document.getElementById('profileSafePhMin').value), max: Number(document.getElementById('profileSafePhMax').value) },
       nh3: { min: Number(document.getElementById('profileSafeNh3Min').value), max: Number(document.getElementById('profileSafeNh3Max').value) },
       no2: { min: Number(document.getElementById('profileSafeNo2Min').value), max: Number(document.getElementById('profileSafeNo2Max').value) },
@@ -1067,6 +1101,7 @@ async function saveProfile() {
       trackTapWater: profile.settings?.trackTapWater !== false,
     },
     safeZones: {
+      kh: sanitizeRange(nextProfile.safeZones.kh, defaults.safeZones.kh, 0, 30),
       ph: sanitizeRange(nextProfile.safeZones.ph, defaults.safeZones.ph, 0, 14),
       nh3: sanitizeRange(nextProfile.safeZones.nh3, defaults.safeZones.nh3, 0, 500),
       no2: sanitizeRange(nextProfile.safeZones.no2, defaults.safeZones.no2, 0, 500),
@@ -1132,7 +1167,7 @@ function showToast(msg) {
 function setLoadingState(loading) {
   isDataLoading = loading;
 
-  ['nd-ph','nd-nh3','nd-no2','nd-no3'].forEach((id) => {
+  ['nd-kh','nd-ph','nd-nh3','nd-no2','nd-no3'].forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.textContent = loading ? 'Loading…' : 'No readings yet';
   });
@@ -1144,7 +1179,7 @@ function setLoadingState(loading) {
   if (!loading) return;
 
   const tankPills = document.querySelectorAll('#statusBar .stat-pill');
-  const tankLabels = ['pH', 'Ammonia', 'Nitrite', 'Nitrate'];
+  const tankLabels = ['KH', 'pH', 'Ammonia', 'Nitrite', 'Nitrate'];
   tankPills.forEach((pill, idx) => {
     pill.innerHTML = `<div class="stat-label">${tankLabels[idx]}</div><div class="stat-value c-muted">Loading…</div><div class="stat-status c-muted">Sync</div>`;
   });
@@ -1436,6 +1471,16 @@ function initTapFeatureToggle() {
 }
 
 // ── Status helpers ──
+function khStatus(v) {
+  if (v === null) return ['—', 'c-muted', ''];
+  const { min, max } = profile.safeZones.kh;
+  const warnLow = Math.max(0, min - 1);
+  const warnHigh = max + 2;
+  const display = Number(v).toFixed(1);
+  if (v >= min && v <= max) return [display, 'c-safe', 'GOOD'];
+  if (v >= warnLow && v <= warnHigh) return [display, 'c-warn', 'WATCH'];
+  return [display, 'c-danger', 'ACT'];
+}
 function phStatus(v)  { if(v===null)return['—','c-muted','']; if(v>=6.5&&v<=7.2)return[v.toFixed(1),'c-safe','GOOD']; if(v>=6.2&&v<=7.5)return[v.toFixed(1),'c-warn','WATCH']; return[v.toFixed(1),'c-danger','ACT']; }
 function nh3Status(v) { if(v===null)return['—','c-muted','']; if(v===0)return['0','c-safe','CLEAR']; if(v<=0.5)return[v,'c-warn','CYCLING']; return[v,'c-danger','HIGH']; }
 function no2Status(v) { if(v===null)return['—','c-muted','']; if(v===0)return['0','c-safe','CLEAR']; if(v<=1)return[v,'c-warn','CYCLING']; return[v,'c-danger','HIGH']; }
@@ -1443,7 +1488,7 @@ function no3Status(v) { if(v===null)return['—','c-muted','']; if(v<=20)return[
 function tapStatus(v) { if(v===null)return['—','c-muted','']; if(v<=20)return[v,'c-safe','LOW']; if(v<=40)return[v,'c-warn','MED']; return[v,'c-danger','HIGH']; }
 function statusClass(v,type) {
   if(v===null||v===undefined)return'c-muted';
-  if(type==='ph') return phStatus(v)[1]; if(type==='nh3')return nh3Status(v)[1];
+  if(type==='kh') return khStatus(v)[1]; if(type==='ph') return phStatus(v)[1]; if(type==='nh3')return nh3Status(v)[1];
   if(type==='no2')return no2Status(v)[1]; if(type==='no3')return no3Status(v)[1];
   if(type==='tap')return tapStatus(v)[1]; return'c-muted';
 }
@@ -1453,7 +1498,8 @@ function updateStatus() {
   if(readings.length>0) {
     const last=readings[readings.length-1];
     const pills=document.querySelectorAll('#statusBar .stat-pill');
-    [[last.ph,phStatus,'pH',last.ph!==null?last.ph.toFixed(1):'—'],
+    [[last.kh,khStatus,'KH',last.kh!==null?last.kh.toFixed(1)+' dKH':'—'],
+     [last.ph,phStatus,'pH',last.ph!==null?last.ph.toFixed(1):'—'],
      [last.nh3,nh3Status,'NH₃',last.nh3!==null?last.nh3+' ppm':'—'],
      [last.no2,no2Status,'NO₂',last.no2!==null?last.no2+' ppm':'—'],
      [last.no3,no3Status,'NO₃',last.no3!==null?last.no3+' ppm':'—']
@@ -1891,19 +1937,23 @@ function renderNo3Chart(tankPts, tapPts, safeZone, warningZone) {
 // ── Build chart data ──
 function renderCharts() {
   const toPts=(arr,key)=>arr.filter(r=>r[key]!==null&&r[key]!==undefined).map(r=>({t:new Date(r.date).getTime(),v:r[key]}));
+  const khSafe = profile.safeZones.kh;
   const phSafe = profile.safeZones.ph;
   const nh3Safe = profile.safeZones.nh3;
   const no2Safe = profile.safeZones.no2;
   const no3Safe = profile.safeZones.no3;
+  const khWarning = getKhWarningRange(khSafe);
   const phWarning = getPhWarningRange(phSafe);
   const no3Warning = getNo3WarningRange(no3Safe);
 
+  const khPts = toPts(readings,'kh');
   const phPts = toPts(readings,'ph');
   const nh3Pts = toPts(readings,'nh3');
   const no2Pts = toPts(readings,'no2');
   const no3Pts = toPts(readings,'no3');
   const tapNo3Pts = tapFeatureEnabled ? toPts(tapReadings,'no3') : [];
 
+  renderMetricChart('kh', 'chart-kh', 'nd-kh', khPts, '#2dd4bf', 0, 12, khSafe.min, khSafe.max, khWarning.min, khWarning.max);
   renderMetricChart('ph', 'chart-ph', 'nd-ph', phPts, '#a78bfa', 6.0, 7.5, phSafe.min, phSafe.max, phWarning.min, phWarning.max);
   renderMetricChart('nh3','chart-nh3','nd-nh3',nh3Pts,'#f87171', 0, 1, nh3Safe.min, nh3Safe.max);
   renderMetricChart('no2','chart-no2','nd-no2',no2Pts,'#fb923c', 0, 1, no2Safe.min, no2Safe.max);
@@ -1920,16 +1970,16 @@ function renderLog() {
     const d=new Date(r.date);
     const ds=d.toLocaleDateString('en-GB',{day:'2-digit',month:'short'});
     const ts=d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
-    const fmt=(v,type)=>v!==null&&v!==undefined?`<span class="${statusClass(v,type)}">${type==='ph'?Number(v).toFixed(1):v}</span>`:'<span class="c-muted">—</span>';
+    const fmt=(v,type)=>v!==null&&v!==undefined?`<span class="${statusClass(v,type)}">${type==='ph'||type==='kh'?Number(v).toFixed(1):v}</span>`:'<span class="c-muted">—</span>';
     return`<tr>
       <td style="color:var(--muted);font-size:11px">${ds}<br>${ts}</td>
-      <td>${fmt(r.ph,'ph')}</td><td>${fmt(r.nh3,'nh3')}</td>
+      <td>${fmt(r.kh,'kh')}</td><td>${fmt(r.ph,'ph')}</td><td>${fmt(r.nh3,'nh3')}</td>
       <td>${fmt(r.no2,'no2')}</td><td>${fmt(r.no3,'no3')}</td>
       <td><button class="del-btn" onclick="deleteReading(${JSON.stringify(r.id)})">×</button></td>
     </tr>`;
   }).join('');
   body.innerHTML=`<table class="log-table"><thead><tr>
-    <th>Date</th><th class="ph-label">pH</th><th class="nh3-label">NH₃</th>
+    <th>Date</th><th class="kh-label">KH</th><th class="ph-label">pH</th><th class="nh3-label">NH₃</th>
     <th class="no2-label">NO₂</th><th class="no3-label">NO₃</th><th></th>
   </tr></thead><tbody>${rows}</tbody></table>`;
 }
@@ -1961,12 +2011,12 @@ async function addReading() {
   const get=fid=>{const v=document.getElementById(fid).value;return v===''?null:parseFloat(v);};
   const date=nowLocal();
   const newId=crypto.randomUUID();
-  const r={id:newId,date,ph:get('f-ph'),nh3:get('f-nh3'),no2:get('f-no2'),no3:get('f-no3')};
-  if([r.ph,r.nh3,r.no2,r.no3].every(v=>v===null))return;
+  const r={id:newId,date,kh:get('f-kh'),ph:get('f-ph'),nh3:get('f-nh3'),no2:get('f-no2'),no3:get('f-no3')};
+  if([r.kh,r.ph,r.nh3,r.no2,r.no3].every(v=>v===null))return;
   readings.push(r);
   readings.sort((a,b)=>new Date(a.date)-new Date(b.date));
   render();
-  ['f-ph','f-nh3','f-no2','f-no3'].forEach(fid=>document.getElementById(fid).value='');
+  ['f-kh','f-ph','f-nh3','f-no2','f-no3'].forEach(fid=>document.getElementById(fid).value='');
   const res=await apiFetch('/readings',{method:'POST',body:JSON.stringify(r)});
   if(!res.ok){
     readings=readings.filter(x=>x.id!==newId);
