@@ -205,6 +205,11 @@ canvas.chart { width: 100%; height: 110px; display: block; }
 }
 .gate-input:focus { border-color: rgba(255,255,255,0.3); }
 .gate-input.error { border-color: var(--danger); animation: shake 0.3s ease; }
+.gate-input:-webkit-autofill { animation-name: gate-autofill; animation-duration: 0.01s; }
+@keyframes gate-autofill {
+  from { opacity: 0.99; }
+  to { opacity: 1; }
+}
 @keyframes shake {
   0%,100% { transform: translateX(0); }
   25%      { transform: translateX(-8px); }
@@ -217,6 +222,7 @@ canvas.chart { width: 100%; height: 110px; display: block; }
   cursor: pointer; transition: opacity 0.15s; margin-bottom: 10px;
 }
 .gate-btn:active { opacity: 0.8; }
+.gate-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 .gate-error {
   font-family: var(--mono); font-size: 10px; color: var(--danger);
   letter-spacing: 0.08em; height: 14px; margin-top: 2px;
@@ -452,9 +458,11 @@ body.profile-open { overflow: hidden; }
     <div class="gate-icon">🐠</div>
     <div class="gate-title">Aquarium Tracker</div>
     <div class="gate-sub" id="gateSub">Fluval Flex 2.0 · 57L</div>
-    <input class="gate-input" type="password" id="gateInput" placeholder="••••••••••••"
-      autocomplete="current-password" onkeydown="if(event.key==='Enter')unlock()">
-    <button class="gate-btn" onclick="unlock()">Unlock</button>
+    <form id="gateForm" autocomplete="on">
+      <input class="gate-input" type="password" id="gateInput" name="password" placeholder="••••••••••••"
+        autocomplete="current-password" autocapitalize="off" spellcheck="false">
+      <button class="gate-btn" type="submit">Unlock</button>
+    </form>
     <div class="gate-error" id="gateError"></div>
     <div class="gate-hint">Password protected · readings are read-only without access</div>
   </div>
@@ -1249,16 +1257,96 @@ async function loadProfileSettings() {
   }
 }
 
-async function unlock() {
+const GATE_AUTOFILL_SUBMIT_DELAY_MS = 300;
+let gateUnlockInFlight = false;
+let gateAutofillTimer = null;
+let lastGateInputValue = '';
+
+function setGateSubmitting(isSubmitting) {
+  const button = document.querySelector('#gateForm .gate-btn');
+  if (button) button.disabled = isSubmitting;
+}
+
+function queueGateAutofillSubmit() {
+  const input = document.getElementById('gateInput');
+  const gate = document.getElementById('gate');
+  if (!input || !input.value || gateUnlockInFlight || (gate && gate.style.display === 'none')) return;
+  clearTimeout(gateAutofillTimer);
+  gateAutofillTimer = setTimeout(() => {
+    if (input.value && !gateUnlockInFlight) unlock();
+  }, GATE_AUTOFILL_SUBMIT_DELAY_MS);
+}
+
+function handleGatePasswordInput(event) {
+  const value = event.currentTarget.value;
+  const insertedLength = value.length - lastGateInputValue.length;
+  lastGateInputValue = value;
+  if (!value) {
+    clearTimeout(gateAutofillTimer);
+    return;
+  }
+
+  const inputType = event.inputType || '';
+  const likelyAutofill = !inputType || inputType === 'insertReplacementText' || insertedLength > 1;
+  if (likelyAutofill) queueGateAutofillSubmit();
+}
+
+function handleGatePasswordChange(event) {
+  const value = event.currentTarget.value;
+  const insertedLength = value.length - lastGateInputValue.length;
+  lastGateInputValue = value;
+  if (value && insertedLength > 1) queueGateAutofillSubmit();
+}
+
+function handleGateAutofillAnimation(event) {
+  if (event.animationName !== 'gate-autofill') return;
+  lastGateInputValue = event.currentTarget.value;
+  queueGateAutofillSubmit();
+}
+
+function initGateForm() {
+  const form = document.getElementById('gateForm');
+  const input = document.getElementById('gateInput');
+  if (form) form.addEventListener('submit', unlock);
+  if (!input) return;
+
+  lastGateInputValue = input.value;
+  input.addEventListener('input', handleGatePasswordInput);
+  input.addEventListener('change', handleGatePasswordChange);
+  input.addEventListener('animationstart', handleGateAutofillAnimation);
+
+  if (input.value) setTimeout(queueGateAutofillSubmit, 100);
+
+  let pollCount = 0;
+  const autofillPoll = setInterval(() => {
+    pollCount += 1;
+    const value = input.value;
+    const insertedLength = value.length - lastGateInputValue.length;
+    if (value && value !== lastGateInputValue) {
+      lastGateInputValue = value;
+      if (insertedLength > 1) {
+        queueGateAutofillSubmit();
+        clearInterval(autofillPoll);
+      }
+    }
+    const gate = document.getElementById('gate');
+    if (pollCount >= 25 || (gate && gate.style.display === 'none')) clearInterval(autofillPoll);
+  }, 100);
+}
+
+async function unlock(event) {
+  if (event) event.preventDefault();
   const input = document.getElementById('gateInput');
   const error = document.getElementById('gateError');
   const val = input.value;
-  if (!val) return;
+  if (!val || gateUnlockInFlight) return;
   if (!API_BASE_URL.trim()) {
     error.textContent = 'Set API_BASE_URL in index.html';
     return;
   }
   error.textContent = '';
+  gateUnlockInFlight = true;
+  setGateSubmitting(true);
   try {
     const loginHeaders = { 'Content-Type': 'application/json' };
     if (API_KEY.trim()) loginHeaders['x-api-key'] = API_KEY.trim();
@@ -1272,6 +1360,7 @@ async function unlock() {
       error.textContent = data.error || 'Sign-in failed';
       input.classList.add('error');
       input.value = '';
+      lastGateInputValue = '';
       setTimeout(() => { input.classList.remove('error'); error.textContent = ''; }, 2000);
       return;
     }
@@ -1281,6 +1370,7 @@ async function unlock() {
     }
     sessionStorage.setItem('wqt_token', data.token);
     input.value = '';
+    lastGateInputValue = '';
     document.getElementById('gate').style.display = 'none';
     document.getElementById('app').style.display = 'block';
     await loadData();
@@ -1288,6 +1378,9 @@ async function unlock() {
     error.textContent = 'Cannot reach API';
     input.classList.add('error');
     setTimeout(() => { input.classList.remove('error'); error.textContent = ''; }, 2000);
+  } finally {
+    gateUnlockInFlight = false;
+    setGateSubmitting(false);
   }
 }
 
@@ -1939,6 +2032,7 @@ function render(){updateStatus();renderCharts();renderLog();renderTapLog();}
 
 document.getElementById('currentYear').textContent = new Date().getFullYear();
 applyProfileToUI();
+initGateForm();
 if (getValidToken() && API_BASE_URL.trim()) {
   document.getElementById('gate').style.display = 'none';
   document.getElementById('app').style.display = 'block';
