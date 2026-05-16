@@ -149,6 +149,7 @@ canvas.chart { width: 100%; height: 110px; display: block; }
 .del-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 14px; padding: 2px 4px; border-radius: 4px; -webkit-tap-highlight-color: transparent; transition: color 0.15s; }
 .del-btn:hover { color: var(--danger); }
 .log-empty { padding: 20px; text-align: center; font-family: var(--mono); font-size: 11px; color: var(--muted); letter-spacing: 0.08em; }
+.footer { max-width: 860px; margin: 28px auto 0; text-align: center; font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
 
 .c-safe { color: var(--safe); } .c-warn { color: var(--warn); } .c-danger { color: var(--danger); } .c-muted { color: var(--muted); }
 
@@ -479,6 +480,8 @@ body.profile-open { overflow: hidden; }
   </div>
   <div id="tapLogBody"><div class="log-empty">No tap tests logged yet</div></div>
 </div>
+
+<footer class="footer">Copyright VibeAI <span id="currentYear"></span></footer>
 
 </div><!-- /app -->
 
@@ -1571,6 +1574,7 @@ async function deleteTapReading(readingId){
 // ── Full render ──
 function render(){updateStatus();renderCharts();renderLog();renderTapLog();}
 
+document.getElementById('currentYear').textContent = new Date().getFullYear();
 applyProfileToUI();
 if (getValidToken() && API_BASE_URL.trim()) {
   document.getElementById('gate').style.display = 'none';
