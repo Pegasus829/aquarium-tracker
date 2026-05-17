@@ -12,6 +12,7 @@ SKIP_LAMBDA="${SKIP_LAMBDA:-0}"
 AWS_CLI="${AWS_CLI:-aws}"
 AUTHORIZATION_TYPE="${AUTHORIZATION_TYPE:-NONE}"
 AUTHORIZER_ID="${AUTHORIZER_ID:-}"
+REQUIRE_API_KEY="${REQUIRE_API_KEY:-0}"
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ZIP_PATH="$REPO_ROOT/deploy/aquarium-api.zip"
@@ -117,7 +118,7 @@ put_options_method() {
     --resource-id "$resource_id" \
     --http-method OPTIONS \
     --status-code 200 \
-    --response-parameters "{\"method.response.header.Access-Control-Allow-Headers\":\"'Content-Type,Authorization,x-api-key'\",\"method.response.header.Access-Control-Allow-Methods\":\"'${allow_methods}'\",\"method.response.header.Access-Control-Allow-Origin\":\"'${ORIGIN}'\"}" >/dev/null
+    --response-parameters "{\"method.response.header.Access-Control-Allow-Headers\":\"'Content-Type,Authorization'\",\"method.response.header.Access-Control-Allow-Methods\":\"'${allow_methods}'\",\"method.response.header.Access-Control-Allow-Origin\":\"'${ORIGIN}'\"}" >/dev/null
 }
 
 put_cors_gateway_response() {
@@ -125,7 +126,7 @@ put_cors_gateway_response() {
   aws_cmd apigateway put-gateway-response \
     --rest-api-id "$API_ID" \
     --response-type "$response_type" \
-    --response-parameters "gatewayresponse.header.Access-Control-Allow-Origin='${ORIGIN}',gatewayresponse.header.Access-Control-Allow-Headers='Content-Type,Authorization,x-api-key',gatewayresponse.header.Access-Control-Allow-Methods='GET,POST,PUT,DELETE,OPTIONS'" >/dev/null
+    --response-parameters "gatewayresponse.header.Access-Control-Allow-Origin='${ORIGIN}',gatewayresponse.header.Access-Control-Allow-Headers='Content-Type,Authorization',gatewayresponse.header.Access-Control-Allow-Methods='GET,POST,PUT,DELETE,OPTIONS'" >/dev/null
 }
 
 require_tool "$AWS_CLI"
@@ -161,12 +162,10 @@ FUNCTION_NAME="${LAMBDA_FUNCTION_NAME:-${FUNCTION_ARN##*:function:}}"
 FUNCTION_NAME="${FUNCTION_NAME%%:*}"
 PARTITION="$(cut -d: -f2 <<<"$FUNCTION_ARN")"
 
-API_KEY_REQUIRED="$(aws_cmd apigateway get-method \
-  --rest-api-id "$API_ID" \
-  --resource-id "$READINGS_ID" \
-  --http-method GET \
-  --query apiKeyRequired \
-  --output text)"
+API_KEY_REQUIRED=false
+if [[ "$REQUIRE_API_KEY" == "1" || "$REQUIRE_API_KEY" == "true" || "$REQUIRE_API_KEY" == "True" ]]; then
+  API_KEY_REQUIRED=true
+fi
 
 if [[ "$SKIP_LAMBDA" != "1" ]]; then
   echo "Building and updating Lambda function: $FUNCTION_NAME"
