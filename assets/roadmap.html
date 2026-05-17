@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; form-action 'self'; frame-src 'none'; manifest-src 'self'; worker-src 'none'">
+<meta name="referrer" content="no-referrer">
 <title>Aquarium Tracker — Roadmap</title>
 <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
 <meta name="theme-color" content="#0f2a3a">
@@ -454,6 +456,7 @@ const ROADMAP_ITEMS = [
   { id: 'AT-030', section: 'backlog', category: 'Security', title: 'Rate-limit / abuse monitoring dashboard or alarms', status: 'idea', priority: 'low', delivered: '', source: 'Security review', notes: 'Usage plan exists; observability not in repo' },
   { id: 'AT-031', section: 'backlog', category: 'Enhancement', title: 'Generate interactive roadmap data from ROADMAP.md', status: 'idea', priority: 'low', delivered: '', source: 'agent:roadmap-next-sync', notes: 'Avoid maintaining duplicate ROADMAP_ITEMS data by hand' },
   { id: 'AT-032', section: 'backlog', category: 'Security', title: 'Roadmap permissions with read/write access controls', status: 'idea', priority: 'medium', delivered: '', source: 'user', notes: 'Default no roadmap access; marc@amphletts.uk has write access' },
+  { id: 'AT-033', section: 'backlog', category: 'Security', title: 'Remove inline code so CSP can drop unsafe-inline', status: 'idea', priority: 'medium', delivered: '', source: 'agent:at-019', notes: 'Externalize handlers, styles, and app script or add repeatable nonce/hash generation' },
 ];
 
 const ROADMAP_PATH = '/ROADMAP.md';

@@ -22,6 +22,12 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Headers': 'Content-Type,Authorization,x-api-key',
   'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
 };
+const SECURITY_HEADERS = {
+  'Cache-Control': 'no-store',
+  'Referrer-Policy': 'no-referrer',
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'DENY',
+};
 const DEFAULT_AVATAR_EMOJI = '👤';
 const AVATAR_EMOJIS = [DEFAULT_AVATAR_EMOJI, '🐠', '🐟', '🐡', '🐙', '🦐'];
 const AVATAR_IMAGE_MAX_CHARS = 220000;
@@ -33,7 +39,7 @@ const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}), {
 function json(status, body) {
   return {
     statusCode: status,
-    headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
+    headers: { 'Content-Type': 'application/json', ...SECURITY_HEADERS, ...CORS_HEADERS },
     body: typeof body === 'string' ? body : JSON.stringify(body),
   };
 }
