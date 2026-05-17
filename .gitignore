@@ -10,6 +10,10 @@ deploy/.jwt_secret_once
 deploy/aquarium-full.zip
 deploy/aquarium-api.zip
 deploy/.deploy_output.txt
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
 
 # Local duplicate copies created by browser/editor save-as actions.
 *\ [0-9]*.html

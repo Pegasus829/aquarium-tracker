@@ -8,6 +8,7 @@ const nodeFiles = [
   'lambda/migrate-legacy-data.mjs',
   'scripts/generate-local-config.mjs',
   'eslint.config.js',
+  'playwright.config.js',
 ];
 
 export default [
@@ -46,6 +47,21 @@ export default [
       ecmaVersion: 2022,
       sourceType: 'module',
       globals: globals.node,
+    },
+    rules: {
+      'no-unused-vars': ['error', { argsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' }],
+    },
+  },
+  {
+    files: ['e2e/**/*.js'],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: 'module',
+      globals: {
+        ...globals.node,
+        ...globals.browser,
+        Chart: 'readonly',
+      },
     },
     rules: {
       'no-unused-vars': ['error', { argsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' }],
