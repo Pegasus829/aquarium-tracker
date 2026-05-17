@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aquarium Tracker — Roadmap</title>
+<link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+<meta name="theme-color" content="#0f2a3a">
+<style>
+:root {
+  --bg: #0c0f14;
+  --surface: #141820;
+  --card: #1a1f2a;
+  --border: rgba(255,255,255,0.07);
+  --text: #c9d4e8;
+  --muted: #9aabc4;
+  --white: #f0f4ff;
+  --cta: #93c5fd;
+  --safe: #34d399;
+  --warn: #f59e0b;
+  --danger: #ffadad;
+  --next: #fbbf24;
+  --font: -apple-system, 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif;
+  --mono: ui-monospace, 'SF Mono', Menlo, monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  padding: 24px 16px 64px;
+  line-height: 1.45;
+}
+.wrap { max-width: 1100px; margin: 0 auto; }
+a { color: var(--cta); }
+a:hover { text-decoration: underline; }
+
+.header { margin-bottom: 24px; }
+.header h1 {
+  font-size: clamp(22px, 5vw, 30px);
+  font-weight: 800;
+  color: var(--white);
+  letter-spacing: -0.02em;
+}
+.header p { font-size: 12px; color: var(--muted); margin-top: 6px; }
+.header-links { margin-top: 10px; font-size: 13px; }
+
+.panel {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+}
+.panel-title {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+.filter-hint {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+.filter-hint kbd {
+  font-family: var(--mono);
+  font-size: 10px;
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.pill-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.pill-row + .pill-row { margin-top: 10px; }
+.pill-label {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  min-width: 72px;
+}
+
+.pill {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s, opacity 0.15s;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.pill:hover { border-color: rgba(147,197,253,0.35); }
+.pill.state-include {
+  background: rgba(52,211,153,0.15);
+  border-color: var(--safe);
+  color: #a7f3d0;
+}
+.pill.state-exclude {
+  background: rgba(255,173,173,0.12);
+  border-color: var(--danger);
+  color: #fecaca;
+  text-decoration: line-through;
+  opacity: 0.85;
+}
+.pill-util {
+  margin-left: auto;
+  font-size: 11px;
+  padding: 5px 10px;
+}
+.pill-util.active {
+  background: rgba(147,197,253,0.12);
+  border-color: var(--cta);
+  color: var(--cta);
+}
+
+.next-panel {
+  border-color: rgba(251,191,36,0.25);
+  background: linear-gradient(135deg, rgba(251,191,36,0.06), transparent);
+}
+.next-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-height: 28px;
+}
+.next-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--surface);
+  border: 1px solid rgba(251,191,36,0.35);
+  font-size: 12px;
+  color: var(--white);
+}
+.next-chip button {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0 2px;
+}
+.next-chip button:hover { color: var(--danger); }
+.next-empty { font-size: 13px; color: var(--muted); font-style: italic; }
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.search {
+  flex: 1;
+  min-width: 200px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--white);
+  font-size: 14px;
+}
+.search::placeholder { color: var(--muted); }
+.count { font-size: 12px; color: var(--muted); font-family: var(--mono); }
+
+.section { margin-bottom: 28px; }
+.section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+.section-head h2 {
+  font-size: 14px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--white);
+}
+.section-head span { font-size: 12px; color: var(--muted); }
+
+.table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+th, td {
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+th {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: var(--surface);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+tr:last-child td { border-bottom: none; }
+tr.hidden { display: none; }
+tr.row-next td { background: rgba(251,191,36,0.04); }
+
+.id-cell {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--cta);
+  white-space: nowrap;
+}
+.notes-cell { font-size: 12px; color: var(--muted); max-width: 280px; }
+
+.tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  border: 1px solid var(--border);
+  white-space: nowrap;
+}
+.tag-cat-Security { border-color: #f87171; color: #fecaca; }
+.tag-cat-Accessibility { border-color: #a78bfa; color: #ddd6fe; }
+.tag-cat-New-Feature { border-color: #34d399; color: #a7f3d0; }
+.tag-cat-Enhancement { border-color: #60a5fa; color: #bfdbfe; }
+.tag-cat-Commercial { border-color: #fbbf24; color: #fde68a; }
+.tag-cat-Defect { border-color: #fb923c; color: #fed7aa; }
+.tag-st-delivered { border-color: var(--safe); color: #a7f3d0; }
+.tag-st-planned { border-color: var(--cta); color: #bfdbfe; }
+.tag-st-in_progress { border-color: #fbbf24; color: #fde68a; }
+.tag-st-idea { border-color: var(--border); color: var(--muted); }
+.tag-st-deferred { border-color: var(--muted); color: var(--muted); }
+.tag-st-wont_fix { border-color: var(--danger); color: var(--danger); }
+.tag-pr-high { border-color: var(--danger); }
+.tag-pr-medium { border-color: var(--warn); }
+.tag-pr-low { border-color: var(--border); color: var(--muted); }
+
+.next-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  transition: all 0.15s;
+}
+.next-btn:hover { border-color: var(--next); color: var(--next); }
+.next-btn.on {
+  background: rgba(251,191,36,0.15);
+  border-color: var(--next);
+  color: var(--next);
+}
+
+.empty-section {
+  padding: 20px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+@media (max-width: 720px) {
+  .pill-label { min-width: 100%; margin-bottom: 4px; }
+  th:nth-child(n+6), td:nth-child(n+6) { display: none; }
+  .notes-cell { max-width: none; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="header">
+    <h1>Product roadmap</h1>
+    <p>Aquarium Tracker · filter by category, status, and priority</p>
+    <p class="header-links">
+      <a href="/">← App</a> · <a href="/ROADMAP.md">ROADMAP.md</a> (source of truth for agents)
+    </p>
+  </header>
+
+  <div class="panel next-panel">
+    <div class="panel-title">Add to next</div>
+    <p class="filter-hint">Mark backlog items with ★ below. Selections are saved in this browser only.</p>
+    <div id="nextList" class="next-list"><span class="next-empty">No items queued yet.</span></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Filters</div>
+    <p class="filter-hint">
+      Click a pill to cycle: <strong>neutral</strong> → <strong>include</strong> (show only matches) → <strong>exclude</strong> (hide matches).
+      Combine filters across groups. <button type="button" class="pill pill-util" id="btnResetFilters">Reset filters</button>
+    </p>
+    <div class="pill-row">
+      <span class="pill-label">Category</span>
+      <div id="pillsCategory" class="pill-row" style="flex:1"></div>
+    </div>
+    <div class="pill-row">
+      <span class="pill-label">Status</span>
+      <div id="pillsStatus" class="pill-row" style="flex:1"></div>
+    </div>
+    <div class="pill-row">
+      <span class="pill-label">Priority</span>
+      <div id="pillsPriority" class="pill-row" style="flex:1"></div>
+      <button type="button" class="pill pill-util" id="btnNextOnly" title="Show only items marked Add to Next">Next only</button>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <input type="search" class="search" id="searchInput" placeholder="Search ID, title, notes…" autocomplete="off">
+    <span class="count" id="visibleCount"></span>
+  </div>
+
+  <section class="section" id="sectionBacklog">
+    <div class="section-head">
+      <h2>Backlog</h2>
+      <span id="backlogCount"></span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Next</th>
+            <th>ID</th>
+            <th>Category</th>
+            <th>Title</th>
+            <th>Status</th>
+            <th>Priority</th>
+            <th>Source</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody id="tbodyBacklog"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="section" id="sectionDelivered">
+    <div class="section-head">
+      <h2>Delivered</h2>
+      <span id="deliveredCount"></span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Category</th>
+            <th>Title</th>
+            <th>Status</th>
+            <th>Delivered</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody id="tbodyDelivered"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="section" id="sectionDeferred">
+    <div class="section-head">
+      <h2>Deferred / won’t fix</h2>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Category</th>
+            <th>Title</th>
+            <th>Status</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody id="tbodyDeferred"></tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<script>
+// Sync from ROADMAP.md when adding items (agents: update both files).
+const ROADMAP_ITEMS = [
+  { id: 'AT-001', section: 'delivered', category: 'Security', title: 'Server-side JWT login (POST /auth/login)', status: 'delivered', priority: '', delivered: '2026 (auth session)', source: '', notes: 'Replaced client-only password gate; see AGENTS.md' },
+  { id: 'AT-002', section: 'delivered', category: 'New Feature', title: 'KH (carbonate) input, chart, safe zones, log column', status: 'delivered', priority: '', delivered: '2026-05 (ef3a8a3)', source: '', notes: 'Ordered with other tank metrics after reorder' },
+  { id: 'AT-003', section: 'delivered', category: 'New Feature', title: 'Profile editor with configurable chart safe zones', status: 'delivered', priority: '', delivered: '2026 (7ae384e)', source: '', notes: 'Profile API + UI' },
+  { id: 'AT-004', section: 'delivered', category: 'Enhancement', title: 'Profile avatar (emoji + image upload)', status: 'delivered', priority: '', delivered: '2026 (fd8dea1, PR #33)', source: '', notes: '' },
+  { id: 'AT-005', section: 'delivered', category: 'Enhancement', title: 'Persist profile/settings via AWS profile API', status: 'delivered', priority: '', delivered: '2026 (f2e8e77)', source: '', notes: '' },
+  { id: 'AT-006', section: 'delivered', category: 'Enhancement', title: 'GitHub Actions deploy to AWS (OIDC)', status: 'delivered', priority: '', delivered: '2026 (0d28449)', source: '', notes: 'deploy-aws.yml' },
+  { id: 'AT-007', section: 'delivered', category: 'Enhancement', title: 'Tank readings: edit, delete confirm, PUT/DELETE API', status: 'delivered', priority: '', delivered: '2026-05 (1f337f4)', source: '', notes: '' },
+  { id: 'AT-008', section: 'delivered', category: 'Enhancement', title: 'Tap readings: edit, delete, PUT/DELETE API', status: 'delivered', priority: '', delivered: '2026-05', source: '', notes: 'Modals + /tap/{id} routes' },
+  { id: 'AT-009', section: 'delivered', category: 'Security', title: 'Escape tap note in log (XSS hardening)', status: 'delivered', priority: '', delivered: '2026 (auth session)', source: '', notes: 'escapeHtml() in renderTapLog' },
+  { id: 'AT-010', section: 'delivered', category: 'Enhancement', title: 'Load tank readings independently of profile', status: 'delivered', priority: '', delivered: '2026 (0794eb7, a61df5a)', source: '', notes: 'Faster perceived load' },
+  { id: 'AT-011', section: 'delivered', category: 'Enhancement', title: 'App icons, manifest, theme color', status: 'delivered', priority: '', delivered: '2026 (PR #36)', source: '', notes: '/assets/' },
+  { id: 'AT-012', section: 'delivered', category: 'Enhancement', title: 'Dynamic copyright footer', status: 'delivered', priority: '', delivered: '2026 (PR #38)', source: '', notes: '' },
+  { id: 'AT-013', section: 'delivered', category: 'Accessibility', title: 'Password manager autofill on login', status: 'delivered', priority: '', delivered: '2026 (PR #37)', source: '', notes: '' },
+  { id: 'AT-014', section: 'delivered', category: 'Defect', title: 'Fix render when legacy readings lack kh', status: 'delivered', priority: '', delivered: '2026-05 (99dda5f)', source: '', notes: 'Post–KH rollout' },
+  { id: 'AT-015', section: 'delivered', category: 'Defect', title: 'API Gateway CORS JSON for OPTIONS routes', status: 'delivered', priority: '', delivered: '2026-05 (1e79788)', source: '', notes: 'Deploy script fix' },
+  { id: 'AT-016', section: 'delivered', category: 'Enhancement', title: 'Roadmap tracking file + agent workflow', status: 'delivered', priority: '', delivered: '2026-05-17', source: '', notes: 'ROADMAP.md' },
+  { id: 'AT-017', section: 'backlog', category: 'Enhancement', title: 'Playwright E2E smoke tests (login, add reading, chart render)', status: 'idea', priority: 'medium', delivered: '', source: 'AGENTS.md', notes: 'No playwright.config or CI job yet' },
+  { id: 'AT-018', section: 'backlog', category: 'Enhancement', title: 'Lint/format tooling for index.html + lambda/', status: 'idea', priority: 'low', delivered: '', source: 'AGENTS.md', notes: 'Single-file frontend; consider HTML/JS checks only' },
+  { id: 'AT-019', section: 'backlog', category: 'Security', title: 'Content-Security-Policy (and related security headers)', status: 'idea', priority: 'medium', delivered: '', source: 'Security review', notes: 'GitHub Pages limits; document what is feasible' },
+  { id: 'AT-020', section: 'backlog', category: 'Enhancement', title: 'API Gateway gateway responses: CORS on 5xx/integration failures', status: 'idea', priority: 'low', delivered: '', source: 'Auth/deploy session', notes: 'Reduces misleading browser CORS errors when Lambda fails' },
+  { id: 'AT-021', section: 'backlog', category: 'Security', title: 'Reduce exposure of static API_KEY in index.html', status: 'idea', priority: 'medium', delivered: '', source: 'Security review', notes: 'JWT helps; key still public to anyone loading the page' },
+  { id: 'AT-022', section: 'backlog', category: 'New Feature', title: 'Export readings (CSV or JSON download)', status: 'idea', priority: 'medium', delivered: '', source: 'Security review', notes: 'No downloadFile in current index.html' },
+  { id: 'AT-023', section: 'backlog', category: 'Enhancement', title: 'Chart date-range filter / zoom', status: 'idea', priority: 'low', delivered: '', source: 'UX', notes: 'Long histories get crowded' },
+  { id: 'AT-024', section: 'backlog', category: 'New Feature', title: 'Out-of-range alerts (email/push or on-open banner)', status: 'idea', priority: 'low', delivered: '', source: 'user', notes: 'Would need notification channel + thresholds' },
+  { id: 'AT-025', section: 'backlog', category: 'New Feature', title: 'Additional parameters (e.g. temperature, GH, Ca, Mg)', status: 'idea', priority: 'low', delivered: '', source: 'user', notes: 'Follow KH pattern; profile safe zones + API validation' },
+  { id: 'AT-026', section: 'backlog', category: 'New Feature', title: 'Multi-tank / multiple aquarium profiles', status: 'idea', priority: 'low', delivered: '', source: 'user', notes: 'Data model + partition key design' },
+  { id: 'AT-027', section: 'backlog', category: 'Security', title: 'Local dev secrets (.env / build inject) instead of committed API_KEY', status: 'idea', priority: 'medium', delivered: '', source: 'deploy sessions', notes: 'Safer forks and PR previews' },
+  { id: 'AT-028', section: 'backlog', category: 'Enhancement', title: 'Remove duplicate stray files (index 2.html, lambda/index 2.mjs, etc.)', status: 'planned', priority: 'low', delivered: '', source: 'git status / agent cleanup', notes: 'Untracked duplicates; avoid confusion' },
+  { id: 'AT-029', section: 'backlog', category: 'Enhancement', title: 'Backfill UI for missing KH on historical readings', status: 'idea', priority: 'low', delivered: '', source: 'KH session', notes: 'Optional bulk edit or per-row prompt' },
+  { id: 'AT-030', section: 'backlog', category: 'Security', title: 'Rate-limit / abuse monitoring dashboard or alarms', status: 'idea', priority: 'low', delivered: '', source: 'Security review', notes: 'Usage plan exists; observability not in repo' },
+];
+
+const STORAGE_NEXT = 'wqt_roadmap_next';
+const CATEGORIES = ['Security', 'Accessibility', 'New Feature', 'Enhancement', 'Commercial', 'Defect'];
+const STATUSES = ['idea', 'planned', 'in_progress', 'delivered', 'deferred', 'wont_fix'];
+const PRIORITIES = ['high', 'medium', 'low'];
+
+/** @type {Record<string, 'neutral'|'include'|'exclude'>} */
+const filterState = {};
+let nextOnly = false;
+let nextIds = new Set();
+
+function loadNext() {
+  try {
+    const raw = localStorage.getItem(STORAGE_NEXT);
+    nextIds = new Set(raw ? JSON.parse(raw) : []);
+  } catch {
+    nextIds = new Set();
+  }
+}
+
+function saveNext() {
+  localStorage.setItem(STORAGE_NEXT, JSON.stringify([...nextIds]));
+}
+
+function slugLabel(value) {
+  return String(value).replace(/\s+/g, '-');
+}
+
+function tagClass(kind, value) {
+  if (!value) return 'tag';
+  return `tag tag-${kind}-${slugLabel(value)}`;
+}
+
+function cycleFilter(key) {
+  const cur = filterState[key] || 'neutral';
+  filterState[key] = cur === 'neutral' ? 'include' : cur === 'include' ? 'exclude' : 'neutral';
+  syncPillUI();
+  applyFilters();
+}
+
+function syncPillUI() {
+  document.querySelectorAll('[data-filter-key]').forEach((el) => {
+    const key = el.dataset.filterKey;
+    const state = filterState[key] || 'neutral';
+    el.classList.remove('state-include', 'state-exclude');
+    if (state === 'include') el.classList.add('state-include');
+    if (state === 'exclude') el.classList.add('state-exclude');
+  });
+  document.getElementById('btnNextOnly').classList.toggle('active', nextOnly);
+}
+
+function matchesDimension(value, prefix) {
+  const includes = [];
+  const excludes = [];
+  for (const [key, state] of Object.entries(filterState)) {
+    if (!key.startsWith(prefix + ':') || state === 'neutral') continue;
+    const v = key.slice(prefix.length + 1);
+    if (state === 'include') includes.push(v);
+    if (state === 'exclude') excludes.push(v);
+  }
+  const v = value || '';
+  if (excludes.includes(v)) return false;
+  if (includes.length && !includes.includes(v)) return false;
+  return true;
+}
+
+function itemVisible(item, query) {
+  if (nextOnly && item.section === 'backlog' && !nextIds.has(item.id)) return false;
+  if (nextOnly && item.section !== 'backlog') return false;
+  if (!matchesDimension(item.category, 'cat')) return false;
+  if (!matchesDimension(item.status, 'st')) return false;
+  if (item.section === 'backlog' && item.priority && !matchesDimension(item.priority, 'pr')) return false;
+  if (item.section === 'backlog' && !item.priority) {
+    const prIncludes = Object.entries(filterState).some(([k, s]) => k.startsWith('pr:') && s === 'include');
+    if (prIncludes) return false;
+  }
+  if (query) {
+    const hay = [item.id, item.title, item.notes, item.source, item.category, item.status, item.priority].join(' ').toLowerCase();
+    if (!hay.includes(query)) return false;
+  }
+  return true;
+}
+
+function renderPills(containerId, prefix, values) {
+  const el = document.getElementById(containerId);
+  el.innerHTML = '';
+  values.forEach((v) => {
+    const key = `${prefix}:${v}`;
+    filterState[key] = filterState[key] || 'neutral';
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'pill';
+    btn.dataset.filterKey = key;
+    btn.textContent = v;
+    btn.addEventListener('click', () => cycleFilter(key));
+    el.appendChild(btn);
+  });
+}
+
+function toggleNext(id) {
+  if (nextIds.has(id)) nextIds.delete(id);
+  else nextIds.add(id);
+  saveNext();
+  renderNextPanel();
+  applyFilters();
+  document.querySelectorAll(`[data-next-id="${id}"]`).forEach((btn) => {
+    btn.classList.toggle('on', nextIds.has(id));
+    btn.setAttribute('aria-pressed', nextIds.has(id) ? 'true' : 'false');
+  });
+  document.querySelectorAll(`tr[data-id="${id}"]`).forEach((tr) => {
+    tr.classList.toggle('row-next', nextIds.has(id));
+  });
+}
+
+function renderNextPanel() {
+  const list = document.getElementById('nextList');
+  const backlogNext = ROADMAP_ITEMS.filter((i) => i.section === 'backlog' && nextIds.has(i.id));
+  if (!backlogNext.length) {
+    list.innerHTML = '<span class="next-empty">No items queued yet.</span>';
+    return;
+  }
+  list.innerHTML = backlogNext.map((i) => `
+    <span class="next-chip">
+      <strong>${i.id}</strong> ${escapeHtml(i.title)}
+      <button type="button" aria-label="Remove ${i.id} from next" data-remove-next="${i.id}">×</button>
+    </span>
+  `).join('');
+  list.querySelectorAll('[data-remove-next]').forEach((btn) => {
+    btn.addEventListener('click', () => toggleNext(btn.dataset.removeNext));
+  });
+}
+
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function renderTables() {
+  const tbodyB = document.getElementById('tbodyBacklog');
+  const tbodyD = document.getElementById('tbodyDelivered');
+  const tbodyX = document.getElementById('tbodyDeferred');
+
+  tbodyB.innerHTML = ROADMAP_ITEMS.filter((i) => i.section === 'backlog').map((i) => {
+    const on = nextIds.has(i.id);
+    return `<tr data-id="${i.id}" class="${on ? 'row-next' : ''}">
+      <td><button type="button" class="next-btn ${on ? 'on' : ''}" data-next-id="${i.id}" aria-pressed="${on}" title="Add to next">★</button></td>
+      <td class="id-cell">${i.id}</td>
+      <td><span class="${tagClass('cat', i.category)}">${escapeHtml(i.category)}</span></td>
+      <td>${escapeHtml(i.title)}</td>
+      <td><span class="${tagClass('st', i.status)}">${escapeHtml(i.status)}</span></td>
+      <td>${i.priority ? `<span class="${tagClass('pr', i.priority)}">${escapeHtml(i.priority)}</span>` : '—'}</td>
+      <td>${escapeHtml(i.source)}</td>
+      <td class="notes-cell">${escapeHtml(i.notes)}</td>
+    </tr>`;
+  }).join('');
+
+  tbodyD.innerHTML = ROADMAP_ITEMS.filter((i) => i.section === 'delivered').map((i) => `
+    <tr data-id="${i.id}">
+      <td class="id-cell">${i.id}</td>
+      <td><span class="${tagClass('cat', i.category)}">${escapeHtml(i.category)}</span></td>
+      <td>${escapeHtml(i.title)}</td>
+      <td><span class="${tagClass('st', i.status)}">${escapeHtml(i.status)}</span></td>
+      <td>${escapeHtml(i.delivered)}</td>
+      <td class="notes-cell">${escapeHtml(i.notes)}</td>
+    </tr>
+  `).join('');
+
+  const deferred = ROADMAP_ITEMS.filter((i) => i.section === 'deferred');
+  if (!deferred.length) {
+    tbodyX.innerHTML = '<tr><td colspan="5" class="empty-section">Nothing deferred yet.</td></tr>';
+  } else {
+    tbodyX.innerHTML = deferred.map((i) => `
+      <tr data-id="${i.id}">
+        <td class="id-cell">${i.id}</td>
+        <td><span class="${tagClass('cat', i.category)}">${escapeHtml(i.category)}</span></td>
+        <td>${escapeHtml(i.title)}</td>
+        <td><span class="${tagClass('st', i.status)}">${escapeHtml(i.status)}</span></td>
+        <td class="notes-cell">${escapeHtml(i.notes)}</td>
+      </tr>
+    `).join('');
+  }
+
+  document.querySelectorAll('[data-next-id]').forEach((btn) => {
+    btn.addEventListener('click', () => toggleNext(btn.dataset.nextId));
+  });
+}
+
+function applyFilters() {
+  const query = document.getElementById('searchInput').value.trim().toLowerCase();
+  let visible = 0;
+  let total = 0;
+
+  document.querySelectorAll('tbody tr[data-id]').forEach((row) => {
+    const id = row.dataset.id;
+    const item = ROADMAP_ITEMS.find((i) => i.id === id);
+    if (!item) return;
+    total += 1;
+    const show = itemVisible(item, query);
+    row.classList.toggle('hidden', !show);
+    if (show) visible += 1;
+  });
+
+  document.getElementById('visibleCount').textContent = `${visible} of ${total} rows visible`;
+  const bVis = ROADMAP_ITEMS.filter((i) => i.section === 'backlog' && itemVisible(i, query)).length;
+  const bTot = ROADMAP_ITEMS.filter((i) => i.section === 'backlog').length;
+  document.getElementById('backlogCount').textContent = `${bVis} / ${bTot} shown`;
+  const dVis = ROADMAP_ITEMS.filter((i) => i.section === 'delivered' && itemVisible(i, query)).length;
+  const dTot = ROADMAP_ITEMS.filter((i) => i.section === 'delivered').length;
+  document.getElementById('deliveredCount').textContent = `${dVis} / ${dTot} shown`;
+}
+
+function resetFilters() {
+  Object.keys(filterState).forEach((k) => { filterState[k] = 'neutral'; });
+  nextOnly = false;
+  syncPillUI();
+  applyFilters();
+}
+
+loadNext();
+renderPills('pillsCategory', 'cat', CATEGORIES);
+renderPills('pillsStatus', 'st', STATUSES);
+renderPills('pillsPriority', 'pr', PRIORITIES);
+renderTables();
+renderNextPanel();
+syncPillUI();
+applyFilters();
+
+document.getElementById('searchInput').addEventListener('input', applyFilters);
+document.getElementById('btnResetFilters').addEventListener('click', resetFilters);
+document.getElementById('btnNextOnly').addEventListener('click', () => {
+  nextOnly = !nextOnly;
+  syncPillUI();
+  applyFilters();
+});
+</script>
+</body>
+</html>

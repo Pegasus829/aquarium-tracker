@@ -4,6 +4,8 @@ Living backlog for features and enhancements. **Reference items by ID** (e.g. �
 
 **Last reviewed:** 2026-05-17
 
+**Interactive view:** [assets/roadmap.html](assets/roadmap.html) — filter pills (category, status, priority), search, and **Add to Next** (★) for backlog items. Open via `python3 -m http.server 8000` → http://localhost:8000/assets/roadmap.html
+
 ---
 
 ## How to use this file
@@ -13,6 +15,7 @@ Living backlog for features and enhancements. **Reference items by ID** (e.g. �
 - Add ideas under [Backlog](#backlog) with the next free `AT-###` ID and a **Category** (see [Category legend](#category-legend)).
 - Move rows to [Delivered](#delivered) when shipped (keep the same ID and category).
 - Use **Status** values consistently (see [Status legend](#status-legend)).
+- Use **[assets/roadmap.html](assets/roadmap.html)** to filter and queue work: click filter pills (neutral → include → exclude), mark **Add to Next** with ★ on backlog rows (saved in browser `localStorage`).
 - Filter or sort by category in your editor, or search for e.g. `| Security |` in this file.
 
 ### For Cursor agents (including this repo)
@@ -20,8 +23,9 @@ Living backlog for features and enhancements. **Reference items by ID** (e.g. �
 1. **Capture new ideas** — When the user or a session implies work, add a backlog row with the next `AT-###` ID, a short title, a **Category**, and **Source** (e.g. `user`, `agent:<topic>`, `security-review`).
 2. **Choose category** — Pick the **single best-fit** category per item (see [Category legend](#category-legend)). If unsure, ask the user or default to `Enhancement` for polish on existing behaviour and `New Feature` for net-new capability.
 3. **Mine other agent work** — After substantive sessions on this repo, scan transcripts/PRs/commits for follow-ups; add them with **Source** and the appropriate category.
-4. **On delivery** — When you implement capability that clearly matches a roadmap ID, **ask the user**: *“Should we mark AT-### as delivered?”* Only move the item after they confirm (or they say to mark it delivered in the same request).
-5. **Do not renumber** — IDs are permanent; never reuse a retired ID.
+4. **Sync HTML** — When adding or changing items, update **`assets/roadmap.html`** (`ROADMAP_ITEMS` array) as well as this file.
+5. **On delivery** — When you implement capability that clearly matches a roadmap ID, **ask the user**: *“Should we mark AT-### as delivered?”* Only move the item after they confirm (or they say to mark it delivered in the same request).
+6. **Do not renumber** — IDs are permanent; never reuse a retired ID.
 
 ### ID format
 
@@ -84,6 +88,8 @@ Every item has exactly one category. Use these labels in the **Category** column
 
 ## Backlog
 
+**Add to Next** is managed in [assets/roadmap.html](assets/roadmap.html) (★ column, `localStorage` key `wqt_roadmap_next`), not in this table.
+
 | ID | Category | Title | Status | Priority | Source | Notes |
 |----|----------|-------|--------|----------|--------|-------|
 | AT-017 | Enhancement | Playwright E2E smoke tests (login, add reading, chart render) | idea | medium | `AGENTS.md` gap; `node_modules/playwright` present | No `playwright.config` or CI job yet |
@@ -125,3 +131,4 @@ No backlog items yet. When planning a public launch, add items here (e.g. subscr
 |------|--------|
 | 2026-05-17 | Initial roadmap: IDs AT-001–AT-030, delivered items from git + agent transcripts |
 | 2026-05-17 | Added Category column and legend (Security, Accessibility, New Feature, Enhancement, Commercial, Defect) |
+| 2026-05-17 | Interactive [assets/roadmap.html](assets/roadmap.html) with filter pills and Add to Next |
