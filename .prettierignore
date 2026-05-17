@@ -4,6 +4,7 @@ lambda/bundle.js
 lambda/package-lock.json
 package-lock.json
 config.local.js
+assets/chart.umd.min.js
 deploy/
 **/* 2.html
 lambda/* 2.mjs

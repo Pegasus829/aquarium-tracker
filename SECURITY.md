@@ -1,5 +1,7 @@
 # Security headers
 
+For the 2026-05-17 security review, see **[ROADMAP.md — Security audit matrix](ROADMAP.md#security-audit-matrix-sa--roadmap)** at the top of that file (`SA-###` → roadmap action).
+
 The production static site is hosted on GitHub Pages (`aquarium.vibeai.software`).
 GitHub Pages does not support repository-defined arbitrary HTTP response headers,
 so browser-enforced page policy is currently limited to metadata that can be
@@ -16,15 +18,16 @@ declared inside each HTML document.
 
 The main app permits:
 
-- `https://cdn.jsdelivr.net` for Chart.js;
 - `https://gnewkvhgwd.execute-api.eu-west-1.amazonaws.com` for the API;
 - `https://*.auth.eu-west-1.amazoncognito.com` for Cognito token exchange and
   form/navigation targets;
 - `data:` images for locally uploaded profile avatars.
 
 The main app (`index.html`) loads same-origin `assets/app.css`, `assets/app.js`,
-and `assets/config-local-loader.js`, so its CSP meta tag no longer includes
-`'unsafe-inline'` for scripts or styles.
+`assets/chart.umd.min.js` (Chart.js 4.4.3, vendored; SA-006 / AT-037), and
+`assets/config-local-loader.js`, so its CSP meta tag no longer includes
+`'unsafe-inline'` for scripts or styles and does not allow third-party script
+origins.
 
 `assets/roadmap.html` still uses inline CSS and JavaScript and keeps
 `'unsafe-inline'` in its CSP until that page is externalized the same way.
