@@ -55,6 +55,17 @@ test.describe('smoke', () => {
     const markerPhLabel = markerPh.toFixed(1);
     let createdId = null;
 
+    await page.route('**/auth/config', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          authMode: 'legacy',
+          cognito: { domain: '', clientId: '', scopes: 'openid email profile' },
+        }),
+      })
+    );
+
     await page.goto('/');
 
     await expect(page.locator('#gate')).toBeVisible();
