@@ -22,7 +22,7 @@ Living backlog for features and enhancements. **Reference items by ID** (e.g. â€
 | SA-001 | High | Complete Cognito-only cutover | AT-034 | With SA-002, SA-008, SA-009 |
 | SA-002 | High | Replace unsalted SHA-256 legacy password | AT-034 | Or drop with SA-001 |
 | SA-003 | High | Rate-limit auth endpoints | AT-030 | With SA-027 |
-| SA-004 | High | Prevent API Gateway auth misconfiguration | AT-035 | Safe defaults in `deploy-profile-api.sh` |
+| SA-004 | High | Prevent API Gateway auth misconfiguration | AT-035 | Delivered 2026-05-17: `deploy-profile-api.sh` inherits from GET `/readings` |
 | SA-005 | High | Deployment protection on `main` | AT-036 | GitHub Environment reviewers |
 | SA-006 | High | Chart.js CDN / SRI or vendor locally | AT-037 | `index.html` jsDelivr without `integrity` |
 | SA-007 | High | Delete or isolate legacy DynamoDB partitions | AT-038 | Post-migration shared rows |
@@ -156,6 +156,7 @@ Every item has exactly one category. Use these labels in the **Category** column
 | AT-017 | Enhancement | Playwright E2E smoke tests (login, add reading, chart render) | 2026-05-17 | `playwright.config.js`, `e2e/smoke.spec.js`, `.github/workflows/e2e.yml` |
 | AT-020 | Enhancement | API Gateway gateway responses: CORS on 5xx/integration failures | 2026-05-17 | `deploy/configure-gateway-cors-responses.sh`; CI + deploy scripts |
 | AT-036 | Security | GitHub deployment protection on `main` | 2026-05-17 | `production` environment + required reviewers; `deploy/github-environments.md` |
+| AT-035 | Security | API Gateway auth safe defaults in deploy scripts | 2026-05-17 | SA-004: `deploy-profile-api.sh` inherits auth from GET `/readings`; `NONE` requires `ALLOW_INSECURE_AUTH=1` |
 
 ---
 
@@ -167,7 +168,6 @@ Use the `Next` column to queue near-term work (`next` vs blank); **Add to Next**
 |------|----|----------|-------|--------|----------|--------|-------|
 |  | AT-018 | Enhancement | Lint/format tooling for `index.html` + `lambda/` | idea | low | `AGENTS.md` | Single-file frontend; consider HTML/JS checks only |
 |  | AT-034 | Security | Cognito-only cutover; remove legacy auth | idea | high | security-review (SA-001, SA-002, SA-008, SA-009) | `AUTH_MODE=cognito`, API GW authorizer, drop `POST /auth/login` / HS256 path |
-|  | AT-035 | Security | API Gateway auth safe defaults in deploy scripts | idea | high | security-review (SA-004) | `deploy-profile-api.sh` must not default `AUTHORIZATION_TYPE=NONE` |
 |  | AT-037 | Security | Vendor Chart.js or add SRI | idea | high | security-review (SA-006) | `index.html` loads jsDelivr without `integrity` |
 |  | AT-038 | Security | Delete or isolate legacy DynamoDB partitions | idea | high | security-review (SA-007) | Post-migration shared `tank`/`tap`/`profile` rows |
 |  | AT-039 | Security | Review WebAuthn `SINGLE_FACTOR` policy | idea | medium | security-review (SA-010) | `deploy/cognito-auth-template.yaml` |

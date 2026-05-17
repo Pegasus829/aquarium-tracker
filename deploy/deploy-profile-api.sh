@@ -3,6 +3,9 @@ set -euo pipefail
 
 # Idempotently deploys the Lambda bundle and API Gateway /profile routes.
 # Required credentials: AWS CLI identity with Lambda update and API Gateway write access.
+#
+# Gateway auth (AT-035): new Lambda proxy methods inherit authorization from GET /readings
+# unless AUTHORIZATION_TYPE is set. AUTHORIZATION_TYPE=NONE requires ALLOW_INSECURE_AUTH=1.
 
 REGION="${AWS_REGION:-${AWS_DEFAULT_REGION:-eu-west-1}}"
 API_ID="${API_ID:-gnewkvhgwd}"
@@ -10,7 +13,7 @@ STAGE="${STAGE:-prod}"
 ORIGIN="${ORIGIN:-https://aquarium.vibeai.software}"
 SKIP_LAMBDA="${SKIP_LAMBDA:-0}"
 AWS_CLI="${AWS_CLI:-aws}"
-AUTHORIZATION_TYPE="${AUTHORIZATION_TYPE:-NONE}"
+AUTHORIZATION_TYPE="${AUTHORIZATION_TYPE:-}"
 AUTHORIZER_ID="${AUTHORIZER_ID:-}"
 REQUIRE_API_KEY="${REQUIRE_API_KEY:-0}"
 
@@ -34,6 +37,81 @@ get_resource_id() {
     --rest-api-id "$API_ID" \
     --query "items[?path=='$path'].id | [0]" \
     --output text
+}
+
+discover_authorizer_id() {
+  local reference_id="$1"
+  local authorizer_id=""
+
+  if [[ -n "$reference_id" ]]; then
+    authorizer_id="$(aws_cmd apigateway get-method \
+      --rest-api-id "$API_ID" \
+      --resource-id "$reference_id" \
+      --http-method GET \
+      --query authorizerId \
+      --output text 2>/dev/null || true)"
+    if [[ -n "$authorizer_id" && "$authorizer_id" != "None" ]]; then
+      echo "$authorizer_id"
+      return 0
+    fi
+  fi
+
+  authorizer_id="$(aws_cmd apigateway get-authorizers \
+    --rest-api-id "$API_ID" \
+    --query "items[?type=='COGNITO_USER_POOLS'].id | [0]" \
+    --output text)"
+  if [[ -n "$authorizer_id" && "$authorizer_id" != "None" ]]; then
+    echo "$authorizer_id"
+    return 0
+  fi
+
+  echo ""
+}
+
+resolve_gateway_auth_config() {
+  local reference_id="$1"
+
+  if [[ -n "$AUTHORIZATION_TYPE" ]]; then
+    if [[ "$AUTHORIZATION_TYPE" == "NONE" && "${ALLOW_INSECURE_AUTH:-}" != "1" ]]; then
+      echo "AUTHORIZATION_TYPE=NONE is unsafe; set ALLOW_INSECURE_AUTH=1 to override" >&2
+      exit 1
+    fi
+    if [[ "$AUTHORIZATION_TYPE" == "COGNITO_USER_POOLS" && -z "$AUTHORIZER_ID" ]]; then
+      AUTHORIZER_ID="$(discover_authorizer_id "$reference_id")"
+    fi
+    return 0
+  fi
+
+  if ! aws_cmd apigateway get-method \
+    --rest-api-id "$API_ID" \
+    --resource-id "$reference_id" \
+    --http-method GET >/dev/null 2>&1; then
+    echo "GET /readings does not exist; set AUTHORIZATION_TYPE (and AUTHORIZER_ID for Cognito) explicitly" >&2
+    exit 1
+  fi
+
+  AUTHORIZATION_TYPE="$(aws_cmd apigateway get-method \
+    --rest-api-id "$API_ID" \
+    --resource-id "$reference_id" \
+    --http-method GET \
+    --query authorizationType \
+    --output text)"
+
+  if [[ -z "$AUTHORIZATION_TYPE" || "$AUTHORIZATION_TYPE" == "None" ]]; then
+    echo "Could not read authorizationType from GET /readings; set AUTHORIZATION_TYPE explicitly" >&2
+    exit 1
+  fi
+
+  if [[ "$AUTHORIZATION_TYPE" == "NONE" && "${ALLOW_INSECURE_AUTH:-}" != "1" ]]; then
+    echo "GET /readings uses authorizationType=NONE; run deploy/setup-cognito-auth.sh or set ALLOW_INSECURE_AUTH=1" >&2
+    exit 1
+  fi
+
+  if [[ "$AUTHORIZATION_TYPE" == "COGNITO_USER_POOLS" ]]; then
+    AUTHORIZER_ID="$(discover_authorizer_id "$reference_id")"
+  fi
+
+  echo "Gateway auth for new methods: $AUTHORIZATION_TYPE (from GET /readings)"
 }
 
 delete_method_if_exists() {
@@ -135,6 +213,12 @@ if [[ -z "$ROOT_ID" || "$ROOT_ID" == "None" ]]; then
 fi
 if [[ -z "$READINGS_ID" || "$READINGS_ID" == "None" ]]; then
   echo "Could not find /readings resource to copy Lambda integration from" >&2
+  exit 1
+fi
+
+resolve_gateway_auth_config "$READINGS_ID"
+if [[ "$AUTHORIZATION_TYPE" == "COGNITO_USER_POOLS" && -z "$AUTHORIZER_ID" ]]; then
+  echo "AUTHORIZER_ID is required when AUTHORIZATION_TYPE=COGNITO_USER_POOLS" >&2
   exit 1
 fi
 
