@@ -104,9 +104,6 @@ jobs:
       - name: Disable browser API key requirement
         run: deploy/disable-api-key-requirement.sh
 
-      - name: Configure API Gateway CORS on error responses
-        run: deploy/configure-gateway-cors-responses.sh
-
       - name: Deploy API Gateway stage
         run: |
           aws apigateway create-deployment \

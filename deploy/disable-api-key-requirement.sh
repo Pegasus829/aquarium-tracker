@@ -9,7 +9,9 @@ REGION="${AWS_REGION:-${AWS_DEFAULT_REGION:-eu-west-1}}"
 API_ID="${API_ID:-${API_GATEWAY_REST_API_ID:-gnewkvhgwd}}"
 STAGE="${STAGE:-${API_GATEWAY_STAGE:-prod}}"
 DEPLOY_STAGE="${DEPLOY_STAGE:-0}"
+ORIGIN="${ORIGIN:-https://aquarium.vibeai.software}"
 AWS_CLI="${AWS_CLI:-aws}"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 require_tool() {
   if ! command -v "$1" >/dev/null 2>&1; then
@@ -77,6 +79,10 @@ ROUTES=(
 for route in "${ROUTES[@]}"; do
   clear_method_api_key_requirement "${route% *}" "${route##* }"
 done
+
+echo "Adding CORS headers to API Gateway error responses"
+API_ID="$API_ID" ORIGIN="$ORIGIN" REGION="$REGION" AWS_CLI="$AWS_CLI" \
+  "$REPO_ROOT/deploy/configure-gateway-cors-responses.sh"
 
 if [[ "$DEPLOY_STAGE" == "1" || "$DEPLOY_STAGE" == "true" || "$DEPLOY_STAGE" == "True" ]]; then
   echo "Deploying API Gateway stage: $STAGE"

@@ -52,6 +52,8 @@ AT-021 removes the committed `API_KEY` from `index.html`. If an existing REST AP
 DEPLOY_STAGE=1 deploy/disable-api-key-requirement.sh
 ```
 
+That script also refreshes API Gateway gateway-response CORS (5xx and integration/authorizer failures) so partial deploys stay aligned with production.
+
 The GitHub Actions deploy workflow also runs this script before creating its API Gateway deployment. API Gateway API keys are suitable for usage-plan metering of trusted clients, but they are not an authorization mechanism for public browser code.
 
 By default, the Cognito hosted domain prefix is account-specific:
