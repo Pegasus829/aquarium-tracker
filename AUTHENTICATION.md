@@ -45,10 +45,14 @@ The script:
 By default, the Cognito hosted domain prefix is account-specific:
 
 ```text
-aquarium-tracker-<aws-account-id>-prod
+wqt-<aws-account-id>
 ```
 
-Override it with `AUTH_DOMAIN_PREFIX` only if you need a custom Cognito prefix.
+Override it with `AUTH_DOMAIN_PREFIX` only if you need a custom Cognito prefix. Keep the resulting fully-qualified relying-party ID under Cognito's 63-character limit:
+
+```text
+<prefix>.auth.<region>.amazoncognito.com
+```
 
 The static frontend first checks the constants in `index.html`, then falls back to `GET /auth/config`. This avoids committing generated Cognito client IDs to the static site.
 
