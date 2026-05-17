@@ -83,6 +83,7 @@ Every item has exactly one category. Use these labels in the **Category** column
 | AT-014 | Defect | Fix render when legacy readings lack `kh` | 2026-05 (`99dda5f`) | Post–KH rollout |
 | AT-015 | Defect | API Gateway CORS JSON for OPTIONS routes | 2026-05 (`1e79788`) | Deploy script fix |
 | AT-016 | Enhancement | Roadmap tracking file + agent workflow | 2026-05-17 | This document |
+| AT-019 | Security | Content-Security-Policy (and related security headers) | 2026-05-17 | Meta CSP + Lambda security headers; see `SECURITY.md` |
 | AT-028 | Enhancement | Remove duplicate stray files (`index 2.html`, `lambda/index 2.mjs`, etc.) | 2026-05-17 | Added `.gitignore` guard for local duplicate copy artifacts |
 
 ---
@@ -95,7 +96,6 @@ Every item has exactly one category. Use these labels in the **Category** column
 |----|----------|-------|--------|----------|--------|-------|
 | AT-017 | Enhancement | Playwright E2E smoke tests (login, add reading, chart render) | idea | medium | `AGENTS.md` gap; `node_modules/playwright` present | No `playwright.config` or CI job yet |
 | AT-018 | Enhancement | Lint/format tooling for `index.html` + `lambda/` | idea | low | `AGENTS.md` | Single-file frontend; consider HTML/JS checks only |
-| AT-019 | Security | Content-Security-Policy (and related security headers) | idea | medium | Security review ([391aaea1](391aaea1-337f-4d97-bdd6-f6b88ba882c0)) | GitHub Pages limits; document what’s feasible |
 | AT-020 | Enhancement | API Gateway gateway responses: CORS on 5xx/integration failures | idea | low | Auth/deploy session ([391aaea1](391aaea1-337f-4d97-bdd6-f6b88ba882c0)) | Reduces misleading browser “CORS” errors when Lambda fails |
 | AT-021 | Security | Reduce exposure of static `API_KEY` in `index.html` | idea | medium | Security review | JWT helps; key still public to anyone loading the page |
 | AT-022 | New Feature | Export readings (CSV or JSON download) | idea | medium | Security review (export mentioned) | No `downloadFile` in current `index.html` |
@@ -106,13 +106,13 @@ Every item has exactly one category. Use these labels in the **Category** column
 | AT-027 | Security | Local dev secrets (`.env` / build inject) instead of committed `API_KEY` | idea | medium | deploy sessions | Safer forks and PR previews |
 | AT-029 | Enhancement | Backfill UI for missing KH on historical readings | idea | low | KH session ([aff87b27](aff87b27-a3af-4666-855c-02edcc319a66)) | Optional bulk edit or per-row prompt |
 | AT-030 | Security | Rate-limit / abuse monitoring dashboard or alarms | idea | low | Security review | Usage plan exists; observability not in repo |
+| AT-033 | Security | Remove inline code so CSP can drop `unsafe-inline` | idea | medium | agent:at-019 | Externalize handlers, styles, and app script or add repeatable nonce/hash generation |
 Use the `Next` column to queue near-term work. Mark selected rows as `next`; leave unselected rows blank.
 
 | Next | ID | Category | Title | Status | Priority | Source | Notes |
 |------|----|----------|-------|--------|----------|--------|-------|
 |  | AT-017 | Enhancement | Playwright E2E smoke tests (login, add reading, chart render) | idea | medium | `AGENTS.md` gap; `node_modules/playwright` present | No `playwright.config` or CI job yet |
 |  | AT-018 | Enhancement | Lint/format tooling for `index.html` + `lambda/` | idea | low | `AGENTS.md` | Single-file frontend; consider HTML/JS checks only |
-|  | AT-019 | Security | Content-Security-Policy (and related security headers) | idea | medium | Security review ([391aaea1](391aaea1-337f-4d97-bdd6-f6b88ba882c0)) | GitHub Pages limits; document what’s feasible |
 |  | AT-020 | Enhancement | API Gateway gateway responses: CORS on 5xx/integration failures | idea | low | Auth/deploy session ([391aaea1](391aaea1-337f-4d97-bdd6-f6b88ba882c0)) | Reduces misleading browser “CORS” errors when Lambda fails |
 |  | AT-021 | Security | Reduce exposure of static `API_KEY` in `index.html` | idea | medium | Security review | JWT helps; key still public to anyone loading the page |
 |  | AT-022 | New Feature | Export readings (CSV or JSON download) | idea | medium | Security review (export mentioned) | No `downloadFile` in current `index.html` |
@@ -126,6 +126,7 @@ Use the `Next` column to queue near-term work. Mark selected rows as `next`; lea
 |  | AT-030 | Security | Rate-limit / abuse monitoring dashboard or alarms | idea | low | Security review | Usage plan exists; observability not in repo |
 |  | AT-031 | Enhancement | Generate interactive roadmap data from `ROADMAP.md` | idea | low | agent:roadmap-next-sync | Avoid maintaining duplicate `ROADMAP_ITEMS` data by hand |
 |  | AT-032 | Security | Roadmap permissions with read/write access controls | idea | medium | user | Default no roadmap access; `marc@amphletts.uk` has write access |
+|  | AT-033 | Security | Remove inline code so CSP can drop `unsafe-inline` | idea | medium | agent:at-019 | Externalize handlers, styles, and app script or add repeatable nonce/hash generation |
 
 ### Commercial (placeholder)
 
