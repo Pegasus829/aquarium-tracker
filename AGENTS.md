@@ -30,6 +30,12 @@ The app shows a client-side password gate UI, but password verification is serve
 - **Backend code/artifacts:** `lambda/index.mjs`, `lambda/package.json`, and `deploy/*.json`.
 - No automated tests or linting infrastructure exist in this repo.
 
+### Roadmap
+
+- Track features and enhancements in **`ROADMAP.md`** (IDs like `AT-017`).
+- When implementing something that matches a roadmap item, ask whether to mark it **delivered**.
+- After substantive agent sessions, add any new follow-up ideas to the backlog with the next free ID.
+
 ### Key notes
 
 - Frontend changes are primarily made by editing `index.html`.
