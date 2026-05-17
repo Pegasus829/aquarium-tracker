@@ -33,8 +33,9 @@ The app shows a client-side password gate UI, but password verification is serve
 ### Roadmap
 
 - Track features and enhancements in **`ROADMAP.md`** (IDs like `AT-017`).
+- Assign each item one **Category**: Security, Accessibility, New Feature, Enhancement, Commercial, or Defect.
 - When implementing something that matches a roadmap item, ask whether to mark it **delivered**.
-- After substantive agent sessions, add any new follow-up ideas to the backlog with the next free ID.
+- After substantive agent sessions, add any new follow-up ideas to the backlog with the next free ID and category.
 
 ### Key notes
 
