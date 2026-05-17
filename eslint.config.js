@@ -7,6 +7,7 @@ const nodeFiles = [
   'lambda/index.mjs',
   'lambda/migrate-legacy-data.mjs',
   'scripts/generate-local-config.mjs',
+  'scripts/verify-e2e-password.mjs',
   'eslint.config.js',
   'playwright.config.js',
 ];
