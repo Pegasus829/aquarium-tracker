@@ -7,3 +7,7 @@ deploy/.jwt_secret_once
 deploy/aquarium-full.zip
 deploy/aquarium-api.zip
 deploy/.deploy_output.txt
+
+# Local duplicate copies created by browser/editor save-as actions.
+*\ [0-9]*.html
+lambda/*\ [0-9]*.mjs
