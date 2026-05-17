@@ -10,6 +10,8 @@ STAGE="${STAGE:-prod}"
 ORIGIN="${ORIGIN:-https://aquarium.vibeai.software}"
 SKIP_LAMBDA="${SKIP_LAMBDA:-0}"
 AWS_CLI="${AWS_CLI:-aws}"
+AUTHORIZATION_TYPE="${AUTHORIZATION_TYPE:-NONE}"
+AUTHORIZER_ID="${AUTHORIZER_ID:-}"
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ZIP_PATH="$REPO_ROOT/deploy/aquarium-api.zip"
@@ -53,9 +55,17 @@ put_lambda_proxy_method() {
   local integration_uri="$3"
   local api_key_required="$4"
   local api_key_flag="--no-api-key-required"
+  local auth_args=(--authorization-type "$AUTHORIZATION_TYPE")
 
   if [[ "$api_key_required" == "true" || "$api_key_required" == "True" ]]; then
     api_key_flag="--api-key-required"
+  fi
+  if [[ "$AUTHORIZATION_TYPE" == "COGNITO_USER_POOLS" ]]; then
+    if [[ -z "$AUTHORIZER_ID" ]]; then
+      echo "AUTHORIZER_ID is required when AUTHORIZATION_TYPE=COGNITO_USER_POOLS" >&2
+      exit 1
+    fi
+    auth_args+=(--authorizer-id "$AUTHORIZER_ID")
   fi
 
   delete_method_if_exists "$resource_id" "$method"
@@ -63,7 +73,7 @@ put_lambda_proxy_method() {
     --rest-api-id "$API_ID" \
     --resource-id "$resource_id" \
     --http-method "$method" \
-    --authorization-type NONE \
+    "${auth_args[@]}" \
     "$api_key_flag" >/dev/null
 
   aws_cmd apigateway put-integration \

@@ -2,52 +2,17 @@
   "Version": "2012-10-17",
   "Statement": [
     {
-      "Sid": "UpdateAquariumLambdaCode",
-      "Effect": "Allow",
-      "Action": [
-        "lambda:AddPermission",
-        "lambda:GetFunction",
-        "lambda:GetFunctionConfiguration",
-        "lambda:UpdateFunctionCode",
-        "lambda:UpdateFunctionConfiguration"
-      ],
-      "Resource": "arn:aws:lambda:eu-west-1:681178750909:function:aquarium-api"
-    },
-    {
-      "Sid": "DeployApiGatewayStage",
-      "Effect": "Allow",
-      "Action": [
-        "apigateway:POST"
-      ],
-      "Resource": "arn:aws:apigateway:eu-west-1::/restapis/gnewkvhgwd/deployments"
-    },
-    {
-      "Sid": "ConfigureApiGatewayCognito",
-      "Effect": "Allow",
-      "Action": [
-        "apigateway:DELETE",
-        "apigateway:GET",
-        "apigateway:PATCH",
-        "apigateway:POST",
-        "apigateway:PUT"
-      ],
-      "Resource": [
-        "arn:aws:apigateway:eu-west-1::/restapis/gnewkvhgwd",
-        "arn:aws:apigateway:eu-west-1::/restapis/gnewkvhgwd/*"
-      ]
-    },
-    {
       "Sid": "ManageCognitoAuthStack",
       "Effect": "Allow",
       "Action": [
         "cloudformation:CreateChangeSet",
-        "cloudformation:CreateStack",
-        "cloudformation:DeleteChangeSet",
         "cloudformation:DescribeChangeSet",
         "cloudformation:DescribeStacks",
         "cloudformation:ExecuteChangeSet",
         "cloudformation:GetTemplate",
-        "cloudformation:UpdateStack"
+        "cloudformation:UpdateStack",
+        "cloudformation:CreateStack",
+        "cloudformation:DeleteChangeSet"
       ],
       "Resource": "*"
     },
@@ -70,6 +35,28 @@
       "Resource": "*"
     },
     {
+      "Sid": "ConfigureApiGatewayCognitoAuthorizer",
+      "Effect": "Allow",
+      "Action": [
+        "apigateway:GET",
+        "apigateway:POST",
+        "apigateway:PATCH"
+      ],
+      "Resource": [
+        "arn:aws:apigateway:eu-west-1::/restapis/gnewkvhgwd",
+        "arn:aws:apigateway:eu-west-1::/restapis/gnewkvhgwd/*"
+      ]
+    },
+    {
+      "Sid": "UpdateAquariumLambdaAuthMode",
+      "Effect": "Allow",
+      "Action": [
+        "lambda:GetFunctionConfiguration",
+        "lambda:UpdateFunctionConfiguration"
+      ],
+      "Resource": "arn:aws:lambda:eu-west-1:681178750909:function:aquarium-api"
+    },
+    {
       "Sid": "MigrateLegacyAquariumData",
       "Effect": "Allow",
       "Action": [
@@ -80,4 +67,3 @@
     }
   ]
 }
-
