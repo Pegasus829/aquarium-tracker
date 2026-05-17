@@ -121,14 +121,6 @@ put_options_method() {
     --response-parameters "{\"method.response.header.Access-Control-Allow-Headers\":\"'Content-Type,Authorization'\",\"method.response.header.Access-Control-Allow-Methods\":\"'${allow_methods}'\",\"method.response.header.Access-Control-Allow-Origin\":\"'${ORIGIN}'\"}" >/dev/null
 }
 
-put_cors_gateway_response() {
-  local response_type="$1"
-  aws_cmd apigateway put-gateway-response \
-    --rest-api-id "$API_ID" \
-    --response-type "$response_type" \
-    --response-parameters "gatewayresponse.header.Access-Control-Allow-Origin='${ORIGIN}',gatewayresponse.header.Access-Control-Allow-Headers='Content-Type,Authorization',gatewayresponse.header.Access-Control-Allow-Methods='GET,POST,PUT,DELETE,OPTIONS'" >/dev/null
-}
-
 require_tool "$AWS_CLI"
 require_tool npm
 require_tool zip
@@ -263,9 +255,9 @@ else
   echo "Skipping /tap/{id} routes because /tap resource was not found"
 fi
 
-echo "Adding CORS headers to default API Gateway error responses"
-put_cors_gateway_response DEFAULT_4XX
-put_cors_gateway_response DEFAULT_5XX
+echo "Adding CORS headers to API Gateway error responses"
+API_ID="$API_ID" ORIGIN="$ORIGIN" REGION="$REGION" AWS_CLI="$AWS_CLI" \
+  "$REPO_ROOT/deploy/configure-gateway-cors-responses.sh"
 
 echo "Deploying API Gateway stage: $STAGE"
 DEPLOYMENT_ID="$(aws_cmd apigateway create-deployment \

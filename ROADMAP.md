@@ -88,6 +88,7 @@ Every item has exactly one category. Use these labels in the **Category** column
 | AT-028 | Enhancement | Remove duplicate stray files (`index 2.html`, `lambda/index 2.mjs`, etc.) | 2026-05-17 | Added `.gitignore` guard for local duplicate copy artifacts |
 | AT-027 | Security | Local dev secrets (`.env` / build inject) instead of committed `API_KEY` | 2026-05-17 | `config.js` + `.env` → `config.local.js`; `scripts/generate-local-config.mjs` |
 | AT-017 | Enhancement | Playwright E2E smoke tests (login, add reading, chart render) | 2026-05-17 | `playwright.config.js`, `e2e/smoke.spec.js`, `.github/workflows/e2e.yml` |
+| AT-020 | Enhancement | API Gateway gateway responses: CORS on 5xx/integration failures | 2026-05-17 | `deploy/configure-gateway-cors-responses.sh`; CI + deploy scripts |
 
 ---
 
@@ -98,7 +99,6 @@ Use the `Next` column to queue near-term work (`next` vs blank); **Add to Next**
 | Next | ID | Category | Title | Status | Priority | Source | Notes |
 |------|----|----------|-------|--------|----------|--------|-------|
 |  | AT-018 | Enhancement | Lint/format tooling for `index.html` + `lambda/` | idea | low | `AGENTS.md` | Single-file frontend; consider HTML/JS checks only |
-|  | AT-020 | Enhancement | API Gateway gateway responses: CORS on 5xx/integration failures | idea | low | Auth/deploy session ([391aaea1](391aaea1-337f-4d97-bdd6-f6b88ba882c0)) | Reduces misleading browser “CORS” errors when Lambda fails |
 |  | AT-022 | New Feature | Export readings (CSV or JSON download) | idea | medium | Security review (export mentioned) | No `downloadFile` in current `index.html` |
 |  | AT-023 | Enhancement | Chart date-range filter / zoom | idea | low | UX | Long histories get crowded |
 |  | AT-024 | New Feature | Out-of-range alerts (email/push or on-open banner) | idea | low | user | Would need notification channel + thresholds |
@@ -141,3 +141,4 @@ No backlog items yet. When planning a public launch, add items here (e.g. subscr
 | 2026-05-17 | Roadmap page hydrates Delivered/Backlog from `ROADMAP.md` and adds ✓ manual “mark delivered” (updates markdown on save/download) |
 | 2026-05-17 | Delivered AT-027: `.env` / `config.local.js` local overrides; `config.js` for production defaults |
 | 2026-05-17 | Delivered AT-017: Playwright smoke tests + `e2e.yml` CI workflow |
+| 2026-05-17 | Delivered AT-020: API Gateway gateway response CORS (`configure-gateway-cors-responses.sh`) |

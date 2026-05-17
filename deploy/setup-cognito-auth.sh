@@ -342,6 +342,10 @@ else
   echo "Skipping legacy data migration. Re-run with RUN_LEGACY_MIGRATION=1 after verifying Marc's user."
 fi
 
+echo "Adding CORS headers to API Gateway error responses"
+API_ID="$API_ID" ORIGIN="$ORIGIN" REGION="$REGION" AWS_CLI="$AWS_CLI" \
+  "$REPO_ROOT/deploy/configure-gateway-cors-responses.sh"
+
 echo "Deploying API Gateway stage: $STAGE"
 aws_cmd apigateway create-deployment \
   --rest-api-id "$API_ID" \

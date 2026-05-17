@@ -37,6 +37,7 @@ The app is being migrated to Cognito:
 - until those values are configured, the legacy password gate remains available via `POST /auth/login`
 - JWTs are stored in `sessionStorage` (`wqt_token`) and sent as `Authorization: Bearer ...`
 - protected API calls do not include browser API keys; use `deploy/disable-api-key-requirement.sh` to clear API Gateway `apiKeyRequired`
+- API Gateway **gateway responses** (5xx, integration/authorizer failures) get CORS via `deploy/configure-gateway-cors-responses.sh` (also run in `.github/workflows/deploy-aws.yml`)
 - Cognito setup and migration assets live in `deploy/cognito-auth-template.yaml`, `deploy/setup-cognito-auth.sh`, and `AUTHENTICATION.md`
 
 ### Architecture
