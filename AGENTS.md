@@ -19,6 +19,7 @@ Use HTTP (not `file://`) so browser APIs and API requests work correctly.
 
 The app is being migrated to Cognito:
 - when `COGNITO_DOMAIN` and `COGNITO_CLIENT_ID` are set in `index.html`, the frontend uses Cognito Hosted UI with authorization-code + PKCE
+- if those constants are blank, the frontend attempts to discover Cognito settings from public `GET /auth/config`
 - until those values are configured, the legacy password gate remains available via `POST /auth/login`
 - JWTs are stored in `sessionStorage` (`wqt_token`) and sent as `Authorization: Bearer ...`
 - protected API calls currently include `x-api-key` from `API_KEY` in `index.html`

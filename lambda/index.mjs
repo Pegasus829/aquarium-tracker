@@ -9,6 +9,9 @@ import {
 
 const TABLE_NAME = process.env.TABLE_NAME || 'aquarium-readings';
 const AUTH_MODE = process.env.AUTH_MODE || 'legacy';
+const COGNITO_DOMAIN = process.env.COGNITO_DOMAIN || '';
+const COGNITO_CLIENT_ID = process.env.COGNITO_CLIENT_ID || '';
+const COGNITO_SCOPES = process.env.COGNITO_SCOPES || 'openid email profile';
 const PASSWORD_HASH = process.env.PASSWORD_HASH;
 const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRY_SEC = Number.parseInt(process.env.JWT_EXPIRY_SEC || '86400', 10);
@@ -267,6 +270,17 @@ export async function handler(event) {
 
   if (method === 'OPTIONS') {
     return json(200, '');
+  }
+
+  if (resource === '/auth/config' && method === 'GET') {
+    return json(200, {
+      authMode: AUTH_MODE,
+      cognito: {
+        domain: COGNITO_DOMAIN,
+        clientId: COGNITO_CLIENT_ID,
+        scopes: COGNITO_SCOPES,
+      },
+    });
   }
 
   if (resource === '/auth/login' && method === 'POST') {

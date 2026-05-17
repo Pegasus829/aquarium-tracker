@@ -23,7 +23,7 @@ The existing shared records are copied, not deleted, so rollback remains possibl
 
 ## Deploy Cognito for this app
 
-The local cloud image does not include the AWS CLI, so the repo includes scripts/templates that can be run from an AWS-enabled machine or CI role.
+The local cloud image does not include the AWS CLI, so the repo includes scripts/templates that can be run from an AWS-enabled machine or the GitHub Actions OIDC deploy role.
 
 ```bash
 export MARC_CURRENT_PASSWORD='the current app password'
@@ -38,18 +38,20 @@ The script:
 3. Sets Marc's permanent password when `MARC_CURRENT_PASSWORD` is provided.
 4. Creates/reuses an API Gateway Cognito authorizer.
 5. Protects the existing `/readings`, `/tap`, and `/profile` methods.
-6. Sets Lambda `AUTH_MODE=cognito`.
+6. Creates public `GET /auth/config` so the static frontend can discover Cognito settings at runtime.
 7. Optionally copies legacy records into Marc's user namespace.
-8. Prints the frontend constants required in `index.html`.
+8. Sets Lambda `AUTH_MODE=cognito`, `COGNITO_DOMAIN`, `COGNITO_CLIENT_ID`, and `COGNITO_SCOPES`.
 
-After the script completes, copy its printed values into:
+The static frontend first checks the constants in `index.html`, then falls back to `GET /auth/config`. This avoids committing generated Cognito client IDs to the static site.
 
-```js
-const COGNITO_DOMAIN = 'https://...auth.eu-west-1.amazoncognito.com';
-const COGNITO_CLIENT_ID = '...';
-```
+## GitHub Actions setup
 
-Then commit and deploy the static site.
+`.github/workflows/deploy-aws.yml` can run the Cognito setup after deploying Lambda. Use `workflow_dispatch` with:
+
+- `enable_cognito_setup = true`
+- `run_legacy_migration = true` only after setting the repository secret `MARC_CURRENT_PASSWORD`
+
+The deploy role must have the permissions in `deploy/github-deploy-policy.json`. The separate `deploy/cognito-deploy-policy.json` is kept as a smaller standalone reference for applying only the Cognito migration permissions.
 
 ## Passkey enrollment
 

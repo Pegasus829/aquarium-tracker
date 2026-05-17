@@ -5,9 +5,11 @@
       "Sid": "UpdateAquariumLambdaCode",
       "Effect": "Allow",
       "Action": [
+        "lambda:AddPermission",
         "lambda:GetFunction",
         "lambda:GetFunctionConfiguration",
-        "lambda:UpdateFunctionCode"
+        "lambda:UpdateFunctionCode",
+        "lambda:UpdateFunctionConfiguration"
       ],
       "Resource": "arn:aws:lambda:eu-west-1:681178750909:function:aquarium-api"
     },
@@ -18,6 +20,63 @@
         "apigateway:POST"
       ],
       "Resource": "arn:aws:apigateway:eu-west-1::/restapis/gnewkvhgwd/deployments"
+    },
+    {
+      "Sid": "ConfigureApiGatewayCognito",
+      "Effect": "Allow",
+      "Action": [
+        "apigateway:DELETE",
+        "apigateway:GET",
+        "apigateway:PATCH",
+        "apigateway:POST",
+        "apigateway:PUT"
+      ],
+      "Resource": [
+        "arn:aws:apigateway:eu-west-1::/restapis/gnewkvhgwd",
+        "arn:aws:apigateway:eu-west-1::/restapis/gnewkvhgwd/*"
+      ]
+    },
+    {
+      "Sid": "ManageCognitoAuthStack",
+      "Effect": "Allow",
+      "Action": [
+        "cloudformation:CreateChangeSet",
+        "cloudformation:CreateStack",
+        "cloudformation:DeleteChangeSet",
+        "cloudformation:DescribeChangeSet",
+        "cloudformation:DescribeStacks",
+        "cloudformation:ExecuteChangeSet",
+        "cloudformation:GetTemplate",
+        "cloudformation:UpdateStack"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "ManageCognitoUserPool",
+      "Effect": "Allow",
+      "Action": [
+        "cognito-idp:AdminCreateUser",
+        "cognito-idp:AdminGetUser",
+        "cognito-idp:AdminSetUserPassword",
+        "cognito-idp:CreateUserPool",
+        "cognito-idp:CreateUserPoolClient",
+        "cognito-idp:CreateUserPoolDomain",
+        "cognito-idp:DescribeUserPool",
+        "cognito-idp:DescribeUserPoolClient",
+        "cognito-idp:TagResource",
+        "cognito-idp:UpdateUserPool",
+        "cognito-idp:UpdateUserPoolClient"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "MigrateLegacyAquariumData",
+      "Effect": "Allow",
+      "Action": [
+        "dynamodb:Query",
+        "dynamodb:PutItem"
+      ],
+      "Resource": "arn:aws:dynamodb:eu-west-1:681178750909:table/aquarium-readings"
     }
   ]
 }
