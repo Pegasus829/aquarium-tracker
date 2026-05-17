@@ -35,17 +35,21 @@ async function deleteTankReading(request, token, id) {
 async function installApiCorsProxy(page) {
   const apiHost = new URL(API_BASE_URL).host;
   await page.route(`**://${apiHost}/**`, async (route) => {
-    const response = await route.fetch();
-    const headers = {};
-    for (const { name, value } of response.headersArray()) {
-      headers[name.toLowerCase()] = value;
+    if (route.request().method() === 'OPTIONS') {
+      await route.fulfill({
+        status: 200,
+        headers: {
+          'access-control-allow-origin': E2E_ORIGIN,
+          'access-control-allow-headers': 'Content-Type,Authorization',
+          'access-control-allow-methods': 'GET,POST,PUT,DELETE,OPTIONS',
+        },
+        body: '',
+      });
+      return;
     }
-    headers['access-control-allow-origin'] = E2E_ORIGIN;
-    await route.fulfill({
-      status: response.status(),
-      headers,
-      body: await response.body(),
-    });
+    const response = await route.fetch();
+    const headers = { ...response.headers(), 'access-control-allow-origin': E2E_ORIGIN };
+    await route.fulfill({ response, headers });
   });
 }
 
