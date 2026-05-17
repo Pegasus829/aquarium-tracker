@@ -22,7 +22,7 @@
 
   <div class="panel next-panel">
     <div class="panel-title">Add to next</div>
-    <p class="filter-hint">Mark backlog items with ★ below for <strong>Next</strong>, or ✓ next to ★ when an item ships (moves row to Delivered in <code>ROADMAP.md</code>). The page merges in <strong>Delivered vs Backlog</strong> from fetched <code>ROADMAP.md</code> when it loads—fix online drift without redeploying the HTML data array.</p>
+    <p class="filter-hint">Mark backlog items with ★ for <strong>Next</strong>, ✓ when an item ships (moves to Delivered), or × when rejected (moves to Deferred / won't fix). The page merges <strong>Delivered vs Backlog</strong> from fetched <code>ROADMAP.md</code> when it loads—fix online drift without redeploying the embedded data.</p>
     <div class="sync-actions">
       <button type="button" class="pill pill-util" id="btnSelectRoadmap">Save to ROADMAP.md</button>
       <a class="pill pill-util" id="btnDownloadRoadmap" aria-disabled="true">Download updated ROADMAP.md</a>
@@ -68,6 +68,7 @@
           <tr>
             <th>Next</th>
             <th title="Mark delivered (updates ROADMAP.md)">✓</th>
+            <th title="Mark won't fix (moves to Deferred section)">×</th>
             <th>ID</th>
             <th>Category</th>
             <th>Title</th>
@@ -107,6 +108,7 @@
   <section class="section" id="sectionDeferred">
     <div class="section-head">
       <h2>Deferred / won’t fix</h2>
+      <span id="deferredCount"></span>
     </div>
     <div class="table-wrap">
       <table>

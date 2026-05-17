@@ -109,6 +109,31 @@ function findDeliveredTable(lines) {
   return null;
 }
 
+function findDeferredTable(lines) {
+  let inDeferred = false;
+  for (let i = 0; i < lines.length; i += 1) {
+    if (/^##\s+Deferred\b/.test(lines[i])) {
+      inDeferred = true;
+      continue;
+    }
+    if (inDeferred && /^##\s+/.test(lines[i])) break;
+    if (!inDeferred) continue;
+    const cells = splitMarkdownRow(lines[i]);
+    if (!cells) continue;
+    const headers = cells.map(normalizeHeaderCell);
+    if (
+      headers[0] === 'id' &&
+      headers.includes('category') &&
+      headers.includes('title') &&
+      headers.includes('status') &&
+      !headers.includes('delivered')
+    ) {
+      return { headerIndex: i };
+    }
+  }
+  return null;
+}
+
 function deliveredNotesColumnIndex(headers) {
   const j = headers.findIndex((h) => h.includes('source') && h.includes('notes'));
   if (j !== -1) return j;
@@ -170,11 +195,47 @@ function parseMarkdownBacklogRows(markdown) {
   return rows;
 }
 
+function parseMarkdownDeferredRows(markdown) {
+  const lines = markdown.split(/\r?\n/);
+  const table = findDeferredTable(lines);
+  if (!table) return [];
+  const headerCells = splitMarkdownRow(lines[table.headerIndex]) || [];
+  const headers = headerCells.map(normalizeHeaderCell);
+  const idx = Object.fromEntries(headers.map((h, i) => [h, i]));
+  const rows = [];
+  const start = dataStartIndex(lines, table.headerIndex);
+  for (let i = start; i < lines.length; i += 1) {
+    const cells = splitMarkdownRow(lines[i]);
+    if (!cells) break;
+    if (isMarkdownSeparator(cells)) continue;
+    const id = cells[idx.id];
+    if (!/^AT-\d{3}$/.test(id)) continue;
+    rows.push({
+      id,
+      category: cells[idx.category] || '',
+      title: cells[idx.title] || '',
+      status: cells[idx.status] || 'wont_fix',
+      notes: cells[idx.notes] || '',
+    });
+  }
+  return rows;
+}
+
+function isDeferredBacklogStatus(status) {
+  const s = String(status || '')
+    .trim()
+    .toLowerCase();
+  return s === 'wont_fix' || s === 'deferred';
+}
+
 function buildDisplayItemsFromMarkdown(markdown, template) {
   const deliveredRows = parseMarkdownDeliveredRows(markdown);
+  const deferredRows = parseMarkdownDeferredRows(markdown);
   const backlogRows = parseMarkdownBacklogRows(markdown);
   const deliveredIds = new Set(deliveredRows.map((r) => r.id));
+  const deferredIds = new Set(deferredRows.map((r) => r.id));
   const deliveredById = new Map(deliveredRows.map((r) => [r.id, r]));
+  const deferredById = new Map(deferredRows.map((r) => [r.id, r]));
   const backlogById = new Map(backlogRows.map((r) => [r.id, r]));
   const byId = new Map(template.map((item) => [item.id, { ...item }]));
 
@@ -207,31 +268,63 @@ function buildDisplayItemsFromMarkdown(markdown, template) {
     }
   }
 
-  for (const [id, row] of backlogById) {
+  for (const [id, row] of deferredById) {
     if (deliveredIds.has(id)) continue;
+    const base = byId.get(id);
+    const status = row.status || 'wont_fix';
+    if (base) {
+      byId.set(id, {
+        ...base,
+        section: 'deferred',
+        category: row.category || base.category,
+        title: row.title || base.title,
+        status,
+        notes: row.notes !== undefined && row.notes !== '' ? row.notes : base.notes,
+        priority: '',
+        source: '',
+        delivered: '',
+      });
+    } else {
+      byId.set(id, {
+        id: row.id,
+        section: 'deferred',
+        category: row.category || '',
+        title: row.title || '',
+        status,
+        priority: '',
+        delivered: '',
+        source: '',
+        notes: row.notes || '',
+      });
+    }
+  }
+
+  for (const [id, row] of backlogById) {
+    if (deliveredIds.has(id) || deferredIds.has(id)) continue;
+    const closed = isDeferredBacklogStatus(row.status);
     const base = byId.get(id);
     if (base) {
       byId.set(id, {
         ...base,
-        section: 'backlog',
+        section: closed ? 'deferred' : 'backlog',
         category: row.category,
         title: row.title,
         status: row.status,
-        priority: row.priority,
-        source: row.source,
+        priority: closed ? '' : row.priority,
+        source: closed ? '' : row.source,
         notes: row.notes,
         delivered: '',
       });
     } else {
       byId.set(id, {
         id,
-        section: 'backlog',
+        section: closed ? 'deferred' : 'backlog',
         category: row.category,
         title: row.title,
         status: row.status,
-        priority: row.priority || '',
+        priority: closed ? '' : row.priority || '',
         delivered: '',
-        source: row.source || '',
+        source: closed ? '' : row.source || '',
         notes: row.notes || '',
       });
     }
@@ -322,6 +415,96 @@ function moveBacklogItemToDeliveredMarkdown(markdown, id, deliveredLabel) {
   return lines.join('\n');
 }
 
+function removeDeferredPlaceholderRow(lines, defTable, dIdx) {
+  const dDataStart = dataStartIndex(lines, defTable.headerIndex);
+  for (let i = dDataStart; i < lines.length; i += 1) {
+    const cells = splitMarkdownRow(lines[i]);
+    if (!cells) break;
+    if (isMarkdownSeparator(cells)) continue;
+    const rid = cells[dIdx.id];
+    if (!/^AT-\d{3}$/.test(rid)) {
+      lines.splice(i, 1);
+    }
+    return;
+  }
+}
+
+function moveBacklogItemToWontFixMarkdown(markdown, id) {
+  const lines = markdown.split(/\r?\n/);
+  const backlogTable = findBacklogTable(lines);
+  if (!backlogTable) return markdown;
+
+  const bHeaderCells = splitMarkdownRow(lines[backlogTable.headerIndex]) || [];
+  const bHeaders = bHeaderCells.map(normalizeHeaderCell);
+  const bIdx = Object.fromEntries(bHeaders.map((h, i) => [h, i]));
+  const bid = bIdx.id;
+  const dataStart = dataStartIndex(lines, backlogTable.headerIndex);
+  let removeIndex = -1;
+  /** @type {string[] | null} */
+  let rowCells = null;
+  for (let i = dataStart; i < lines.length; i += 1) {
+    const cells = splitMarkdownRow(lines[i]);
+    if (!cells) break;
+    if (isMarkdownSeparator(cells)) continue;
+    if (cells[bid] === id) {
+      removeIndex = i;
+      rowCells = cells;
+      break;
+    }
+  }
+  if (removeIndex === -1 || !rowCells) return markdown;
+
+  const category = rowCells[bIdx.category] || '';
+  const title = rowCells[bIdx.title] || '';
+  const source = rowCells[bIdx.source] || '';
+  const notes = rowCells[bIdx.notes] || '';
+  const combinedNotes = formatDeliveredNoteFromBacklog(source, notes);
+
+  lines.splice(removeIndex, 1);
+
+  const defTable = findDeferredTable(lines);
+  if (!defTable) return lines.join('\n');
+
+  const dHeaderCells = splitMarkdownRow(lines[defTable.headerIndex]) || [];
+  const dHeaders = dHeaderCells.map(normalizeHeaderCell);
+  const dIdx = Object.fromEntries(dHeaders.map((h, i) => [h, i]));
+  const dDataStart = dataStartIndex(lines, defTable.headerIndex);
+  const newRow = formatMarkdownRow([id, category, title, 'wont_fix', combinedNotes]);
+  const idNum = parseInt(id.slice(3), 10);
+  let replaced = false;
+
+  for (let i = dDataStart; i < lines.length; i += 1) {
+    const cells = splitMarkdownRow(lines[i]);
+    if (!cells) break;
+    if (isMarkdownSeparator(cells)) continue;
+    const rid = cells[dIdx.id];
+    if (!/^AT-\d{3}$/.test(rid)) break;
+    if (rid === id) {
+      lines[i] = newRow;
+      replaced = true;
+      break;
+    }
+  }
+
+  if (!replaced) {
+    removeDeferredPlaceholderRow(lines, defTable, dIdx);
+    let insertAt = dDataStart;
+    for (let i = dDataStart; i < lines.length; i += 1) {
+      const cells = splitMarkdownRow(lines[i]);
+      if (!cells) break;
+      if (isMarkdownSeparator(cells)) continue;
+      const rid = cells[dIdx.id];
+      if (!/^AT-\d{3}$/.test(rid)) break;
+      const rNum = parseInt(rid.slice(3), 10);
+      if (rNum < idNum) insertAt = i + 1;
+      else break;
+    }
+    lines.splice(insertAt, 0, newRow);
+  }
+
+  return lines.join('\n');
+}
+
 async function markItemDelivered(id) {
   const item = getItems().find((i) => i.id === id);
   if (!item || item.section !== 'backlog') return;
@@ -339,6 +522,28 @@ async function markItemDelivered(id) {
     return;
   }
   roadmapMarkdown = moveBacklogItemToDeliveredMarkdown(roadmapMarkdown, id, deliveredLabel);
+  nextIds.delete(id);
+  saveNext();
+  updateRoadmapDownload();
+  refreshNextUi();
+  await persistRoadmapMarkdown({ allowPrompt: true });
+}
+
+async function markItemWontFix(id) {
+  const item = getItems().find((i) => i.id === id);
+  if (!item || item.section !== 'backlog') return;
+  const ok = window.confirm(
+    `Mark ${id} as won't fix? Its backlog row will be removed and moved to the Deferred / won't fix section in ROADMAP.md.`
+  );
+  if (!ok) return;
+  if (!roadmapMarkdown) {
+    setSyncStatus(
+      'ROADMAP.md is not loaded yet. Serve the repo over HTTP (see AGENTS.md) or use Save to ROADMAP.md after it loads.',
+      'warn'
+    );
+    return;
+  }
+  roadmapMarkdown = moveBacklogItemToWontFixMarkdown(roadmapMarkdown, id);
   nextIds.delete(id);
   saveNext();
   updateRoadmapDownload();
@@ -569,7 +774,7 @@ async function writeRoadmapMarkdown() {
   roadmapMarkdown = updated;
   updateRoadmapDownload();
   refreshNextUi();
-  setSyncStatus('Saved ROADMAP.md (Delivered/backlog edits + Next column).', 'ok');
+  setSyncStatus('Saved ROADMAP.md (Delivered, backlog, deferred edits + Next column).', 'ok');
   return true;
 }
 
@@ -750,6 +955,7 @@ function renderTables() {
     return `<tr data-id="${i.id}" class="${on ? 'row-next' : ''}">
       <td><button type="button" class="next-btn ${on ? 'on' : ''}" data-next-id="${i.id}" aria-pressed="${on}" title="Add to next">★</button></td>
       <td><button type="button" class="deliver-btn" data-deliver-id="${i.id}" aria-label="Mark ${i.id} delivered" title="Mark delivered">✓</button></td>
+      <td><button type="button" class="wontfix-btn" data-wontfix-id="${i.id}" aria-label="Mark ${i.id} won't fix" title="Mark won't fix">×</button></td>
       <td class="id-cell">${i.id}</td>
       <td><span class="${tagClass('cat', i.category)}">${escapeHtml(i.category)}</span></td>
       <td>${escapeHtml(i.title)}</td>
@@ -792,6 +998,9 @@ function renderTables() {
   document.querySelectorAll('[data-deliver-id]').forEach((btn) => {
     btn.addEventListener('click', () => markItemDelivered(btn.dataset.deliverId));
   });
+  document.querySelectorAll('[data-wontfix-id]').forEach((btn) => {
+    btn.addEventListener('click', () => markItemWontFix(btn.dataset.wontfixId));
+  });
 }
 
 function applyFilters() {
@@ -816,6 +1025,10 @@ function applyFilters() {
   const dVis = getItems().filter((i) => i.section === 'delivered' && itemVisible(i, query)).length;
   const dTot = getItems().filter((i) => i.section === 'delivered').length;
   document.getElementById('deliveredCount').textContent = `${dVis} / ${dTot} shown`;
+  const xVis = getItems().filter((i) => i.section === 'deferred' && itemVisible(i, query)).length;
+  const xTot = getItems().filter((i) => i.section === 'deferred').length;
+  const deferredCountEl = document.getElementById('deferredCount');
+  if (deferredCountEl) deferredCountEl.textContent = `${xVis} / ${xTot} shown`;
 }
 
 function resetFilters() {

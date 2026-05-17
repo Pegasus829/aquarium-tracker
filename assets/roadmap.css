@@ -301,6 +301,23 @@ tr.row-next td { background: rgba(251,191,36,0.04); }
   color: var(--safe);
 }
 
+.wontfix-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  transition: all 0.15s;
+}
+.wontfix-btn:hover {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
 .empty-section {
   padding: 20px;
   text-align: center;
