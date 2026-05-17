@@ -107,6 +107,7 @@ Use the `Next` column to queue near-term work. Mark selected rows as `next`; lea
 |  | AT-029 | Enhancement | Backfill UI for missing KH on historical readings | idea | low | KH session ([aff87b27](aff87b27-a3af-4666-855c-02edcc319a66)) | Optional bulk edit or per-row prompt |
 |  | AT-030 | Security | Rate-limit / abuse monitoring dashboard or alarms | idea | low | Security review | Usage plan exists; observability not in repo |
 |  | AT-031 | Enhancement | Generate interactive roadmap data from `ROADMAP.md` | idea | low | agent:roadmap-next-sync | Avoid maintaining duplicate `ROADMAP_ITEMS` data by hand |
+|  | AT-032 | Security | Roadmap permissions with read/write access controls | idea | medium | user | Default no roadmap access; `marc@amphletts.uk` has write access |
 
 ### Commercial (placeholder)
 
@@ -134,3 +135,4 @@ No backlog items yet. When planning a public launch, add items here (e.g. subscr
 | 2026-05-17 | Added Category column and legend (Security, Accessibility, New Feature, Enhancement, Commercial, Defect) |
 | 2026-05-17 | Interactive [assets/roadmap.html](assets/roadmap.html) with filter pills and Add to Next |
 | 2026-05-17 | Added markdown-backed `Next` column and local-file save support in [assets/roadmap.html](assets/roadmap.html) |
+| 2026-05-17 | Added AT-032 roadmap permissions item |
