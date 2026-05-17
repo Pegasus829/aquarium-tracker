@@ -4,7 +4,8 @@ const API_BASE_URL = (
   process.env.WQT_API_BASE_URL || 'https://gnewkvhgwd.execute-api.eu-west-1.amazonaws.com/prod'
 ).replace(/\/$/, '');
 
-const E2E_PASSWORD = process.env.WQT_E2E_PASSWORD || '';
+const E2E_PASSWORD = (process.env.WQT_E2E_PASSWORD || '').trim();
+const E2E_ORIGIN = (process.env.WQT_E2E_ORIGIN || 'http://127.0.0.1:8000').replace(/\/$/, '');
 
 async function fetchAuthMode(request) {
   const res = await request.get(`${API_BASE_URL}/auth/config`);
@@ -27,6 +28,24 @@ async function deleteTankReading(request, token, id) {
   if (!id || !token) return;
   await request.delete(`${API_BASE_URL}/readings/${encodeURIComponent(id)}`, {
     headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+/** Lambda CORS allows production origin only; rewrite ACAO for local Playwright. */
+async function installApiCorsProxy(page) {
+  const apiHost = new URL(API_BASE_URL).host;
+  await page.route(`**://${apiHost}/**`, async (route) => {
+    const response = await route.fetch();
+    const headers = {};
+    for (const { name, value } of response.headersArray()) {
+      headers[name.toLowerCase()] = value;
+    }
+    headers['access-control-allow-origin'] = E2E_ORIGIN;
+    await route.fulfill({
+      status: response.status(),
+      headers,
+      body: await response.body(),
+    });
   });
 }
 
@@ -55,6 +74,7 @@ test.describe('smoke', () => {
     const markerPhLabel = markerPh.toFixed(1);
     let createdId = null;
 
+    await installApiCorsProxy(page);
     await page.route('**/auth/config', (route) =>
       route.fulfill({
         status: 200,
@@ -71,8 +91,13 @@ test.describe('smoke', () => {
     await expect(page.locator('#gate')).toBeVisible();
     await expect(page.locator('#gateInput')).toBeVisible();
 
+    const loginResponse = page.waitForResponse(
+      (res) => res.url().includes('/auth/login') && res.request().method() === 'POST'
+    );
     await page.locator('#gateInput').fill(E2E_PASSWORD);
-    await page.locator('#gateForm').evaluate((form) => form.requestSubmit());
+    await page.getByRole('button', { name: 'Unlock' }).click();
+    const loginRes = await loginResponse;
+    expect(loginRes.ok(), 'Gate login should succeed with WQT_E2E_PASSWORD').toBeTruthy();
 
     await expect(page.locator('#app')).toHaveClass(/app-visible/);
     await expect(page.locator('#gate')).toHaveClass(/gate-hidden/);
