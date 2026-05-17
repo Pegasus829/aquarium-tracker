@@ -83,6 +83,16 @@ const AVATAR_EMOJIS = [DEFAULT_AVATAR_EMOJI, '🐠', '🐟', '🐡', '🐙', '�
 const AVATAR_UPLOAD_MAX_BYTES = 6 * 1024 * 1024;
 const AVATAR_IMAGE_MAX_CHARS = 220000;
 
+const LEGACY_TANK_METRICS = ['ph', 'nh3', 'no2', 'no3', 'kh'];
+const EXTENDED_TANK_METRICS = ['temp', 'gh', 'ca', 'mg'];
+const TANK_METRIC_KEYS = [...LEGACY_TANK_METRICS, ...EXTENDED_TANK_METRICS];
+
+function defaultDashboardVisible() {
+  return Object.fromEntries(
+    TANK_METRIC_KEYS.map((key) => [key, LEGACY_TANK_METRICS.includes(key)])
+  );
+}
+
 function defaultProfile() {
   return {
     userName: 'Aquarist',
@@ -90,15 +100,32 @@ function defaultProfile() {
     aquariumSize: 57,
     aquariumUnits: 'litres',
     avatar: { type: 'emoji', emoji: DEFAULT_AVATAR_EMOJI, imageDataUrl: '' },
-    settings: { trackTapWater: true },
+    settings: { trackTapWater: true, dashboardVisible: defaultDashboardVisible() },
     safeZones: {
       kh: { min: 2, max: 6 },
       ph: { min: 6.5, max: 7.0 },
       nh3: { min: 0, max: 0.25 },
       no2: { min: 0, max: 0.25 },
       no3: { min: 0, max: 20 },
+      temp: { min: 24, max: 26 },
+      gh: { min: 4, max: 8 },
+      ca: { min: 400, max: 450 },
+      mg: { min: 1250, max: 1350 },
     },
   };
+}
+
+function normalizeDashboardVisible(raw = {}) {
+  const defaults = defaultDashboardVisible();
+  const out = {};
+  TANK_METRIC_KEYS.forEach((key) => {
+    out[key] = typeof raw[key] === 'boolean' ? raw[key] : defaults[key];
+  });
+  return out;
+}
+
+function isMetricOnDashboard(key) {
+  return profile.settings?.dashboardVisible?.[key] === true;
 }
 
 function sanitizeRange(raw, fallback, minCap, maxCap) {
@@ -151,6 +178,7 @@ function normalizeProfile(raw = {}) {
         typeof raw.settings?.trackTapWater === 'boolean'
           ? raw.settings.trackTapWater
           : defaults.settings.trackTapWater,
+      dashboardVisible: normalizeDashboardVisible(raw.settings?.dashboardVisible),
     },
     safeZones: {
       kh: sanitizeRange(raw.safeZones?.kh, defaults.safeZones.kh, 0, 30),
@@ -158,6 +186,10 @@ function normalizeProfile(raw = {}) {
       nh3: sanitizeRange(raw.safeZones?.nh3, defaults.safeZones.nh3, 0, 500),
       no2: sanitizeRange(raw.safeZones?.no2, defaults.safeZones.no2, 0, 500),
       no3: sanitizeRange(raw.safeZones?.no3, defaults.safeZones.no3, 0, 500),
+      temp: sanitizeRange(raw.safeZones?.temp, defaults.safeZones.temp, 0, 50),
+      gh: sanitizeRange(raw.safeZones?.gh, defaults.safeZones.gh, 0, 50),
+      ca: sanitizeRange(raw.safeZones?.ca, defaults.safeZones.ca, 0, 2000),
+      mg: sanitizeRange(raw.safeZones?.mg, defaults.safeZones.mg, 0, 2000),
     },
   };
 }
@@ -209,42 +241,54 @@ function getPhWarningRange(safeZone = profile.safeZones.ph) {
   };
 }
 
+function getOffsetWarningRange(safeZone, lowOffset, highOffset, minCap = 0, maxCap = Infinity) {
+  return {
+    min: Math.max(minCap, safeZone.min - lowOffset),
+    max: Math.min(maxCap, safeZone.max + highOffset),
+  };
+}
+
+function chartRangeLabel(key) {
+  const zone = profile.safeZones[key];
+  if (!zone) return '';
+  if (key === 'kh') {
+    return `Target: ${formatRangeValue(zone.min, 1)}-${formatRangeValue(zone.max, 1)} dKH`;
+  }
+  if (key === 'ph') {
+    return `Target: ${formatRangeValue(zone.min, 1)}-${formatRangeValue(zone.max, 1)}`;
+  }
+  if (key === 'nh3' || key === 'no2') {
+    if (zone.min === 0 && zone.max === 0) return 'Target: 0 ppm';
+    return `Safe: ${formatRangeValue(zone.min)}-${formatRangeValue(zone.max)} ppm`;
+  }
+  if (key === 'no3') {
+    const warn = getNo3WarningRange(zone);
+    return `Safe: ${formatRangeValue(zone.min)}-${formatRangeValue(zone.max)} ppm · Warning: ${formatRangeValue(warn.min)}-${formatRangeValue(warn.max)} ppm`;
+  }
+  if (key === 'temp') {
+    return `Target: ${formatRangeValue(zone.min, 1)}-${formatRangeValue(zone.max, 1)} °C`;
+  }
+  if (key === 'gh') {
+    return `Target: ${formatRangeValue(zone.min, 1)}-${formatRangeValue(zone.max, 1)} °dGH`;
+  }
+  if (key === 'ca' || key === 'mg') {
+    return `Target: ${formatRangeValue(zone.min, 0)}-${formatRangeValue(zone.max, 0)} ppm`;
+  }
+  return '';
+}
+
 function updateChartRangeLabels() {
-  const kh = profile.safeZones.kh;
-  const ph = profile.safeZones.ph;
-  const nh3 = profile.safeZones.nh3;
-  const no2 = profile.safeZones.no2;
-  const no3 = profile.safeZones.no3;
-  const no3Warn = getNo3WarningRange(no3);
+  TANK_METRIC_KEYS.forEach((key) => {
+    const el = document.getElementById(`range-${key}`);
+    if (el) el.textContent = chartRangeLabel(key);
+  });
+}
 
-  const rangeKh = document.getElementById('range-kh');
-  if (rangeKh)
-    rangeKh.textContent = `Target: ${formatRangeValue(kh.min, 1)}-${formatRangeValue(kh.max, 1)} dKH`;
-
-  const rangePh = document.getElementById('range-ph');
-  if (rangePh)
-    rangePh.textContent = `Target: ${formatRangeValue(ph.min, 1)}-${formatRangeValue(ph.max, 1)}`;
-
-  const rangeNh3 = document.getElementById('range-nh3');
-  if (rangeNh3) {
-    rangeNh3.textContent =
-      nh3.min === 0 && nh3.max === 0
-        ? 'Target: 0 ppm'
-        : `Safe: ${formatRangeValue(nh3.min)}-${formatRangeValue(nh3.max)} ppm`;
-  }
-
-  const rangeNo2 = document.getElementById('range-no2');
-  if (rangeNo2) {
-    rangeNo2.textContent =
-      no2.min === 0 && no2.max === 0
-        ? 'Target: 0 ppm'
-        : `Safe: ${formatRangeValue(no2.min)}-${formatRangeValue(no2.max)} ppm`;
-  }
-
-  const rangeNo3 = document.getElementById('range-no3');
-  if (rangeNo3) {
-    rangeNo3.textContent = `Safe: ${formatRangeValue(no3.min)}-${formatRangeValue(no3.max)} ppm · Warning: ${formatRangeValue(no3Warn.min)}-${formatRangeValue(no3Warn.max)} ppm`;
-  }
+function applyDashboardVisibility() {
+  document.querySelectorAll('[data-dashboard-metric]').forEach((el) => {
+    const key = el.getAttribute('data-dashboard-metric');
+    el.classList.toggle('dashboard-metric-hidden', !isMetricOnDashboard(key));
+  });
 }
 
 function updateHeaderMeta() {
@@ -284,6 +328,7 @@ function applyProfileToUI() {
   updateHeaderMeta();
   updateHeaderAvatar();
   updateChartRangeLabels();
+  applyDashboardVisibility();
 }
 
 function populateProfileForm() {
@@ -294,16 +339,23 @@ function populateProfileForm() {
   document.getElementById('profileAquariumSize').value = profile.aquariumSize;
   document.getElementById('profileAquariumUnits').value = profile.aquariumUnits;
 
-  document.getElementById('profileSafeKhMin').value = profile.safeZones.kh.min;
-  document.getElementById('profileSafeKhMax').value = profile.safeZones.kh.max;
-  document.getElementById('profileSafePhMin').value = profile.safeZones.ph.min;
-  document.getElementById('profileSafePhMax').value = profile.safeZones.ph.max;
-  document.getElementById('profileSafeNh3Min').value = profile.safeZones.nh3.min;
-  document.getElementById('profileSafeNh3Max').value = profile.safeZones.nh3.max;
-  document.getElementById('profileSafeNo2Min').value = profile.safeZones.no2.min;
-  document.getElementById('profileSafeNo2Max').value = profile.safeZones.no2.max;
-  document.getElementById('profileSafeNo3Min').value = profile.safeZones.no3.min;
-  document.getElementById('profileSafeNo3Max').value = profile.safeZones.no3.max;
+  const zoneFields = [
+    ['kh', 'profileSafeKhMin', 'profileSafeKhMax', 'profileDashKh'],
+    ['ph', 'profileSafePhMin', 'profileSafePhMax', 'profileDashPh'],
+    ['nh3', 'profileSafeNh3Min', 'profileSafeNh3Max', 'profileDashNh3'],
+    ['no2', 'profileSafeNo2Min', 'profileSafeNo2Max', 'profileDashNo2'],
+    ['no3', 'profileSafeNo3Min', 'profileSafeNo3Max', 'profileDashNo3'],
+    ['temp', 'profileSafeTempMin', 'profileSafeTempMax', 'profileDashTemp'],
+    ['gh', 'profileSafeGhMin', 'profileSafeGhMax', 'profileDashGh'],
+    ['ca', 'profileSafeCaMin', 'profileSafeCaMax', 'profileDashCa'],
+    ['mg', 'profileSafeMgMin', 'profileSafeMgMax', 'profileDashMg'],
+  ];
+  zoneFields.forEach(([key, minId, maxId, dashId]) => {
+    document.getElementById(minId).value = profile.safeZones[key].min;
+    document.getElementById(maxId).value = profile.safeZones[key].max;
+    const dash = document.getElementById(dashId);
+    if (dash) dash.checked = isMetricOnDashboard(key);
+  });
 }
 
 function openProfilePage() {
@@ -498,6 +550,33 @@ async function saveProfile() {
         min: Number(document.getElementById('profileSafeNo3Min').value),
         max: Number(document.getElementById('profileSafeNo3Max').value),
       },
+      temp: {
+        min: Number(document.getElementById('profileSafeTempMin').value),
+        max: Number(document.getElementById('profileSafeTempMax').value),
+      },
+      gh: {
+        min: Number(document.getElementById('profileSafeGhMin').value),
+        max: Number(document.getElementById('profileSafeGhMax').value),
+      },
+      ca: {
+        min: Number(document.getElementById('profileSafeCaMin').value),
+        max: Number(document.getElementById('profileSafeCaMax').value),
+      },
+      mg: {
+        min: Number(document.getElementById('profileSafeMgMin').value),
+        max: Number(document.getElementById('profileSafeMgMax').value),
+      },
+    },
+    dashboardVisible: {
+      kh: document.getElementById('profileDashKh')?.checked === true,
+      ph: document.getElementById('profileDashPh')?.checked === true,
+      nh3: document.getElementById('profileDashNh3')?.checked === true,
+      no2: document.getElementById('profileDashNo2')?.checked === true,
+      no3: document.getElementById('profileDashNo3')?.checked === true,
+      temp: document.getElementById('profileDashTemp')?.checked === true,
+      gh: document.getElementById('profileDashGh')?.checked === true,
+      ca: document.getElementById('profileDashCa')?.checked === true,
+      mg: document.getElementById('profileDashMg')?.checked === true,
     },
   };
   const defaults = defaultProfile();
@@ -511,6 +590,7 @@ async function saveProfile() {
     avatar: nextProfile.avatar,
     settings: {
       trackTapWater: profile.settings?.trackTapWater !== false,
+      dashboardVisible: normalizeDashboardVisible(nextProfile.dashboardVisible),
     },
     safeZones: {
       kh: sanitizeRange(nextProfile.safeZones.kh, defaults.safeZones.kh, 0, 30),
@@ -518,6 +598,10 @@ async function saveProfile() {
       nh3: sanitizeRange(nextProfile.safeZones.nh3, defaults.safeZones.nh3, 0, 500),
       no2: sanitizeRange(nextProfile.safeZones.no2, defaults.safeZones.no2, 0, 500),
       no3: sanitizeRange(nextProfile.safeZones.no3, defaults.safeZones.no3, 0, 500),
+      temp: sanitizeRange(nextProfile.safeZones.temp, defaults.safeZones.temp, 0, 50),
+      gh: sanitizeRange(nextProfile.safeZones.gh, defaults.safeZones.gh, 0, 50),
+      ca: sanitizeRange(nextProfile.safeZones.ca, defaults.safeZones.ca, 0, 2000),
+      mg: sanitizeRange(nextProfile.safeZones.mg, defaults.safeZones.mg, 0, 2000),
     },
   };
 
@@ -712,7 +796,7 @@ function showToast(msg) {
 function setLoadingState(loading) {
   isDataLoading = loading;
 
-  ['nd-ph', 'nd-nh3', 'nd-no2', 'nd-no3', 'nd-kh'].forEach((id) => {
+  TANK_METRIC_KEYS.map((key) => `nd-${key}`).forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.textContent = loading ? 'Loading…' : 'No readings yet';
   });
@@ -724,9 +808,10 @@ function setLoadingState(loading) {
   if (!loading) return;
 
   const tankPills = document.querySelectorAll('#statusBar .stat-pill');
-  const tankLabels = ['pH', 'Ammonia', 'Nitrite', 'Nitrate', 'KH'];
-  tankPills.forEach((pill, idx) => {
-    pill.innerHTML = `<div class="stat-label">${tankLabels[idx]}</div><div class="stat-value c-muted">Loading…</div><div class="stat-status c-muted">Sync</div>`;
+  tankPills.forEach((pill) => {
+    if (!pill.hasAttribute('data-dashboard-metric')) return;
+    const label = pill.querySelector('.stat-label')?.textContent || '';
+    pill.innerHTML = '<div class="stat-label">' + label + '</div><div class="stat-value c-muted">Loading…</div><div class="stat-status c-muted">Sync</div>';
   });
 
   const tapPills = document.querySelectorAll('#tapStatusBar .stat-pill');
@@ -1035,10 +1120,35 @@ function khStatus(v) {
   return [display, 'c-danger', 'ACT'];
 }
 function phStatus(v) {
-  if (v === null) return ['—', 'c-muted', ''];
-  if (v >= 6.5 && v <= 7.2) return [v.toFixed(1), 'c-safe', 'GOOD'];
-  if (v >= 6.2 && v <= 7.5) return [v.toFixed(1), 'c-warn', 'WATCH'];
-  return [v.toFixed(1), 'c-danger', 'ACT'];
+  if (v == null) return ['—', 'c-muted', ''];
+  const { min, max } = profile.safeZones.ph;
+  const warn = getPhWarningRange(profile.safeZones.ph);
+  const display = Number(v).toFixed(1);
+  if (v >= min && v <= max) return [display, 'c-safe', 'GOOD'];
+  if (v >= warn.min && v <= warn.max) return [display, 'c-warn', 'WATCH'];
+  return [display, 'c-danger', 'ACT'];
+}
+function tempStatus(v) {
+  return rangeMetricStatus(v, profile.safeZones.temp, 1, ' °C', 0.5, 0.5, 0, 50);
+}
+function ghStatus(v) {
+  return rangeMetricStatus(v, profile.safeZones.gh, 1, ' °dGH', 1, 2, 0, 50);
+}
+function caStatus(v) {
+  return rangeMetricStatus(v, profile.safeZones.ca, 0, ' ppm', 25, 50, 0, 2000);
+}
+function mgStatus(v) {
+  return rangeMetricStatus(v, profile.safeZones.mg, 0, ' ppm', 50, 100, 0, 2000);
+}
+function rangeMetricStatus(v, safeZone, decimals, suffix, lowOffset, highOffset, minCap, maxCap) {
+  if (v == null) return ['—', 'c-muted', ''];
+  const warn = getOffsetWarningRange(safeZone, lowOffset, highOffset, minCap, maxCap);
+  const display =
+    (decimals === 0 ? String(Math.round(v)) : Number(v).toFixed(decimals)) + suffix;
+  if (v >= safeZone.min && v <= safeZone.max) return [display, 'c-safe', 'GOOD'];
+  if (v >= warn.min && v <= warn.max) return [display, 'c-warn', 'WATCH'];
+  const shortDisplay = decimals === 0 ? String(Math.round(v)) : Number(v).toFixed(decimals);
+  return [shortDisplay + suffix, 'c-danger', 'ACT'];
 }
 function nh3Status(v) {
   if (v === null) return ['—', 'c-muted', ''];
@@ -1064,32 +1174,48 @@ function tapStatus(v) {
   if (v <= 40) return [v, 'c-warn', 'MED'];
   return [v, 'c-danger', 'HIGH'];
 }
+const METRIC_STATUS_FNS = {
+  kh: khStatus,
+  ph: phStatus,
+  nh3: nh3Status,
+  no2: no2Status,
+  no3: no3Status,
+  temp: tempStatus,
+  gh: ghStatus,
+  ca: caStatus,
+  mg: mgStatus,
+};
+
 function statusClass(v, type) {
   if (v === null || v === undefined) return 'c-muted';
-  if (type === 'kh') return khStatus(v)[1];
-  if (type === 'ph') return phStatus(v)[1];
-  if (type === 'nh3') return nh3Status(v)[1];
-  if (type === 'no2') return no2Status(v)[1];
-  if (type === 'no3') return no3Status(v)[1];
   if (type === 'tap') return tapStatus(v)[1];
-  return 'c-muted';
+  const fn = METRIC_STATUS_FNS[type];
+  return fn ? fn(v)[1] : 'c-muted';
 }
 
 // ── Status pills ──
 function updateStatus() {
   if (readings.length > 0) {
     const last = readings[readings.length - 1];
-    const pills = document.querySelectorAll('#statusBar .stat-pill');
-    [
-      [last.ph, phStatus, 'pH', last.ph != null ? last.ph.toFixed(1) : '—'],
-      [last.nh3, nh3Status, 'NH₃', last.nh3 !== null ? last.nh3 + ' ppm' : '—'],
-      [last.no2, no2Status, 'NO₂', last.no2 !== null ? last.no2 + ' ppm' : '—'],
-      [last.no3, no3Status, 'NO₃', last.no3 !== null ? last.no3 + ' ppm' : '—'],
-      [last.kh, khStatus, 'KH', last.kh != null ? last.kh.toFixed(1) + ' dKH' : '—'],
-    ].forEach(([val, fn, label, display], i) => {
-      const [, cls, status] = fn(val);
-      pills[i].innerHTML =
-        `<div class="stat-label">${label}</div><div class="stat-value ${cls}">${display}</div><div class="stat-status ${cls}">${status}</div>`;
+    document.querySelectorAll('#statusBar .stat-pill[data-dashboard-metric]').forEach((pill) => {
+      const key = pill.getAttribute('data-dashboard-metric');
+      if (!isMetricOnDashboard(key)) return;
+      const fn = METRIC_STATUS_FNS[key];
+      if (!fn) return;
+      const [display, cls, status] = fn(last[key]);
+      const label = pill.querySelector('.stat-label')?.textContent || key;
+      pill.innerHTML =
+        '<div class="stat-label">' +
+        label +
+        '</div><div class="stat-value ' +
+        cls +
+        '">' +
+        display +
+        '</div><div class="stat-status ' +
+        cls +
+        '">' +
+        status +
+        '</div>';
     });
   }
   const tapPills = document.querySelectorAll('#tapStatusBar .stat-pill');
@@ -1282,6 +1408,15 @@ function renderMetricChart(
 ) {
   if (typeof Chart === 'undefined') {
     drawChart(canvasId, ndId, pts, color, yMin, yMax, safeMin, safeMax);
+    return;
+  }
+
+  if (!isMetricOnDashboard(chartKey)) {
+    if (metricCharts[chartKey]) {
+      metricCharts[chartKey].destroy();
+      metricCharts[chartKey] = null;
+    }
+    setChartHasData(canvasId, false);
     return;
   }
 
@@ -1634,7 +1769,13 @@ function renderCharts() {
     no2Safe.min,
     no2Safe.max
   );
-  renderNo3Chart(no3Pts, tapNo3Pts, no3Safe, no3Warning);
+  if (isMetricOnDashboard('no3')) {
+    renderNo3Chart(no3Pts, tapNo3Pts, no3Safe, no3Warning);
+  } else if (no3Chart) {
+    no3Chart.destroy();
+    no3Chart = null;
+    setChartHasData('chart-no3', false);
+  }
   renderMetricChart(
     'kh',
     'chart-kh',
@@ -1648,9 +1789,75 @@ function renderCharts() {
     khWarning.min,
     khWarning.max
   );
+
+  const tempSafe = profile.safeZones.temp;
+  const ghSafe = profile.safeZones.gh;
+  const caSafe = profile.safeZones.ca;
+  const mgSafe = profile.safeZones.mg;
+  const tempWarning = getOffsetWarningRange(tempSafe, 0.5, 0.5, 0, 50);
+  const ghWarning = getKhWarningRange(ghSafe);
+  const caWarning = getOffsetWarningRange(caSafe, 25, 50, 0, 2000);
+  const mgWarning = getOffsetWarningRange(mgSafe, 50, 100, 0, 2000);
+
+  renderMetricChart(
+    'temp',
+    'chart-temp',
+    'nd-temp',
+    toPts(readings, 'temp'),
+    '#fbbf24',
+    20,
+    32,
+    tempSafe.min,
+    tempSafe.max,
+    tempWarning.min,
+    tempWarning.max
+  );
+  renderMetricChart(
+    'gh',
+    'chart-gh',
+    'nd-gh',
+    toPts(readings, 'gh'),
+    '#60a5fa',
+    0,
+    20,
+    ghSafe.min,
+    ghSafe.max,
+    ghWarning.min,
+    ghWarning.max
+  );
+  renderMetricChart(
+    'ca',
+    'chart-ca',
+    'nd-ca',
+    toPts(readings, 'ca'),
+    '#e879f9',
+    300,
+    500,
+    caSafe.min,
+    caSafe.max,
+    caWarning.min,
+    caWarning.max
+  );
+  renderMetricChart(
+    'mg',
+    'chart-mg',
+    'nd-mg',
+    toPts(readings, 'mg'),
+    '#4ade80',
+    1000,
+    1500,
+    mgSafe.min,
+    mgSafe.max,
+    mgWarning.min,
+    mgWarning.max
+  );
+  applyDashboardVisibility();
 }
 
 // ── Render tank log ──
+const LOG_METRIC_HEADER_LABELS = {"ph": "pH", "nh3": "NH₃", "no2": "NO₂", "no3": "NO₃", "kh": "KH", "temp": "Temp", "gh": "GH", "ca": "Ca", "mg": "Mg"};
+const LOG_METRIC_HEADER_CLASSES = {"ph": "ph-label", "nh3": "nh3-label", "no2": "no2-label", "no3": "no3-label", "kh": "kh-label", "temp": "temp-label", "gh": "gh-label", "ca": "ca-label", "mg": "mg-label"};
+
 function renderLog() {
   const body = document.getElementById('logBody');
   const count = document.getElementById('logCount');
@@ -1665,14 +1872,18 @@ function renderLog() {
       const d = new Date(r.date);
       const ds = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
       const ts = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-      const fmt = (v, type) =>
-        v !== null && v !== undefined
-          ? `<span class="${statusClass(v, type)}">${type === 'ph' || type === 'kh' ? Number(v).toFixed(1) : v}</span>`
+      const fmt = (v, type) => {
+        const formatted = formatLogMetricValue(v, type);
+        return formatted != null
+          ? `<span class="${statusClass(v, type)}">${formatted}</span>`
           : '<span class="c-muted">—</span>';
+      };
+      const metricCells = ['ph', 'nh3', 'no2', 'no3', 'kh', 'temp', 'gh', 'ca', 'mg']
+        .map((key) => `<td>${fmt(r[key], key)}</td>`)
+        .join('');
       return `<tr>
       <td class="log-cell-muted">${ds}<br>${ts}</td>
-      <td>${fmt(r.ph, 'ph')}</td><td>${fmt(r.nh3, 'nh3')}</td>
-      <td>${fmt(r.no2, 'no2')}</td><td>${fmt(r.no3, 'no3')}</td><td>${fmt(r.kh, 'kh')}</td>
+      ${metricCells}
       <td class="log-actions">
         <button type="button" class="icon-btn edit-btn" data-action="edit-tank" data-id="${escapeHtml(r.id)}" aria-label="Edit reading">✎</button>
         <button type="button" class="icon-btn del-btn" data-action="delete-tank" data-id="${escapeHtml(r.id)}" aria-label="Delete reading">×</button>
@@ -1680,9 +1891,15 @@ function renderLog() {
     </tr>`;
     })
     .join('');
+  const headerMetrics = ['ph', 'nh3', 'no2', 'no3', 'kh', 'temp', 'gh', 'ca', 'mg'];
+  const metricHeaders = headerMetrics
+    .map(
+      (key) =>
+        `<th class="${LOG_METRIC_HEADER_CLASSES[key] || ''}">${LOG_METRIC_HEADER_LABELS[key]}</th>`
+    )
+    .join('');
   body.innerHTML = `<table class="log-table"><thead><tr>
-    <th>Date</th><th class="ph-label">pH</th><th class="nh3-label">NH₃</th>
-    <th class="no2-label">NO₂</th><th class="no3-label">NO₃</th><th class="kh-label">KH</th><th></th>
+    <th>Date</th>${metricHeaders}<th></th>
   </tr></thead><tbody>${rows}</tbody></table>`;
 }
 
@@ -1733,14 +1950,19 @@ async function addReading() {
     nh3: get('f-nh3'),
     no2: get('f-no2'),
     no3: get('f-no3'),
+    temp: get('f-temp'),
+    gh: get('f-gh'),
+    ca: get('f-ca'),
+    mg: get('f-mg'),
   };
-  if ([r.kh, r.ph, r.nh3, r.no2, r.no3].every((v) => v === null)) return;
+  if (TANK_METRIC_KEYS.map((k) => r[k]).every((v) => v === null)) return;
   readings.push(r);
   readings.sort((a, b) => new Date(a.date) - new Date(b.date));
   render();
-  ['f-ph', 'f-nh3', 'f-no2', 'f-no3', 'f-kh'].forEach(
-    (fid) => (document.getElementById(fid).value = '')
-  );
+  TANK_METRIC_KEYS.map((k) => `f-${k}`).forEach((fid) => {
+    const el = document.getElementById(fid);
+    if (el) el.value = '';
+  });
   const res = await apiFetch('/readings', { method: 'POST', body: JSON.stringify(r) });
   if (!res.ok) {
     readings = readings.filter((x) => x.id !== newId);
@@ -1876,11 +2098,7 @@ function openEditTankModal(readingId) {
   const r = readings.find((x) => x.id === readingId);
   if (!r) return;
   editingTankId = readingId;
-  setEditInputValue('edit-ph', r.ph);
-  setEditInputValue('edit-nh3', r.nh3);
-  setEditInputValue('edit-no2', r.no2);
-  setEditInputValue('edit-no3', r.no3);
-  setEditInputValue('edit-kh', r.kh);
+  TANK_METRIC_KEYS.forEach((key) => setEditInputValue(`edit-${key}`, r[key]));
   document.getElementById('edit-tank-date').value = toDatetimeLocalValue(r.date);
   document.getElementById('editTankModal').classList.add('show');
   document.body.classList.add('modal-open');
@@ -1943,8 +2161,12 @@ async function saveEditTankReading() {
     no2: get('edit-no2'),
     no3: get('edit-no3'),
     kh: get('edit-kh'),
+    temp: get('edit-temp'),
+    gh: get('edit-gh'),
+    ca: get('edit-ca'),
+    mg: get('edit-mg'),
   };
-  if ([updated.ph, updated.nh3, updated.no2, updated.no3, updated.kh].every((v) => v === null)) {
+  if (TANK_METRIC_KEYS.map((k) => updated[k]).every((v) => v === null)) {
     showToast('Enter at least one value');
     return;
   }
@@ -2041,6 +2263,7 @@ function initLogTableActions() {
 // ── Full render ──
 function render() {
   try {
+    applyDashboardVisibility();
     updateStatus();
     renderCharts();
     renderLog();

@@ -91,6 +91,22 @@
             <label class="kh-label">KH (dKH)</label
             ><input type="number" id="f-kh" step="0.5" min="0" placeholder="4" />
           </div>
+          <div class="field">
+            <label class="temp-label">Temperature (°C)</label
+            ><input type="number" id="f-temp" step="0.1" min="0" placeholder="25" />
+          </div>
+          <div class="field">
+            <label class="gh-label">GH (°dGH)</label
+            ><input type="number" id="f-gh" step="0.5" min="0" placeholder="6" />
+          </div>
+          <div class="field">
+            <label class="ca-label">Calcium (ppm)</label
+            ><input type="number" id="f-ca" step="1" min="0" placeholder="420" />
+          </div>
+          <div class="field">
+            <label class="mg-label">Magnesium (ppm)</label
+            ><input type="number" id="f-mg" step="1" min="0" placeholder="1300" />
+          </div>
         </div>
         <div class="form-row form-row-right">
           <button type="button" class="btn-add">Add Reading</button>
@@ -127,26 +143,43 @@
       </div>
 
       <div class="status-bar" id="statusBar">
-        <div class="stat-pill">
+        <div class="stat-pill" data-dashboard-metric="ph">
           <div class="stat-label">pH</div>
           <div class="stat-value c-muted">—</div>
         </div>
-        <div class="stat-pill">
+        <div class="stat-pill" data-dashboard-metric="nh3">
           <div class="stat-label">Ammonia</div>
           <div class="stat-value c-muted">—</div>
         </div>
-        <div class="stat-pill">
+        <div class="stat-pill" data-dashboard-metric="no2">
           <div class="stat-label">Nitrite</div>
           <div class="stat-value c-muted">—</div>
         </div>
-        <div class="stat-pill">
+        <div class="stat-pill" data-dashboard-metric="no3">
           <div class="stat-label">Nitrate</div>
           <div class="stat-value c-muted">—</div>
         </div>
-        <div class="stat-pill">
+        <div class="stat-pill" data-dashboard-metric="kh">
           <div class="stat-label">KH</div>
           <div class="stat-value c-muted">—</div>
+
+        <div class="stat-pill" data-dashboard-metric="temp">
+          <div class="stat-label">Temperature</div>
+          <div class="stat-value c-muted">—</div>
         </div>
+        <div class="stat-pill" data-dashboard-metric="gh">
+          <div class="stat-label">GH</div>
+          <div class="stat-value c-muted">—</div>
+        </div>
+        <div class="stat-pill" data-dashboard-metric="ca">
+          <div class="stat-label">Calcium</div>
+          <div class="stat-value c-muted">—</div>
+        </div>
+        <div class="stat-pill" data-dashboard-metric="mg">
+          <div class="stat-label">Magnesium</div>
+          <div class="stat-value c-muted">—</div>
+        </div>
+      </div>
       </div>
 
       <div class="section-label">
@@ -155,7 +188,7 @@
       </div>
 
       <div class="charts-wrap">
-        <div class="chart-card">
+        <div class="chart-card" data-dashboard-metric="ph">
           <div class="chart-header">
             <div class="chart-dot chart-dot-ph"></div>
             <div class="chart-name">pH</div>
@@ -166,7 +199,7 @@
             <div class="chart-no-data" id="nd-ph">No readings yet</div>
           </div>
         </div>
-        <div class="chart-card">
+        <div class="chart-card" data-dashboard-metric="nh3">
           <div class="chart-header">
             <div class="chart-dot chart-dot-nh3"></div>
             <div class="chart-name">Ammonia</div>
@@ -177,7 +210,7 @@
             <div class="chart-no-data" id="nd-nh3">No readings yet</div>
           </div>
         </div>
-        <div class="chart-card">
+        <div class="chart-card" data-dashboard-metric="no2">
           <div class="chart-header">
             <div class="chart-dot chart-dot-no2"></div>
             <div class="chart-name">Nitrite</div>
@@ -188,7 +221,7 @@
             <div class="chart-no-data" id="nd-no2">No readings yet</div>
           </div>
         </div>
-        <div class="chart-card">
+        <div class="chart-card" data-dashboard-metric="no3">
           <div class="chart-header">
             <div class="chart-dot chart-dot-no3"></div>
             <div class="chart-name">Nitrate</div>
@@ -209,12 +242,57 @@
             <div class="chart-no-data" id="nd-no3">No readings yet</div>
           </div>
         </div>
-        <div class="chart-card">
+        <div class="chart-card" data-dashboard-metric="kh">
           <div class="chart-header">
             <div class="chart-dot chart-dot-kh"></div>
             <div class="chart-name">KH (Carbonate)</div>
             <div class="chart-range" id="range-kh">Target: 2–6 dKH</div>
+
+        <div class="chart-card" data-dashboard-metric="temp">
+          <div class="chart-header">
+            <div class="chart-dot chart-dot-temp"></div>
+            <div class="chart-name">Temperature</div>
+            <div class="chart-range" id="range-temp">Target: 24–26 °C</div>
           </div>
+          <div class="chart-canvas-wrap">
+            <canvas class="chart" id="chart-temp"></canvas>
+            <div class="chart-no-data" id="nd-temp">No readings yet</div>
+          </div>
+        </div>
+        <div class="chart-card" data-dashboard-metric="gh">
+          <div class="chart-header">
+            <div class="chart-dot chart-dot-gh"></div>
+            <div class="chart-name">GH (General Hardness)</div>
+            <div class="chart-range" id="range-gh">Target: 4–8 °dGH</div>
+          </div>
+          <div class="chart-canvas-wrap">
+            <canvas class="chart" id="chart-gh"></canvas>
+            <div class="chart-no-data" id="nd-gh">No readings yet</div>
+          </div>
+        </div>
+        <div class="chart-card" data-dashboard-metric="ca">
+          <div class="chart-header">
+            <div class="chart-dot chart-dot-ca"></div>
+            <div class="chart-name">Calcium</div>
+            <div class="chart-range" id="range-ca">Target: 400–450 ppm</div>
+          </div>
+          <div class="chart-canvas-wrap">
+            <canvas class="chart" id="chart-ca"></canvas>
+            <div class="chart-no-data" id="nd-ca">No readings yet</div>
+          </div>
+        </div>
+        <div class="chart-card" data-dashboard-metric="mg">
+          <div class="chart-header">
+            <div class="chart-dot chart-dot-mg"></div>
+            <div class="chart-name">Magnesium</div>
+            <div class="chart-range" id="range-mg">Target: 1250–1350 ppm</div>
+          </div>
+          <div class="chart-canvas-wrap">
+            <canvas class="chart" id="chart-mg"></canvas>
+            <div class="chart-no-data" id="nd-mg">No readings yet</div>
+          </div>
+        </div>
+      </div>
           <div class="chart-canvas-wrap">
             <canvas class="chart" id="chart-kh"></canvas>
             <div class="chart-no-data" id="nd-kh">No readings yet</div>
@@ -373,9 +451,15 @@
           </div>
         </div>
 
+
         <div class="profile-section-title">Chart Safe Zones</div>
+        <p class="profile-section-hint">Uncheck a parameter to hide it from dashboard charts and status.</p>
         <div class="safe-zone-list">
           <div class="safe-zone-row">
+            <label class="safe-zone-dash-toggle" title="Show on dashboard">
+              <input type="checkbox" id="profileDashPh" checked />
+              <span class="safe-zone-dash-toggle-label">Dashboard</span>
+            </label>
             <div class="safe-zone-category">pH</div>
             <div class="safe-zone-inputs">
               <div class="field">
@@ -389,6 +473,10 @@
             </div>
           </div>
           <div class="safe-zone-row">
+            <label class="safe-zone-dash-toggle" title="Show on dashboard">
+              <input type="checkbox" id="profileDashNh3" checked />
+              <span class="safe-zone-dash-toggle-label">Dashboard</span>
+            </label>
             <div class="safe-zone-category">Ammonia (ppm)</div>
             <div class="safe-zone-inputs">
               <div class="field">
@@ -402,6 +490,10 @@
             </div>
           </div>
           <div class="safe-zone-row">
+            <label class="safe-zone-dash-toggle" title="Show on dashboard">
+              <input type="checkbox" id="profileDashNo2" checked />
+              <span class="safe-zone-dash-toggle-label">Dashboard</span>
+            </label>
             <div class="safe-zone-category">Nitrite (ppm)</div>
             <div class="safe-zone-inputs">
               <div class="field">
@@ -415,6 +507,10 @@
             </div>
           </div>
           <div class="safe-zone-row">
+            <label class="safe-zone-dash-toggle" title="Show on dashboard">
+              <input type="checkbox" id="profileDashNo3" checked />
+              <span class="safe-zone-dash-toggle-label">Dashboard</span>
+            </label>
             <div class="safe-zone-category">Nitrate (ppm)</div>
             <div class="safe-zone-inputs">
               <div class="field">
@@ -428,6 +524,10 @@
             </div>
           </div>
           <div class="safe-zone-row">
+            <label class="safe-zone-dash-toggle" title="Show on dashboard">
+              <input type="checkbox" id="profileDashKh" checked />
+              <span class="safe-zone-dash-toggle-label">Dashboard</span>
+            </label>
             <div class="safe-zone-category">KH (dKH)</div>
             <div class="safe-zone-inputs">
               <div class="field">
@@ -437,6 +537,74 @@
               <div class="field">
                 <label class="safe-zone-label">Max</label
                 ><input type="number" id="profileSafeKhMax" step="0.5" min="0" />
+              </div>
+            </div>
+          </div>
+          <div class="safe-zone-row">
+            <label class="safe-zone-dash-toggle" title="Show on dashboard">
+              <input type="checkbox" id="profileDashTemp" />
+              <span class="safe-zone-dash-toggle-label">Dashboard</span>
+            </label>
+            <div class="safe-zone-category">Temperature (°C)</div>
+            <div class="safe-zone-inputs">
+              <div class="field">
+                <label class="safe-zone-label">Min</label
+                ><input type="number" id="profileSafeTempMin" step="0.1" min="0" />
+              </div>
+              <div class="field">
+                <label class="safe-zone-label">Max</label
+                ><input type="number" id="profileSafeTempMax" step="0.1" min="0" />
+              </div>
+            </div>
+          </div>
+          <div class="safe-zone-row">
+            <label class="safe-zone-dash-toggle" title="Show on dashboard">
+              <input type="checkbox" id="profileDashGh" />
+              <span class="safe-zone-dash-toggle-label">Dashboard</span>
+            </label>
+            <div class="safe-zone-category">GH (°dGH)</div>
+            <div class="safe-zone-inputs">
+              <div class="field">
+                <label class="safe-zone-label">Min</label
+                ><input type="number" id="profileSafeGhMin" step="0.5" min="0" />
+              </div>
+              <div class="field">
+                <label class="safe-zone-label">Max</label
+                ><input type="number" id="profileSafeGhMax" step="0.5" min="0" />
+              </div>
+            </div>
+          </div>
+          <div class="safe-zone-row">
+            <label class="safe-zone-dash-toggle" title="Show on dashboard">
+              <input type="checkbox" id="profileDashCa" />
+              <span class="safe-zone-dash-toggle-label">Dashboard</span>
+            </label>
+            <div class="safe-zone-category">Calcium (ppm)</div>
+            <div class="safe-zone-inputs">
+              <div class="field">
+                <label class="safe-zone-label">Min</label
+                ><input type="number" id="profileSafeCaMin" step="1" min="0" />
+              </div>
+              <div class="field">
+                <label class="safe-zone-label">Max</label
+                ><input type="number" id="profileSafeCaMax" step="1" min="0" />
+              </div>
+            </div>
+          </div>
+          <div class="safe-zone-row">
+            <label class="safe-zone-dash-toggle" title="Show on dashboard">
+              <input type="checkbox" id="profileDashMg" />
+              <span class="safe-zone-dash-toggle-label">Dashboard</span>
+            </label>
+            <div class="safe-zone-category">Magnesium (ppm)</div>
+            <div class="safe-zone-inputs">
+              <div class="field">
+                <label class="safe-zone-label">Min</label
+                ><input type="number" id="profileSafeMgMin" step="1" min="0" />
+              </div>
+              <div class="field">
+                <label class="safe-zone-label">Max</label
+                ><input type="number" id="profileSafeMgMax" step="1" min="0" />
               </div>
             </div>
           </div>
@@ -497,6 +665,23 @@
           <div class="field">
             <label class="kh-label">KH (dKH)</label
             ><input type="number" id="edit-kh" step="0.5" min="0" />
+          </div>
+
+          <div class="field">
+            <label class="temp-label">Temperature (°C)</label
+            ><input type="number" id="edit-temp" step="0.1" min="0" />
+          </div>
+          <div class="field">
+            <label class="gh-label">GH (°dGH)</label
+            ><input type="number" id="edit-gh" step="0.5" min="0" />
+          </div>
+          <div class="field">
+            <label class="ca-label">Calcium (ppm)</label
+            ><input type="number" id="edit-ca" step="1" min="0" />
+          </div>
+          <div class="field">
+            <label class="mg-label">Magnesium (ppm)</label
+            ><input type="number" id="edit-mg" step="1" min="0" />
           </div>
           <div class="field field-date">
             <label class="label-muted">Date &amp; Time</label

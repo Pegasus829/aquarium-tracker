@@ -13,6 +13,10 @@
   --no2: #fb923c;
   --no3: #facc15;
   --tap: #22d3ee;
+  --temp: #fbbf24;
+  --gh: #60a5fa;
+  --ca: #e879f9;
+  --mg: #4ade80;
   --tap-toggle: #0e7490;
   --safe: #34d399;
   --warn: #f59e0b;
@@ -270,6 +274,21 @@ body {
 }
 .tap-label {
   color: var(--tap);
+}
+.temp-label {
+  color: var(--temp);
+}
+.gh-label {
+  color: var(--gh);
+}
+.ca-label {
+  color: var(--ca);
+}
+.mg-label {
+  color: var(--mg);
+}
+.dashboard-metric-hidden {
+  display: none !important;
 }
 .form-row {
   display: flex;
@@ -849,6 +868,18 @@ body.modal-open {
 .chart-dot-kh {
   background: var(--kh);
 }
+.chart-dot-temp {
+  background: var(--temp);
+}
+.chart-dot-gh {
+  background: var(--gh);
+}
+.chart-dot-ca {
+  background: var(--ca);
+}
+.chart-dot-mg {
+  background: var(--mg);
+}
 .legend-dot-no3 {
   background: var(--no3);
 }
@@ -1019,15 +1050,45 @@ body.profile-open {
   flex-direction: column;
   gap: 10px;
 }
+.profile-section-hint {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--muted);
+  line-height: 1.4;
+  margin: -4px 0 10px;
+}
 .safe-zone-row {
   display: grid;
-  grid-template-columns: minmax(120px, 180px) 1fr;
+  grid-template-columns: auto minmax(100px, 140px) 1fr;
   gap: 10px;
   align-items: end;
   padding: 10px;
   border: 1px solid var(--border);
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.015);
+}
+.safe-zone-dash-toggle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  padding-bottom: 2px;
+}
+.safe-zone-dash-toggle input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--cta);
+  cursor: pointer;
+}
+.safe-zone-dash-toggle-label {
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  text-align: center;
+  line-height: 1.2;
 }
 .safe-zone-category {
   font-family: var(--display);
@@ -1050,7 +1111,13 @@ body.profile-open {
 }
 @media (max-width: 560px) {
   .safe-zone-row {
-    grid-template-columns: 1fr;
+    grid-template-columns: auto 1fr;
+  }
+  .safe-zone-category {
+    grid-column: 2;
+  }
+  .safe-zone-inputs {
+    grid-column: 1 / -1;
   }
   .avatar-editor {
     grid-template-columns: 1fr;

@@ -197,6 +197,10 @@ function validateTankItem(o) {
     nh3: o.nh3 ?? null,
     no2: o.no2 ?? null,
     no3: o.no3 ?? null,
+    temp: o.temp ?? null,
+    gh: o.gh ?? null,
+    ca: o.ca ?? null,
+    mg: o.mg ?? null,
   };
 }
 
@@ -218,15 +222,47 @@ const DEFAULT_PROFILE = {
   aquariumSize: 57,
   aquariumUnits: 'litres',
   avatar: { type: 'emoji', emoji: DEFAULT_AVATAR_EMOJI, imageDataUrl: '' },
-  settings: { trackTapWater: true },
+  settings: {
+    trackTapWater: true,
+    dashboardVisible: {
+      ph: true,
+      nh3: true,
+      no2: true,
+      no3: true,
+      kh: true,
+      temp: false,
+      gh: false,
+      ca: false,
+      mg: false,
+    },
+  },
   safeZones: {
     kh: { min: 2, max: 6 },
     ph: { min: 6.5, max: 7.0 },
     nh3: { min: 0, max: 0.25 },
     no2: { min: 0, max: 0.25 },
     no3: { min: 0, max: 20 },
+    temp: { min: 24, max: 26 },
+    gh: { min: 4, max: 8 },
+    ca: { min: 400, max: 450 },
+    mg: { min: 1250, max: 1350 },
   },
 };
+
+function normalizeDashboardVisible(raw = {}) {
+  const defaults = DEFAULT_PROFILE.settings.dashboardVisible;
+  return {
+    ph: typeof raw.ph === 'boolean' ? raw.ph : defaults.ph,
+    nh3: typeof raw.nh3 === 'boolean' ? raw.nh3 : defaults.nh3,
+    no2: typeof raw.no2 === 'boolean' ? raw.no2 : defaults.no2,
+    no3: typeof raw.no3 === 'boolean' ? raw.no3 : defaults.no3,
+    kh: typeof raw.kh === 'boolean' ? raw.kh : defaults.kh,
+    temp: typeof raw.temp === 'boolean' ? raw.temp : defaults.temp,
+    gh: typeof raw.gh === 'boolean' ? raw.gh : defaults.gh,
+    ca: typeof raw.ca === 'boolean' ? raw.ca : defaults.ca,
+    mg: typeof raw.mg === 'boolean' ? raw.mg : defaults.mg,
+  };
+}
 
 function sanitizeRange(raw, fallback, minCap, maxCap) {
   let min = Number.isFinite(Number(raw?.min)) ? Number(raw.min) : fallback.min;
@@ -275,6 +311,7 @@ function normalizeProfile(raw = {}) {
         typeof raw.settings?.trackTapWater === 'boolean'
           ? raw.settings.trackTapWater
           : DEFAULT_PROFILE.settings.trackTapWater,
+      dashboardVisible: normalizeDashboardVisible(raw.settings?.dashboardVisible),
     },
     safeZones: {
       kh: sanitizeRange(raw.safeZones?.kh, DEFAULT_PROFILE.safeZones.kh, 0, 30),
@@ -282,6 +319,10 @@ function normalizeProfile(raw = {}) {
       nh3: sanitizeRange(raw.safeZones?.nh3, DEFAULT_PROFILE.safeZones.nh3, 0, 500),
       no2: sanitizeRange(raw.safeZones?.no2, DEFAULT_PROFILE.safeZones.no2, 0, 500),
       no3: sanitizeRange(raw.safeZones?.no3, DEFAULT_PROFILE.safeZones.no3, 0, 500),
+      temp: sanitizeRange(raw.safeZones?.temp, DEFAULT_PROFILE.safeZones.temp, 0, 50),
+      gh: sanitizeRange(raw.safeZones?.gh, DEFAULT_PROFILE.safeZones.gh, 0, 50),
+      ca: sanitizeRange(raw.safeZones?.ca, DEFAULT_PROFILE.safeZones.ca, 0, 2000),
+      mg: sanitizeRange(raw.safeZones?.mg, DEFAULT_PROFILE.safeZones.mg, 0, 2000),
     },
   };
 }
