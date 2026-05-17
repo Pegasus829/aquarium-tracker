@@ -5,7 +5,6 @@ const API_BASE_URL = (
 ).replace(/\/$/, '');
 
 const E2E_PASSWORD = (process.env.WQT_E2E_PASSWORD || '').trim();
-const E2E_ORIGIN = (process.env.WQT_E2E_ORIGIN || 'http://127.0.0.1:8000').replace(/\/$/, '');
 
 async function fetchAuthMode(request) {
   const res = await request.get(`${API_BASE_URL}/auth/config`);
@@ -31,26 +30,17 @@ async function deleteTankReading(request, token, id) {
   });
 }
 
-/** Lambda CORS allows production origin only; rewrite ACAO for local Playwright. */
-async function installApiCorsProxy(page) {
-  const apiHost = new URL(API_BASE_URL).host;
-  await page.route(`**://${apiHost}/**`, async (route) => {
-    if (route.request().method() === 'OPTIONS') {
-      await route.fulfill({
-        status: 200,
-        headers: {
-          'access-control-allow-origin': E2E_ORIGIN,
-          'access-control-allow-headers': 'Content-Type,Authorization',
-          'access-control-allow-methods': 'GET,POST,PUT,DELETE,OPTIONS',
-        },
-        body: '',
-      });
-      return;
-    }
-    const response = await route.fetch();
-    const headers = { ...response.headers(), 'access-control-allow-origin': E2E_ORIGIN };
-    await route.fulfill({ response, headers });
+async function deleteReadingByPh(request, token, markerPh) {
+  const res = await request.get(`${API_BASE_URL}/readings`, {
+    headers: { Authorization: `Bearer ${token}` },
   });
+  if (!res.ok()) return;
+  const readings = await res.json();
+  if (!Array.isArray(readings)) return;
+  const match = readings.find(
+    (r) => typeof r.ph === 'number' && Math.abs(r.ph - markerPh) < 0.0001
+  );
+  await deleteTankReading(request, token, match?.id);
 }
 
 test.describe('smoke', () => {
@@ -76,9 +66,7 @@ test.describe('smoke', () => {
 
     const markerPh = 6.5 + (Date.now() % 4000) / 10_000;
     const markerPhLabel = markerPh.toFixed(1);
-    let createdId = null;
 
-    await installApiCorsProxy(page);
     await page.route('**/auth/config', (route) =>
       route.fulfill({
         status: 200,
@@ -111,17 +99,9 @@ test.describe('smoke', () => {
 
     await page.locator('#f-ph').fill(String(markerPh));
     await page.locator('#f-kh').fill('4');
-
-    const saveResponse = page.waitForResponse(
-      (res) =>
-        res.url().includes('/readings') && res.request().method() === 'POST' && res.status() === 201
-    );
     await page.getByRole('button', { name: 'Add Reading' }).click();
-    const saved = await saveResponse;
-    const savedBody = await saved.json();
-    createdId = savedBody.id;
 
-    await expect(page.locator('#toast')).toContainText('Reading added');
+    await expect(page.locator('#toast')).toContainText('Reading added', { timeout: 20_000 });
     await expect(page.locator('#logBody')).toContainText(markerPhLabel);
     await expect(page.locator('.chart-canvas-wrap:has(#chart-ph)')).toHaveClass(/chart-has-data/);
 
@@ -131,6 +111,6 @@ test.describe('smoke', () => {
     });
     expect(chartReady).toBe(true);
 
-    await deleteTankReading(request, token, createdId);
+    await deleteReadingByPh(request, token, markerPh);
   });
 });

@@ -11,6 +11,7 @@ on:
       - 'playwright.config.js'
       - 'package.json'
       - 'package-lock.json'
+      - 'lambda/index.mjs'
       - '.github/workflows/e2e.yml'
   pull_request:
     paths:
@@ -21,8 +22,12 @@ on:
       - 'playwright.config.js'
       - 'package.json'
       - 'package-lock.json'
+      - 'lambda/index.mjs'
       - '.github/workflows/e2e.yml'
   workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
 jobs:
   e2e:

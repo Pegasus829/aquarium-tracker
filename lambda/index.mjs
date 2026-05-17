@@ -17,11 +17,27 @@ const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRY_SEC = Number.parseInt(process.env.JWT_EXPIRY_SEC || '86400', 10);
 const LEGACY_USER_SUB = process.env.LEGACY_USER_SUB || 'legacy-aquarium';
 
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': 'https://aquarium.vibeai.software',
-  'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-  'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
-};
+const CORS_ALLOWED_ORIGINS = (
+  process.env.CORS_ALLOWED_ORIGINS ||
+  'https://aquarium.vibeai.software,http://127.0.0.1:8000,http://localhost:8000'
+)
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
+
+function resolveCorsHeaders(event = {}) {
+  const origin = event.headers?.origin || event.headers?.Origin || '';
+  const allowOrigin = CORS_ALLOWED_ORIGINS.includes(origin) ? origin : CORS_ALLOWED_ORIGINS[0];
+  const headers = {
+    'Access-Control-Allow-Origin': allowOrigin,
+    'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+    'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
+  };
+  if (origin && CORS_ALLOWED_ORIGINS.includes(origin)) {
+    headers.Vary = 'Origin';
+  }
+  return headers;
+}
 const SECURITY_HEADERS = {
   'Cache-Control': 'no-store',
   'Referrer-Policy': 'no-referrer',
@@ -36,10 +52,14 @@ const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}), {
   marshallOptions: { removeUndefinedValues: true },
 });
 
-function json(status, body) {
+function json(status, body, event = {}) {
   return {
     statusCode: status,
-    headers: { 'Content-Type': 'application/json', ...SECURITY_HEADERS, ...CORS_HEADERS },
+    headers: {
+      'Content-Type': 'application/json',
+      ...SECURITY_HEADERS,
+      ...resolveCorsHeaders(event),
+    },
     body: typeof body === 'string' ? body : JSON.stringify(body),
   };
 }
@@ -113,11 +133,11 @@ function requireAuth(event) {
   }
 
   if (AUTH_MODE === 'cognito') {
-    return { error: json(401, { error: 'Unauthorized' }) };
+    return { error: json(401, { error: 'Unauthorized' }, event) };
   }
 
   const bearer = getBearer(event);
-  if (!bearer) return { error: json(401, { error: 'Unauthorized' }) };
+  if (!bearer) return { error: json(401, { error: 'Unauthorized' }, event) };
   try {
     const payload = verifyJwt(bearer);
     return {
@@ -129,7 +149,7 @@ function requireAuth(event) {
       },
     };
   } catch {
-    return { error: json(401, { error: 'Unauthorized' }) };
+    return { error: json(401, { error: 'Unauthorized' }, event) };
   }
 }
 
@@ -289,38 +309,42 @@ export async function handler(event) {
   const resource = event.resource || '';
 
   if (AUTH_MODE !== 'cognito' && (!PASSWORD_HASH || !JWT_SECRET)) {
-    return json(500, { error: 'Server misconfiguration' });
+    return json(500, { error: 'Server misconfiguration' }, event);
   }
 
   if (method === 'OPTIONS') {
-    return json(200, '');
+    return json(200, '', event);
   }
 
   if (resource === '/auth/config' && method === 'GET') {
-    return json(200, {
-      authMode: AUTH_MODE,
-      cognito: {
-        domain: COGNITO_DOMAIN,
-        clientId: COGNITO_CLIENT_ID,
-        scopes: COGNITO_SCOPES,
+    return json(
+      200,
+      {
+        authMode: AUTH_MODE,
+        cognito: {
+          domain: COGNITO_DOMAIN,
+          clientId: COGNITO_CLIENT_ID,
+          scopes: COGNITO_SCOPES,
+        },
       },
-    });
+      event
+    );
   }
 
   if (resource === '/auth/login' && method === 'POST') {
     if (AUTH_MODE === 'cognito') {
-      return json(410, { error: 'Use Cognito sign-in' });
+      return json(410, { error: 'Use Cognito sign-in' }, event);
     }
     const body = parseBody(event);
-    if (!body) return json(400, { error: 'Invalid JSON' });
+    if (!body) return json(400, { error: 'Invalid JSON' }, event);
     const pwd = body.password;
-    if (typeof pwd !== 'string' || !pwd) return json(400, { error: 'Password required' });
+    if (typeof pwd !== 'string' || !pwd) return json(400, { error: 'Password required' }, event);
     const got = hashPassword(pwd);
     if (!timingSafeCompareHex(got, PASSWORD_HASH)) {
-      return json(401, { error: 'Invalid credentials' });
+      return json(401, { error: 'Invalid credentials' }, event);
     }
     const token = signJwt();
-    return json(200, { token, expiresIn: JWT_EXPIRY_SEC });
+    return json(200, { token, expiresIn: JWT_EXPIRY_SEC }, event);
   }
 
   const auth = requireAuth(event);
@@ -339,42 +363,43 @@ export async function handler(event) {
       );
       return json(
         200,
-        (out.Items || []).map((item) => itemToClientItem(item, 'tank'))
+        (out.Items || []).map((item) => itemToClientItem(item, 'tank')),
+        event
       );
     }
 
     if (resource === '/readings' && method === 'POST') {
       const body = parseBody(event);
-      if (!body) return json(400, { error: 'Invalid JSON' });
+      if (!body) return json(400, { error: 'Invalid JSON' }, event);
       const item = validateTankItem(body);
-      if (!item) return json(400, { error: 'Invalid tank reading' });
+      if (!item) return json(400, { error: 'Invalid tank reading' }, event);
       const stored = attachOwner(item, user, 'tank');
       await ddb.send(new PutCommand({ TableName: TABLE_NAME, Item: stored }));
-      return json(201, itemToClientItem(stored, 'tank'));
+      return json(201, itemToClientItem(stored, 'tank'), event);
     }
 
     if (resource === '/readings/{id}' && method === 'PUT') {
       const id = event.pathParameters?.id;
-      if (!id) return json(400, { error: 'Missing id' });
+      if (!id) return json(400, { error: 'Missing id' }, event);
       const body = parseBody(event);
-      if (!body) return json(400, { error: 'Invalid JSON' });
+      if (!body) return json(400, { error: 'Invalid JSON' }, event);
       const item = validateTankItem({ ...body, id });
-      if (!item) return json(400, { error: 'Invalid tank reading' });
+      if (!item) return json(400, { error: 'Invalid tank reading' }, event);
       const stored = attachOwner(item, user, 'tank');
       await ddb.send(new PutCommand({ TableName: TABLE_NAME, Item: stored }));
-      return json(200, itemToClientItem(stored, 'tank'));
+      return json(200, itemToClientItem(stored, 'tank'), event);
     }
 
     if (resource === '/readings/{id}' && method === 'DELETE') {
       const id = event.pathParameters?.id;
-      if (!id) return json(400, { error: 'Missing id' });
+      if (!id) return json(400, { error: 'Missing id' }, event);
       await ddb.send(
         new DeleteCommand({
           TableName: TABLE_NAME,
           Key: { type: dataTypeFor(user, 'tank'), id },
         })
       );
-      return json(204, '');
+      return json(204, '', event);
     }
 
     if (resource === '/tap' && method === 'GET') {
@@ -388,42 +413,43 @@ export async function handler(event) {
       );
       return json(
         200,
-        (out.Items || []).map((item) => itemToClientItem(item, 'tap'))
+        (out.Items || []).map((item) => itemToClientItem(item, 'tap')),
+        event
       );
     }
 
     if (resource === '/tap' && method === 'POST') {
       const body = parseBody(event);
-      if (!body) return json(400, { error: 'Invalid JSON' });
+      if (!body) return json(400, { error: 'Invalid JSON' }, event);
       const item = validateTapItem(body);
-      if (!item) return json(400, { error: 'Invalid tap reading' });
+      if (!item) return json(400, { error: 'Invalid tap reading' }, event);
       const stored = attachOwner(item, user, 'tap');
       await ddb.send(new PutCommand({ TableName: TABLE_NAME, Item: stored }));
-      return json(201, itemToClientItem(stored, 'tap'));
+      return json(201, itemToClientItem(stored, 'tap'), event);
     }
 
     if (resource === '/tap/{id}' && method === 'PUT') {
       const id = event.pathParameters?.id;
-      if (!id) return json(400, { error: 'Missing id' });
+      if (!id) return json(400, { error: 'Missing id' }, event);
       const body = parseBody(event);
-      if (!body) return json(400, { error: 'Invalid JSON' });
+      if (!body) return json(400, { error: 'Invalid JSON' }, event);
       const item = validateTapItem({ ...body, id });
-      if (!item) return json(400, { error: 'Invalid tap reading' });
+      if (!item) return json(400, { error: 'Invalid tap reading' }, event);
       const stored = attachOwner(item, user, 'tap');
       await ddb.send(new PutCommand({ TableName: TABLE_NAME, Item: stored }));
-      return json(200, itemToClientItem(stored, 'tap'));
+      return json(200, itemToClientItem(stored, 'tap'), event);
     }
 
     if (resource === '/tap/{id}' && method === 'DELETE') {
       const id = event.pathParameters?.id;
-      if (!id) return json(400, { error: 'Missing id' });
+      if (!id) return json(400, { error: 'Missing id' }, event);
       await ddb.send(
         new DeleteCommand({
           TableName: TABLE_NAME,
           Key: { type: dataTypeFor(user, 'tap'), id },
         })
       );
-      return json(204, '');
+      return json(204, '', event);
     }
 
     if (resource === '/profile' && method === 'GET') {
@@ -436,20 +462,20 @@ export async function handler(event) {
         })
       );
       const found = (out.Items || []).find((x) => x.id === 'default') || (out.Items || [])[0];
-      return json(200, itemToProfile(found));
+      return json(200, itemToProfile(found), event);
     }
 
     if (resource === '/profile' && method === 'PUT') {
       const body = parseBody(event);
-      if (!body) return json(400, { error: 'Invalid JSON' });
+      if (!body) return json(400, { error: 'Invalid JSON' }, event);
       const item = profileToItem(body, user);
       await ddb.send(new PutCommand({ TableName: TABLE_NAME, Item: item }));
-      return json(200, itemToProfile(item));
+      return json(200, itemToProfile(item), event);
     }
 
-    return json(404, { error: 'Not found' });
+    return json(404, { error: 'Not found' }, event);
   } catch (e) {
     console.error(e);
-    return json(500, { error: 'Server error' });
+    return json(500, { error: 'Server error' }, event);
   }
 }
