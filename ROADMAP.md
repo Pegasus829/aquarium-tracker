@@ -196,7 +196,7 @@ Use the `Next` column to queue near-term work (`next` vs blank); **Add to Next**
 |  | AT-024 | New Feature | Out-of-range alerts (email/push or on-open banner) | idea | low | user | Would need notification channel + thresholds |
 |  | AT-025 | New Feature | Additional parameters (e.g. temperature, GH, Ca, Mg) | idea | low | user | Follow KH pattern; profile safe zones + API validation |
 |  | AT-026 | New Feature | Multi-tank / multiple aquarium profiles | idea | low | user | SA-030, SA-045: partition design + per-tank authorization before multi-user scale |
-|  | AT-029 | Enhancement | Backfill UI for missing KH on historical readings | idea | low | KH session ([aff87b27](aff87b27-a3af-4666-855c-02edcc319a66)) | Optional bulk edit or per-row prompt |
+|  | AT-029 | Enhancement | Backfill UI for missing KH on historical readings | wont_fix | low | KH session ([aff87b27](aff87b27-a3af-4666-855c-02edcc319a66)) | Won't do: edit readings individually if needed |
 |  | AT-030 | Security | Rate-limit / abuse monitoring dashboard or alarms | idea | medium | Security review | SA-003, SA-027: WAF/throttle `/auth/login` + token abuse; auth-failure audit logs and alarms |
 |  | AT-031 | Enhancement | Generate interactive roadmap data from `ROADMAP.md` | idea | low | agent:roadmap-next-sync | Avoid maintaining duplicate `ROADMAP_ITEMS` data by hand |
 |  | AT-032 | Security | Roadmap permissions with read/write access controls | idea | medium | user | SA-041: default no roadmap access; `marc@amphletts.uk` write access |
