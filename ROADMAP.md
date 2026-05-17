@@ -24,7 +24,7 @@ Living backlog for features and enhancements. **Reference items by ID** (e.g. â€
 | SA-003 | High | Rate-limit auth endpoints | AT-030 | With SA-027 |
 | SA-004 | High | Prevent API Gateway auth misconfiguration | AT-035 | Delivered 2026-05-17: `deploy-profile-api.sh` inherits from GET `/readings` |
 | SA-005 | High | Deployment protection on `main` | AT-036 | GitHub Environment reviewers |
-| SA-006 | High | Chart.js CDN / SRI or vendor locally | AT-037 | `index.html` jsDelivr without `integrity` |
+| SA-006 | High | Chart.js CDN / SRI or vendor locally | AT-037 | Delivered 2026-05-17: vendored `assets/chart.umd.min.js`; CSP `script-src 'self'` only |
 | SA-007 | High | Delete or isolate legacy DynamoDB partitions | AT-038 | Delivered 2026-05-17: `lambda/purge-legacy-partitions.mjs`; `RUN_LEGACY_PURGE` in Cognito setup |
 | SA-008 | Medium | Harden legacy JWT (`iss`/`aud`, TTL) | AT-034 | Low priority if cutover ships first |
 | SA-009 | Medium | Block legacy login when Cognito intended | AT-034 | Same work as SA-001 |
@@ -158,6 +158,7 @@ Every item has exactly one category. Use these labels in the **Category** column
 | AT-036 | Security | GitHub deployment protection on `main` | 2026-05-17 | `production` environment + required reviewers; `deploy/github-environments.md` |
 | AT-035 | Security | API Gateway auth safe defaults in deploy scripts | 2026-05-17 | SA-004: `deploy-profile-api.sh` inherits auth from GET `/readings`; `NONE` requires `ALLOW_INSECURE_AUTH=1` |
 | AT-038 | Security | Delete or isolate legacy DynamoDB partitions | 2026-05-17 | SA-007: `purge-legacy-partitions.mjs`; dry-run / delete / isolate; `RUN_LEGACY_PURGE` |
+| AT-037 | Security | Vendor Chart.js or add SRI | 2026-05-17 | SA-006: `assets/chart.umd.min.js` (4.4.3); removed jsDelivr from CSP |
 
 ---
 
@@ -169,7 +170,6 @@ Use the `Next` column to queue near-term work (`next` vs blank); **Add to Next**
 |------|----|----------|-------|--------|----------|--------|-------|
 |  | AT-018 | Enhancement | Lint/format tooling for `index.html` + `lambda/` | idea | low | `AGENTS.md` | Single-file frontend; consider HTML/JS checks only |
 |  | AT-034 | Security | Cognito-only cutover; remove legacy auth | idea | high | security-review (SA-001, SA-002, SA-008, SA-009) | `AUTH_MODE=cognito`, API GW authorizer, drop `POST /auth/login` / HS256 path |
-|  | AT-037 | Security | Vendor Chart.js or add SRI | idea | high | security-review (SA-006) | `index.html` loads jsDelivr without `integrity` |
 |  | AT-039 | Security | Review WebAuthn `SINGLE_FACTOR` policy | idea | medium | security-review (SA-010) | `deploy/cognito-auth-template.yaml` |
 |  | AT-040 | Security | Lambda-side JWT verification (defense in depth) | idea | low | security-review (SA-011) | Optional if API GW + `lambda:Invoke` stay locked down |
 |  | AT-041 | Security | Cap API string field sizes | idea | medium | security-review (SA-012) | Profile names, tank `id`/`date`, avatar payload |
