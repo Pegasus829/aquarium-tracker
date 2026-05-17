@@ -41,7 +41,7 @@ The app is being migrated to Cognito:
 
 ### Architecture
 
-- **Frontend:** no build step; UI logic lives in a single `index.html`.
+- **Frontend:** no build step; markup in `index.html`, styles in `assets/app.css`, app logic in `assets/app.js` (plus `config.js` / optional `config.local.js`).
 - **Data flow:** frontend loads and mutates readings via backend endpoints (`/readings`, `/tap`) using `fetch`.
 - `readings` and `tapReadings` arrays are runtime client caches, hydrated from the API.
 - **Backend code/artifacts:** `lambda/index.mjs`, `lambda/package.json`, and `deploy/*`.

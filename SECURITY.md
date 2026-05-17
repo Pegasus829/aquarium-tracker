@@ -22,11 +22,12 @@ The main app permits:
   form/navigation targets;
 - `data:` images for locally uploaded profile avatars.
 
-Both pages still require `'unsafe-inline'` for scripts and styles because the
-frontend is a no-build single-file app with inline CSS, inline event handlers,
-and inline script blocks. Removing that exception requires moving handlers,
-styles, and application JavaScript into external same-origin files or adding a
-repeatable nonce/hash generation step.
+The main app (`index.html`) loads same-origin `assets/app.css`, `assets/app.js`,
+and `assets/config-local-loader.js`, so its CSP meta tag no longer includes
+`'unsafe-inline'` for scripts or styles.
+
+`assets/roadmap.html` still uses inline CSS and JavaScript and keeps
+`'unsafe-inline'` in its CSP until that page is externalized the same way.
 
 ## API responses
 
