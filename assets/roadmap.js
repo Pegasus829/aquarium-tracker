@@ -808,7 +808,7 @@ async function persistRoadmapMarkdown({ allowPrompt = false } = {}) {
 
   try {
     await writeRoadmapMarkdown();
-  } catch (err) {
+  } catch (_err) {
     setSyncStatus('Could not write ROADMAP.md. Use the download fallback to replace the file.', 'error');
   }
 }
