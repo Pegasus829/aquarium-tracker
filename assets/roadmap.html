@@ -381,8 +381,9 @@ tr.row-next td { background: rgba(251,191,36,0.04); }
         <thead>
           <tr>
             <th>Next</th>
-            <th title="Mark delivered (updates ROADMAP.md)">✓</th>
-            <th>ID</th>
+                <th title="Mark delivered (updates ROADMAP.md)">✓</th>
+                <th title="Mark won't fix (moves to Deferred section)">×</th>
+                <th>ID</th>
             <th>Category</th>
             <th>Title</th>
             <th>Status</th>
@@ -480,7 +481,7 @@ const ROADMAP_ITEMS = [
   { id: 'AT-047', section: 'backlog', category: 'Security', title: 'Parameterize CSP connect-src for local API', status: 'idea', priority: 'medium', delivered: '', source: 'security-review', notes: 'SA-021: hardcoded API host in index.html CSP' },
   { id: 'AT-048', section: 'backlog', category: 'Security', title: 'Restrict GitHub OIDC trust to main', status: 'idea', priority: 'medium', delivered: '', source: 'security-review', notes: 'SA-022: github-oidc-trust-policy.json' },
   { id: 'AT-049', section: 'backlog', category: 'Security', title: 'Narrow CI deploy IAM policies', status: 'idea', priority: 'medium', delivered: '', source: 'security-review', notes: 'SA-023: github-deploy-policy.json Cognito/CFN Resource: *' },
-  { id: 'AT-050', section: 'backlog', category: 'Enhancement', title: 'Split infra vs routine Lambda deploy workflow', status: 'idea', priority: 'medium', delivered: '', source: 'security-review', notes: 'SA-024: deploy-aws.yml API key script + stage every push' },
+  { id: 'AT-050', section: 'delivered', category: 'Enhancement', title: 'Split infra vs routine Lambda deploy workflow', status: 'delivered', priority: '', delivered: '2026-05-17', source: 'security-review', notes: 'SA-024: deploy-aws.yml Lambda; deploy-aws-infra.yml manual gateway/Cognito' },
   { id: 'AT-051', section: 'backlog', category: 'Security', title: 'Staging API and credentials for E2E', status: 'idea', priority: 'medium', delivered: '', source: 'security-review', notes: 'SA-025: follow-up to delivered AT-017; do not hit prod API' },
   { id: 'AT-052', section: 'backlog', category: 'Security', title: 'Dependabot and npm audit in CI', status: 'idea', priority: 'medium', delivered: '', source: 'security-review', notes: 'SA-028: root + lambda/' },
   { id: 'AT-053', section: 'backlog', category: 'Security', title: 'DynamoDB encryption at rest and PITR', status: 'idea', priority: 'medium', delivered: '', source: 'security-review', notes: 'SA-029: verify in console / IaC' },

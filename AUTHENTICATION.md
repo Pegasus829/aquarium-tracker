@@ -75,10 +75,15 @@ The static frontend first checks `config.js` / localhost `config.local.js` (from
 AWS deploys use the GitHub **`production`** environment (required reviewers).
 See [deploy/github-environments.md](deploy/github-environments.md) for one-time setup.
 
-`.github/workflows/deploy-aws.yml` can run the Cognito setup after deploying Lambda. Use `workflow_dispatch` with:
+**Lambda code** publishes via `.github/workflows/deploy-aws.yml` (auto on `lambda/**`
+pushes to `main`, or manual dispatch).
+
+**Cognito and API Gateway** changes use `.github/workflows/deploy-aws-infra.yml`
+(`workflow_dispatch` only). Use:
 
 - `enable_cognito_setup = true`
 - `run_legacy_migration = true` only after setting the repository secret `MARC_CURRENT_PASSWORD`
+- `update_api_gateway = true` (default) when gateway routes or stage need redeploying
 
 The deploy role must have the permissions in `deploy/github-deploy-policy.json`. The separate `deploy/cognito-deploy-policy.json` is kept as a smaller standalone reference for applying only the Cognito migration permissions.
 

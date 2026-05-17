@@ -1,0 +1,132 @@
+name: Deploy AWS infrastructure (OIDC)
+
+# AT-050 / SA-024: API Gateway stage, JWT route policy, and Cognito — manual only.
+# Routine Lambda code publishes via deploy-aws.yml.
+on:
+  workflow_dispatch:
+    inputs:
+      enable_cognito_setup:
+        description: "Create/update Cognito, API Gateway authorizer, and Lambda auth config"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+      run_legacy_migration:
+        description: "Copy legacy shared readings/profile into Marc's Cognito user namespace"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+      update_api_gateway:
+        description: "Clear browser API-key requirement and redeploy the prod API stage"
+        required: false
+        default: "true"
+        type: choice
+        options:
+          - "false"
+          - "true"
+
+permissions:
+  id-token: write
+  contents: read
+  deployments: write
+
+concurrency:
+  group: deploy-aws-infra-main
+  cancel-in-progress: true
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  AWS_REGION: eu-west-1
+  LAMBDA_FUNCTION_NAME: aquarium-api
+  API_GATEWAY_REST_API_ID: gnewkvhgwd
+  API_GATEWAY_STAGE: prod
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://gnewkvhgwd.execute-api.eu-west-1.amazonaws.com/prod/
+    steps:
+      - name: Validate inputs
+        run: |
+          if [[ "${{ inputs.enable_cognito_setup }}" != "true" && "${{ inputs.update_api_gateway }}" != "true" ]]; then
+            echo "Enable Cognito setup and/or update API Gateway before running this workflow." >&2
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        if: ${{ inputs.enable_cognito_setup == 'true' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: lambda/package-lock.json
+
+      - name: Install Lambda deps
+        if: ${{ inputs.enable_cognito_setup == 'true' }}
+        working-directory: lambda
+        run: npm ci
+
+      - name: Bundle Lambda (bundle.js)
+        if: ${{ inputs.enable_cognito_setup == 'true' }}
+        working-directory: lambda
+        run: npm run bundle
+
+      - name: Create deployment zip
+        if: ${{ inputs.enable_cognito_setup == 'true' }}
+        run: |
+          mkdir -p deploy
+          rm -f deploy/aquarium-api.zip
+          zip -j deploy/aquarium-api.zip lambda/bundle.js
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: arn:aws:iam::681178750909:role/aquarium-github-deploy-role
+
+      - name: Update Lambda code
+        if: ${{ inputs.enable_cognito_setup == 'true' }}
+        run: |
+          aws lambda update-function-code \
+            --function-name "${LAMBDA_FUNCTION_NAME}" \
+            --zip-file fileb://deploy/aquarium-api.zip
+          aws lambda wait function-updated --function-name "${LAMBDA_FUNCTION_NAME}"
+
+      - name: Configure Cognito auth
+        if: ${{ inputs.enable_cognito_setup == 'true' }}
+        env:
+          MARC_CURRENT_PASSWORD: ${{ secrets.MARC_CURRENT_PASSWORD }}
+          REQUESTED_LEGACY_MIGRATION: ${{ inputs.run_legacy_migration }}
+        run: |
+          if [[ -z "${MARC_CURRENT_PASSWORD}" ]]; then
+            echo "Set the MARC_CURRENT_PASSWORD repository secret before configuring Cognito." >&2
+            exit 1
+          fi
+          if [[ "${REQUESTED_LEGACY_MIGRATION}" == "true" ]]; then
+            export RUN_LEGACY_MIGRATION=1
+          else
+            export RUN_LEGACY_MIGRATION=0
+          fi
+          deploy/setup-cognito-auth.sh
+
+      - name: Disable browser API key requirement
+        if: ${{ inputs.update_api_gateway == 'true' }}
+        run: deploy/disable-api-key-requirement.sh
+
+      - name: Deploy API Gateway stage
+        if: ${{ inputs.update_api_gateway == 'true' }}
+        run: |
+          aws apigateway create-deployment \
+            --rest-api-id "${API_GATEWAY_REST_API_ID}" \
+            --stage-name "${API_GATEWAY_STAGE}" \
+            --description "GitHub Actions infra deploy $GITHUB_SHA"

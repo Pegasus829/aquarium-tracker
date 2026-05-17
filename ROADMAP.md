@@ -42,7 +42,7 @@ Living backlog for features and enhancements. **Reference items by ID** (e.g. �
 | SA-021 | Medium | Parameterize CSP `connect-src` for local API | AT-047 | Hardcoded API host in `index.html` |
 | SA-022 | Medium | Restrict OIDC trust to `main` (or tags) | AT-048 | `github-oidc-trust-policy.json` |
 | SA-023 | Medium | Narrow CI deploy role `Resource: "*"` | AT-049 | `github-deploy-policy.json` |
-| SA-024 | Medium | Split infra vs routine Lambda deploy | AT-050 | `deploy-aws.yml` |
+| SA-024 | Medium | Split infra vs routine Lambda deploy | AT-050 | Delivered 2026-05-17: `deploy-aws.yml` (Lambda); `deploy-aws-infra.yml` (manual) |
 | SA-025 | Medium | Staging API/credentials for E2E | AT-051 | Follow-up to delivered AT-017 |
 | SA-026 | Medium | Rotate/limit `MARC_CURRENT_PASSWORD` secret use | — | Ops only; no backlog row |
 | SA-027 | Medium | Auth-failure / security audit logging | AT-030 | With SA-003 |
@@ -157,6 +157,7 @@ Every item has exactly one category. Use these labels in the **Category** column
 | AT-020 | Enhancement | API Gateway gateway responses: CORS on 5xx/integration failures | 2026-05-17 | `deploy/configure-gateway-cors-responses.sh`; CI + deploy scripts |
 | AT-036 | Security | GitHub deployment protection on `main` | 2026-05-17 | `production` environment + required reviewers; `deploy/github-environments.md` |
 | AT-035 | Security | API Gateway auth safe defaults in deploy scripts | 2026-05-17 | SA-004: `deploy-profile-api.sh` inherits auth from GET `/readings`; `NONE` requires `ALLOW_INSECURE_AUTH=1` |
+| AT-050 | Enhancement | Split infra vs routine Lambda deploy workflow | 2026-05-17 | SA-024: `deploy-aws.yml` Lambda-only; `deploy-aws-infra.yml` manual gateway/Cognito |
 
 ---
 
@@ -181,7 +182,6 @@ Use the `Next` column to queue near-term work (`next` vs blank); **Add to Next**
 |  | AT-047 | Security | Parameterize CSP `connect-src` for local API | idea | medium | security-review (SA-021) | Hardcoded API host in `index.html` CSP |
 |  | AT-048 | Security | Restrict GitHub OIDC trust to `main` | idea | medium | security-review (SA-022) | `deploy/github-oidc-trust-policy.json` |
 |  | AT-049 | Security | Narrow CI deploy IAM policies | idea | medium | security-review (SA-023) | `github-deploy-policy.json` Cognito/CFN `Resource: "*"` |
-|  | AT-050 | Enhancement | Split infra vs routine Lambda deploy workflow | idea | medium | security-review (SA-024) | `deploy-aws.yml` API key script + stage every push |
 |  | AT-051 | Security | Staging API and credentials for E2E | idea | medium | security-review (SA-025) | Follow-up to delivered AT-017; do not hit prod API |
 |  | AT-052 | Security | Dependabot and `npm audit` in CI | idea | medium | security-review (SA-028) | Root + `lambda/` |
 |  | AT-053 | Security | DynamoDB encryption at rest and PITR | idea | medium | security-review (SA-029) | Verify in console / IaC |
@@ -236,3 +236,4 @@ No backlog items yet. When planning a public launch, add items here (e.g. subscr
 | 2026-05-17 | Added [Security audit matrix](#security-audit-matrix-sa--roadmap) (SA-001–SA-045 → roadmap action) |
 | 2026-05-17 | Promoted security audit: AT-034–AT-058 backlog; extended AT-030, AT-033, AT-026, AT-022, AT-032 |
 | 2026-05-17 | Delivered AT-036: GitHub `production` environment gate on `deploy-aws.yml` |
+| 2026-05-17 | Delivered AT-050: split Lambda (`deploy-aws.yml`) vs infra (`deploy-aws-infra.yml`) workflows |

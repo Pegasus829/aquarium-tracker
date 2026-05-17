@@ -46,6 +46,7 @@ The app is being migrated to Cognito:
 - **Data flow:** frontend loads and mutates readings via backend endpoints (`/readings`, `/tap`) using `fetch`.
 - `readings` and `tapReadings` arrays are runtime client caches, hydrated from the API.
 - **Backend code/artifacts:** `lambda/index.mjs`, `lambda/package.json`, and `deploy/*`.
+- **AWS deploy (AT-050):** `deploy-aws.yml` publishes Lambda on `lambda/**` pushes; `deploy-aws-infra.yml` is manual for Cognito, API key policy, and API Gateway stage (`deploy/github-environments.md`).
 - **Lint/format (AT-018):** from the repo root, `npm ci` then `npm run lint` (ESLint for `assets/*.js`, `config.js`, `lambda/*.mjs`, `scripts/`; html-validate for `index.html` and `assets/roadmap.html`), `npm run format` / `format:check` (Prettier). CI: `.github/workflows/lint.yml`.
 - **E2E smoke (AT-017):** `npm ci`, `npx playwright install chromium`, then `WQT_E2E_PASSWORD=… npm run test:e2e`. Playwright serves the static app on port 8000 and hits the configured API (`config.js` / `WQT_API_BASE_URL`). Tests skip when the password is unset or the API uses Cognito-only auth. CI: `.github/workflows/e2e.yml` (requires repo secret `WQT_E2E_PASSWORD`).
 
