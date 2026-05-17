@@ -178,7 +178,7 @@ require_tool node
 
 ACCOUNT_ID="$(aws_cmd sts get-caller-identity --query Account --output text)"
 if [[ -z "$AUTH_DOMAIN_PREFIX" ]]; then
-  AUTH_DOMAIN_PREFIX="${APP_NAME}-${ACCOUNT_ID}-prod"
+  AUTH_DOMAIN_PREFIX="wqt-${ACCOUNT_ID}"
 fi
 
 echo "Deploying Cognito stack: $STACK_NAME"
