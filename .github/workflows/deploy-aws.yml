@@ -29,6 +29,7 @@ on:
 permissions:
   id-token: write
   contents: read
+  deployments: write
 
 concurrency:
   group: deploy-aws-main
@@ -46,6 +47,12 @@ env:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    # AT-036 / SA-005: requires the `production` environment with required reviewers
+    # (see deploy/github-environments.md). Push and workflow_dispatch both wait for approval
+    # before AWS OIDC credentials are used.
+    environment:
+      name: production
+      url: https://gnewkvhgwd.execute-api.eu-west-1.amazonaws.com/prod/
     steps:
       - name: Checkout
         uses: actions/checkout@v4

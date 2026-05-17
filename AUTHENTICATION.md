@@ -72,6 +72,9 @@ The static frontend first checks `config.js` / localhost `config.local.js` (from
 
 ## GitHub Actions setup
 
+AWS deploys use the GitHub **`production`** environment (required reviewers).
+See [deploy/github-environments.md](deploy/github-environments.md) for one-time setup.
+
 `.github/workflows/deploy-aws.yml` can run the Cognito setup after deploying Lambda. Use `workflow_dispatch` with:
 
 - `enable_cognito_setup = true`
