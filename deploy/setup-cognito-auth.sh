@@ -41,6 +41,14 @@ stack_output() {
     --output text
 }
 
+print_stack_events() {
+  echo "Recent CloudFormation events for $STACK_NAME:" >&2
+  aws_cmd cloudformation describe-stack-events \
+    --stack-name "$STACK_NAME" \
+    --query "StackEvents[0:20].[Timestamp,LogicalResourceId,ResourceStatus,ResourceStatusReason]" \
+    --output table >&2 || true
+}
+
 get_resource_id() {
   local path="$1"
   aws_cmd apigateway get-resources \
@@ -169,14 +177,17 @@ require_tool "$AWS_CLI"
 require_tool node
 
 echo "Deploying Cognito stack: $STACK_NAME"
-aws_cmd cloudformation deploy \
-  --stack-name "$STACK_NAME" \
-  --template-file "$TEMPLATE_FILE" \
-  --parameter-overrides \
-    AppName="$APP_NAME" \
-    HostedAuthDomainPrefix="$AUTH_DOMAIN_PREFIX" \
-    CallbackUrl="$APP_URL" \
-    LogoutUrl="$APP_URL"
+if ! aws_cmd cloudformation deploy \
+    --stack-name "$STACK_NAME" \
+    --template-file "$TEMPLATE_FILE" \
+    --parameter-overrides \
+      AppName="$APP_NAME" \
+      HostedAuthDomainPrefix="$AUTH_DOMAIN_PREFIX" \
+      CallbackUrl="$APP_URL" \
+      LogoutUrl="$APP_URL"; then
+  print_stack_events
+  exit 1
+fi
 
 USER_POOL_ID="$(stack_output UserPoolId)"
 USER_POOL_ARN="$(stack_output UserPoolArn)"
