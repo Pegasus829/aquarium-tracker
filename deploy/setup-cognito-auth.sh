@@ -17,6 +17,8 @@ COGNITO_SCOPES="${COGNITO_SCOPES:-openid email profile}"
 MARC_EMAIL="${MARC_EMAIL:-marc@amphletts.uk}"
 MARC_CURRENT_PASSWORD="${MARC_CURRENT_PASSWORD:-}"
 RUN_LEGACY_MIGRATION="${RUN_LEGACY_MIGRATION:-0}"
+RUN_LEGACY_PURGE="${RUN_LEGACY_PURGE:-0}"
+LEGACY_PURGE_MODE="${LEGACY_PURGE_MODE:-delete}"
 AWS_CLI="${AWS_CLI:-aws}"
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -340,6 +342,20 @@ if [[ "$RUN_LEGACY_MIGRATION" == "1" ]]; then
   )
 else
   echo "Skipping legacy data migration. Re-run with RUN_LEGACY_MIGRATION=1 after verifying Marc's user."
+fi
+
+if [[ "$RUN_LEGACY_PURGE" == "1" ]]; then
+  echo "Purging shared legacy DynamoDB partitions (type=tank|tap|profile)"
+  (
+    cd "$REPO_ROOT/lambda"
+    TABLE_NAME="$TABLE_NAME" \
+    COGNITO_USER_SUB="$MARC_SUB" \
+    PURGE_MODE="$LEGACY_PURGE_MODE" \
+    CONFIRM_PURGE=yes \
+    npm run purge:legacy-partitions
+  )
+else
+  echo "Skipping legacy partition purge. Re-run with RUN_LEGACY_PURGE=1 after verifying user-scoped copies."
 fi
 
 echo "Adding CORS headers to API Gateway error responses"

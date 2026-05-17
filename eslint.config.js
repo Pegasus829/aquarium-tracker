@@ -6,6 +6,7 @@ const browserFiles = ['assets/app.js', 'assets/config-local-loader.js', 'config.
 const nodeFiles = [
   'lambda/index.mjs',
   'lambda/migrate-legacy-data.mjs',
+  'lambda/purge-legacy-partitions.mjs',
   'scripts/generate-local-config.mjs',
   'scripts/verify-e2e-password.mjs',
   'eslint.config.js',
@@ -21,6 +22,7 @@ export default [
       'lambda/bundle.cjs',
       'lambda/bundle.mjs',
       'config.local.js',
+      'assets/chart.umd.min.js',
       '**/* 2.html',
       'lambda/* 2.mjs',
     ],

@@ -19,6 +19,14 @@ on:
         options:
           - "false"
           - "true"
+      purge_legacy_partitions:
+        description: "After migration, delete shared tank/tap/profile DynamoDB partitions (AT-038)"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
   push:
     branches: [main]
     paths:
@@ -96,6 +104,7 @@ jobs:
         env:
           MARC_CURRENT_PASSWORD: ${{ secrets.MARC_CURRENT_PASSWORD }}
           REQUESTED_LEGACY_MIGRATION: ${{ inputs.run_legacy_migration }}
+          REQUESTED_LEGACY_PURGE: ${{ inputs.purge_legacy_partitions }}
         run: |
           if [[ -z "${MARC_CURRENT_PASSWORD}" ]]; then
             echo "Set the MARC_CURRENT_PASSWORD repository secret before configuring Cognito." >&2
@@ -105,6 +114,15 @@ jobs:
             export RUN_LEGACY_MIGRATION=1
           else
             export RUN_LEGACY_MIGRATION=0
+          fi
+          if [[ "${REQUESTED_LEGACY_PURGE}" == "true" ]]; then
+            if [[ "${REQUESTED_LEGACY_MIGRATION}" != "true" ]]; then
+              echo "purge_legacy_partitions requires run_legacy_migration=true in the same run." >&2
+              exit 1
+            fi
+            export RUN_LEGACY_PURGE=1
+          else
+            export RUN_LEGACY_PURGE=0
           fi
           deploy/setup-cognito-auth.sh
 

@@ -20,7 +20,37 @@ type = USER#<cognito-sub>#profile
 id   = existing reading id, or default for profile
 ```
 
-The existing shared records are copied, not deleted, so rollback remains possible.
+The existing shared records are copied, not deleted, so rollback remains possible until you run the legacy partition purge (AT-038).
+
+## Remove shared legacy partitions (AT-038 / SA-007)
+
+After Cognito migration and verification that `USER#<cognito-sub>#tank|tap|profile` contains your data, remove the pre-migration shared rows (`type` = `tank`, `tap`, or `profile`). Cognito mode never reads those partitions, but deleting or isolating them closes the shared-data exposure if `AUTH_MODE` is ever mis-set to `legacy`.
+
+From `lambda/` with AWS credentials for the readings table:
+
+```bash
+# Preview counts (no writes)
+PURGE_MODE=dry-run npm run purge:legacy-partitions
+
+# Delete shared partitions after copy verification
+COGNITO_USER_SUB='<cognito-sub>' CONFIRM_PURGE=yes PURGE_MODE=delete npm run purge:legacy-partitions
+
+# Or move rows to ARCHIVED#<tag>#* instead of deleting
+COGNITO_USER_SUB='<cognito-sub>' CONFIRM_PURGE=yes PURGE_MODE=isolate npm run purge:legacy-partitions
+```
+
+`COGNITO_USER_SUB` checks that each user-scoped partition has at least as many items as the legacy partition (override with `SKIP_VERIFY=1` only after manual review).
+
+During Cognito setup:
+
+```bash
+export RUN_LEGACY_MIGRATION=1
+export RUN_LEGACY_PURGE=1
+# optional: LEGACY_PURGE_MODE=isolate
+deploy/setup-cognito-auth.sh
+```
+
+GitHub Actions `workflow_dispatch` can set `purge_legacy_partitions` when `run_legacy_migration` is true.
 
 ## Deploy Cognito for this app
 

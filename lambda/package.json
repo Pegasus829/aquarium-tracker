@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "bundle": "esbuild index.mjs --bundle --platform=node --target=node22 --format=cjs --outfile=bundle.js",
-    "migrate:legacy-user": "node migrate-legacy-data.mjs"
+    "migrate:legacy-user": "node migrate-legacy-data.mjs",
+    "purge:legacy-partitions": "node purge-legacy-partitions.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.726.0",

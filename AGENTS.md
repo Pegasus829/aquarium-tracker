@@ -39,6 +39,7 @@ The app is being migrated to Cognito:
 - protected API calls do not include browser API keys; use `deploy/disable-api-key-requirement.sh` to clear API Gateway `apiKeyRequired` (also configures gateway-response CORS via `configure-gateway-cors-responses.sh`)
 - API Gateway **gateway responses** (5xx, integration/authorizer failures): `deploy/configure-gateway-cors-responses.sh` (invoked by disable-api-key, profile deploy, Cognito setup, and CI)
 - Cognito setup and migration assets live in `deploy/cognito-auth-template.yaml`, `deploy/setup-cognito-auth.sh`, and `AUTHENTICATION.md`
+- After Cognito migration, purge shared legacy DynamoDB partitions with `lambda/purge-legacy-partitions.mjs` (`npm run purge:legacy-partitions`; optional `RUN_LEGACY_PURGE=1` in setup script)
 
 ### Architecture
 
