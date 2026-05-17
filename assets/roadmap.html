@@ -490,6 +490,275 @@ let nextIds = new Set();
 let roadmapMarkdown = '';
 let roadmapFileHandle = null;
 let roadmapDownloadUrl = '';
+/** @type {typeof ROADMAP_ITEMS | null} */
+let displayItems = null;
+
+function compareAtId(a, b) {
+  const na = parseInt(String(a.id).slice(3), 10) || 0;
+  const nb = parseInt(String(b.id).slice(3), 10) || 0;
+  return na - nb;
+}
+
+function getItems() {
+  return displayItems || ROADMAP_ITEMS;
+}
+
+function sortItemRows(rows) {
+  return [...rows].sort(compareAtId);
+}
+
+function findDeliveredTable(lines) {
+  let inDelivered = false;
+  for (let i = 0; i < lines.length; i += 1) {
+    if (/^##\s+Delivered\b/.test(lines[i])) {
+      inDelivered = true;
+      continue;
+    }
+    if (inDelivered && /^##\s+/.test(lines[i])) break;
+    if (!inDelivered) continue;
+    const cells = splitMarkdownRow(lines[i]);
+    if (!cells) continue;
+    const headers = cells.map(normalizeHeaderCell);
+    if (headers[0] === 'id' && headers.includes('category') && headers.includes('title') && headers.includes('delivered')) {
+      return { headerIndex: i };
+    }
+  }
+  return null;
+}
+
+function deliveredNotesColumnIndex(headers) {
+  const j = headers.findIndex((h) => h.includes('source') && h.includes('notes'));
+  if (j !== -1) return j;
+  return headers.length - 1;
+}
+
+function parseMarkdownDeliveredRows(markdown) {
+  const lines = markdown.split(/\r?\n/);
+  const table = findDeliveredTable(lines);
+  if (!table) return [];
+  const headerCells = splitMarkdownRow(lines[table.headerIndex]) || [];
+  const headers = headerCells.map(normalizeHeaderCell);
+  const idx = Object.fromEntries(headers.map((h, i) => [h, i]));
+  const notesIdx = deliveredNotesColumnIndex(headers);
+  const rows = [];
+  const start = dataStartIndex(lines, table.headerIndex);
+  for (let i = start; i < lines.length; i += 1) {
+    const cells = splitMarkdownRow(lines[i]);
+    if (!cells) break;
+    if (isMarkdownSeparator(cells)) continue;
+    const id = cells[idx.id];
+    if (!/^AT-\d{3}$/.test(id)) continue;
+    rows.push({
+      id,
+      category: cells[idx.category] || '',
+      title: cells[idx.title] || '',
+      delivered: cells[idx.delivered] || '',
+      notes: cells[notesIdx] || '',
+    });
+  }
+  return rows;
+}
+
+function parseMarkdownBacklogRows(markdown) {
+  const lines = markdown.split(/\r?\n/);
+  const table = findBacklogTable(lines);
+  if (!table) return [];
+  const headerCells = splitMarkdownRow(lines[table.headerIndex]) || [];
+  const headers = headerCells.map(normalizeHeaderCell);
+  const idx = Object.fromEntries(headers.map((h, i) => [h, i]));
+  const rows = [];
+  const start = dataStartIndex(lines, table.headerIndex);
+  for (let i = start; i < lines.length; i += 1) {
+    const cells = splitMarkdownRow(lines[i]);
+    if (!cells) break;
+    if (isMarkdownSeparator(cells)) continue;
+    const id = cells[idx.id];
+    if (!/^AT-\d{3}$/.test(id)) continue;
+    rows.push({
+      id,
+      category: cells[idx.category] || '',
+      title: cells[idx.title] || '',
+      status: cells[idx.status] || '',
+      priority: cells[idx.priority] || '',
+      source: cells[idx.source] || '',
+      notes: cells[idx.notes] || '',
+    });
+  }
+  return rows;
+}
+
+function buildDisplayItemsFromMarkdown(markdown, template) {
+  const deliveredRows = parseMarkdownDeliveredRows(markdown);
+  const backlogRows = parseMarkdownBacklogRows(markdown);
+  const deliveredIds = new Set(deliveredRows.map((r) => r.id));
+  const deliveredById = new Map(deliveredRows.map((r) => [r.id, r]));
+  const backlogById = new Map(backlogRows.map((r) => [r.id, r]));
+  const byId = new Map(template.map((item) => [item.id, { ...item }]));
+
+  for (const [id, row] of deliveredById) {
+    const base = byId.get(id);
+    if (base) {
+      byId.set(id, {
+        ...base,
+        section: 'delivered',
+        status: 'delivered',
+        category: row.category || base.category,
+        title: row.title || base.title,
+        delivered: row.delivered || base.delivered,
+        notes: row.notes !== undefined && row.notes !== '' ? row.notes : base.notes,
+        priority: '',
+        source: '',
+      });
+    } else {
+      byId.set(id, {
+        id: row.id,
+        section: 'delivered',
+        category: row.category || '',
+        title: row.title || '',
+        status: 'delivered',
+        priority: '',
+        delivered: row.delivered || '',
+        source: '',
+        notes: row.notes || '',
+      });
+    }
+  }
+
+  for (const [id, row] of backlogById) {
+    if (deliveredIds.has(id)) continue;
+    const base = byId.get(id);
+    if (base) {
+      byId.set(id, {
+        ...base,
+        section: 'backlog',
+        category: row.category,
+        title: row.title,
+        status: row.status,
+        priority: row.priority,
+        source: row.source,
+        notes: row.notes,
+        delivered: '',
+      });
+    } else {
+      byId.set(id, {
+        id,
+        section: 'backlog',
+        category: row.category,
+        title: row.title,
+        status: row.status,
+        priority: row.priority || '',
+        delivered: '',
+        source: row.source || '',
+        notes: row.notes || '',
+      });
+    }
+  }
+
+  return sortItemRows([...byId.values()]);
+}
+
+function formatDeliveredNoteFromBacklog(source, notes) {
+  const parts = [];
+  if (source && String(source).trim()) parts.push(`\`${String(source).trim()}\``);
+  if (notes && String(notes).trim()) parts.push(String(notes).trim());
+  return parts.length ? parts.join(' · ') : '—';
+}
+
+function moveBacklogItemToDeliveredMarkdown(markdown, id, deliveredLabel) {
+  const lines = markdown.split(/\r?\n/);
+  const backlogTable = findBacklogTable(lines);
+  if (!backlogTable) return markdown;
+
+  const bHeaderCells = splitMarkdownRow(lines[backlogTable.headerIndex]) || [];
+  const bHeaders = bHeaderCells.map(normalizeHeaderCell);
+  const bIdx = Object.fromEntries(bHeaders.map((h, i) => [h, i]));
+  const bid = bIdx.id;
+  const dataStart = dataStartIndex(lines, backlogTable.headerIndex);
+  let removeIndex = -1;
+  /** @type {string[] | null} */
+  let rowCells = null;
+  for (let i = dataStart; i < lines.length; i += 1) {
+    const cells = splitMarkdownRow(lines[i]);
+    if (!cells) break;
+    if (isMarkdownSeparator(cells)) continue;
+    if (cells[bid] === id) {
+      removeIndex = i;
+      rowCells = cells;
+      break;
+    }
+  }
+  if (removeIndex === -1 || !rowCells) return markdown;
+
+  const category = rowCells[bIdx.category] || '';
+  const title = rowCells[bIdx.title] || '';
+  const source = rowCells[bIdx.source] || '';
+  const notes = rowCells[bIdx.notes] || '';
+  const combinedNotes = formatDeliveredNoteFromBacklog(source, notes);
+
+  lines.splice(removeIndex, 1);
+
+  const delTable = findDeliveredTable(lines);
+  if (!delTable) return lines.join('\n');
+
+  const dHeaderCells = splitMarkdownRow(lines[delTable.headerIndex]) || [];
+  const dHeaders = dHeaderCells.map(normalizeHeaderCell);
+  const dIdx = Object.fromEntries(dHeaders.map((h, i) => [h, i]));
+  const dDataStart = dataStartIndex(lines, delTable.headerIndex);
+  const newRow = formatMarkdownRow([id, category, title, deliveredLabel, combinedNotes]);
+  const idNum = parseInt(id.slice(3), 10);
+  let replaced = false;
+
+  for (let i = dDataStart; i < lines.length; i += 1) {
+    const cells = splitMarkdownRow(lines[i]);
+    if (!cells) break;
+    if (isMarkdownSeparator(cells)) continue;
+    const rid = cells[dIdx.id];
+    if (!/^AT-\d{3}$/.test(rid)) break;
+    if (rid === id) {
+      lines[i] = newRow;
+      replaced = true;
+      break;
+    }
+  }
+
+  if (!replaced) {
+    let insertAt = dDataStart;
+    for (let i = dDataStart; i < lines.length; i += 1) {
+      const cells = splitMarkdownRow(lines[i]);
+      if (!cells) break;
+      if (isMarkdownSeparator(cells)) continue;
+      const rid = cells[dIdx.id];
+      if (!/^AT-\d{3}$/.test(rid)) break;
+      const rNum = parseInt(rid.slice(3), 10);
+      if (rNum < idNum) insertAt = i + 1;
+      else break;
+    }
+    lines.splice(insertAt, 0, newRow);
+  }
+
+  return lines.join('\n');
+}
+
+async function markItemDelivered(id) {
+  const item = getItems().find((i) => i.id === id);
+  if (!item || item.section !== 'backlog') return;
+  const ok = window.confirm(`Mark ${id} as delivered? This removes its backlog row from ROADMAP.md and adds a Delivered row.`);
+  if (!ok) return;
+  const today = new Date().toISOString().slice(0, 10);
+  const prompted = window.prompt('Delivered column value (shown in the Delivered table)', today);
+  if (prompted === null) return;
+  const deliveredLabel = String(prompted).trim() || today;
+  if (!roadmapMarkdown) {
+    setSyncStatus('ROADMAP.md is not loaded yet. Serve the repo over HTTP (see AGENTS.md) or use Save to ROADMAP.md after it loads.', 'warn');
+    return;
+  }
+  roadmapMarkdown = moveBacklogItemToDeliveredMarkdown(roadmapMarkdown, id, deliveredLabel);
+  nextIds.delete(id);
+  saveNext();
+  updateRoadmapDownload();
+  refreshNextUi();
+  await persistRoadmapMarkdown({ allowPrompt: true });
+}
 
 function loadNext() {
   try {
@@ -645,6 +914,7 @@ function updateRoadmapDownload() {
 }
 
 function refreshNextUi() {
+  displayItems = roadmapMarkdown ? buildDisplayItemsFromMarkdown(roadmapMarkdown, ROADMAP_ITEMS) : null;
   renderTables();
   renderNextPanel();
   syncPillUI();
@@ -661,14 +931,18 @@ async function loadRoadmapMarkdown() {
       nextIds = parsed.ids;
       saveNext();
       refreshNextUi();
-      setSyncStatus('Loaded Next selections from ROADMAP.md. Star changes can now be saved to the file.', 'ok');
+      setSyncStatus('Synced from ROADMAP.md (Delivered vs Backlog + Next column). ★ edits can be saved.', 'ok');
     } else {
+      refreshNextUi();
       updateRoadmapDownload();
-      setSyncStatus('Loaded ROADMAP.md. Saving will add the Next column.', 'warn');
+      setSyncStatus('Loaded ROADMAP.md. Saving Next will add the Next column.', 'warn');
     }
   } catch (err) {
+    roadmapMarkdown = '';
+    displayItems = null;
     updateRoadmapDownload();
-    setSyncStatus('Could not load ROADMAP.md; Next selections are browser-only until you choose the file.', 'warn');
+    setSyncStatus('Could not load ROADMAP.md; showing embedded data until fetch works or you attach a local file.', 'warn');
+    refreshNextUi();
   }
 }
 
@@ -676,7 +950,7 @@ function canUseFilePicker() {
   return typeof window.showOpenFilePicker === 'function';
 }
 
-async function chooseRoadmapFile({ applyNextFromFile = false } = {}) {
+async function chooseRoadmapFile() {
   if (!canUseFilePicker()) {
     throw new Error('This browser cannot save directly to local files.');
   }
@@ -689,16 +963,14 @@ async function chooseRoadmapFile({ applyNextFromFile = false } = {}) {
   const file = await handle.getFile();
   roadmapMarkdown = await file.text();
 
-  if (applyNextFromFile) {
-    const parsed = parseNextIdsFromMarkdown(roadmapMarkdown);
-    if (parsed.hasNextColumn) {
-      nextIds = parsed.ids;
-      saveNext();
-      refreshNextUi();
-    }
+  const parsed = parseNextIdsFromMarkdown(roadmapMarkdown);
+  if (parsed.hasNextColumn) {
+    nextIds = parsed.ids;
+    saveNext();
   }
 
   updateRoadmapDownload();
+  refreshNextUi();
   return handle;
 }
 
@@ -710,7 +982,8 @@ async function writeRoadmapMarkdown() {
   await writable.close();
   roadmapMarkdown = updated;
   updateRoadmapDownload();
-  setSyncStatus('Saved Next selections to ROADMAP.md.', 'ok');
+  refreshNextUi();
+  setSyncStatus('Saved ROADMAP.md (Delivered/backlog edits + Next column).', 'ok');
   return true;
 }
 
@@ -723,12 +996,12 @@ async function persistRoadmapMarkdown({ allowPrompt = false } = {}) {
 
   if (!roadmapFileHandle) {
     if (allowPrompt && canUseFilePicker()) {
-      setSyncStatus('Select ROADMAP.md to save Next selections.', '');
+      setSyncStatus('Select ROADMAP.md to save your changes.', '');
       try {
-        await chooseRoadmapFile({ applyNextFromFile: false });
+        await chooseRoadmapFile();
       } catch (err) {
         if (err && err.name === 'AbortError') {
-          setSyncStatus('Next saved in this browser. Select ROADMAP.md or use the download fallback to update the file.', 'warn');
+          setSyncStatus('Changes are in this browser only. Select ROADMAP.md or download the file to update the repo.', 'warn');
         } else {
           setSyncStatus('Could not open ROADMAP.md. Use the download fallback to update the file.', 'error');
         }
@@ -736,8 +1009,8 @@ async function persistRoadmapMarkdown({ allowPrompt = false } = {}) {
       }
     } else {
       setSyncStatus(canUseFilePicker()
-        ? 'Next saved in this browser. Use Save to ROADMAP.md to update the file.'
-        : 'Direct file save is unavailable in this browser. Use the download fallback to update ROADMAP.md.', 'warn');
+        ? 'Use Save to ROADMAP.md or download to persist changes.'
+        : 'Use the download fallback to update ROADMAP.md.', 'warn');
       return;
     }
   }
@@ -751,11 +1024,11 @@ async function persistRoadmapMarkdown({ allowPrompt = false } = {}) {
 
 async function saveRoadmapNow() {
   try {
-    await chooseRoadmapFile({ applyNextFromFile: false });
+    await chooseRoadmapFile();
     await writeRoadmapMarkdown();
   } catch (err) {
     if (err && err.name === 'AbortError') {
-      setSyncStatus('Save canceled. Next selections remain in this browser.', 'warn');
+      setSyncStatus('Save canceled.', 'warn');
     } else {
       setSyncStatus(canUseFilePicker()
         ? 'Could not save ROADMAP.md. Use the download fallback to replace the file.'
@@ -857,7 +1130,7 @@ function toggleNext(id) {
 
 function renderNextPanel() {
   const list = document.getElementById('nextList');
-  const backlogNext = ROADMAP_ITEMS.filter((i) => i.section === 'backlog' && nextIds.has(i.id));
+  const backlogNext = getItems().filter((i) => i.section === 'backlog' && nextIds.has(i.id));
   if (!backlogNext.length) {
     list.innerHTML = '<span class="next-empty">No items queued yet.</span>';
     return;
@@ -886,10 +1159,11 @@ function renderTables() {
   const tbodyD = document.getElementById('tbodyDelivered');
   const tbodyX = document.getElementById('tbodyDeferred');
 
-  tbodyB.innerHTML = ROADMAP_ITEMS.filter((i) => i.section === 'backlog').map((i) => {
+  tbodyB.innerHTML = sortItemRows(getItems().filter((i) => i.section === 'backlog')).map((i) => {
     const on = nextIds.has(i.id);
     return `<tr data-id="${i.id}" class="${on ? 'row-next' : ''}">
       <td><button type="button" class="next-btn ${on ? 'on' : ''}" data-next-id="${i.id}" aria-pressed="${on}" title="Add to next">★</button></td>
+      <td><button type="button" class="deliver-btn" data-deliver-id="${i.id}" aria-label="Mark ${i.id} delivered" title="Mark delivered">✓</button></td>
       <td class="id-cell">${i.id}</td>
       <td><span class="${tagClass('cat', i.category)}">${escapeHtml(i.category)}</span></td>
       <td>${escapeHtml(i.title)}</td>
@@ -900,7 +1174,7 @@ function renderTables() {
     </tr>`;
   }).join('');
 
-  tbodyD.innerHTML = ROADMAP_ITEMS.filter((i) => i.section === 'delivered').map((i) => `
+  tbodyD.innerHTML = sortItemRows(getItems().filter((i) => i.section === 'delivered')).map((i) => `
     <tr data-id="${i.id}">
       <td class="id-cell">${i.id}</td>
       <td><span class="${tagClass('cat', i.category)}">${escapeHtml(i.category)}</span></td>
@@ -911,7 +1185,7 @@ function renderTables() {
     </tr>
   `).join('');
 
-  const deferred = ROADMAP_ITEMS.filter((i) => i.section === 'deferred');
+  const deferred = sortItemRows(getItems().filter((i) => i.section === 'deferred'));
   if (!deferred.length) {
     tbodyX.innerHTML = '<tr><td colspan="5" class="empty-section">Nothing deferred yet.</td></tr>';
   } else {
@@ -929,6 +1203,9 @@ function renderTables() {
   document.querySelectorAll('[data-next-id]').forEach((btn) => {
     btn.addEventListener('click', () => toggleNext(btn.dataset.nextId));
   });
+  document.querySelectorAll('[data-deliver-id]').forEach((btn) => {
+    btn.addEventListener('click', () => markItemDelivered(btn.dataset.deliverId));
+  });
 }
 
 function applyFilters() {
@@ -938,7 +1215,7 @@ function applyFilters() {
 
   document.querySelectorAll('tbody tr[data-id]').forEach((row) => {
     const id = row.dataset.id;
-    const item = ROADMAP_ITEMS.find((i) => i.id === id);
+    const item = getItems().find((i) => i.id === id);
     if (!item) return;
     total += 1;
     const show = itemVisible(item, query);
@@ -947,11 +1224,11 @@ function applyFilters() {
   });
 
   document.getElementById('visibleCount').textContent = `${visible} of ${total} rows visible`;
-  const bVis = ROADMAP_ITEMS.filter((i) => i.section === 'backlog' && itemVisible(i, query)).length;
-  const bTot = ROADMAP_ITEMS.filter((i) => i.section === 'backlog').length;
+  const bVis = getItems().filter((i) => i.section === 'backlog' && itemVisible(i, query)).length;
+  const bTot = getItems().filter((i) => i.section === 'backlog').length;
   document.getElementById('backlogCount').textContent = `${bVis} / ${bTot} shown`;
-  const dVis = ROADMAP_ITEMS.filter((i) => i.section === 'delivered' && itemVisible(i, query)).length;
-  const dTot = ROADMAP_ITEMS.filter((i) => i.section === 'delivered').length;
+  const dVis = getItems().filter((i) => i.section === 'delivered' && itemVisible(i, query)).length;
+  const dTot = getItems().filter((i) => i.section === 'delivered').length;
   document.getElementById('deliveredCount').textContent = `${dVis} / ${dTot} shown`;
 }
 

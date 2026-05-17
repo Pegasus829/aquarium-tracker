@@ -15,7 +15,7 @@ Living backlog for features and enhancements. **Reference items by ID** (e.g. �
 - Add ideas under [Backlog](#backlog) with the next free `AT-###` ID and a **Category** (see [Category legend](#category-legend)).
 - Move rows to [Delivered](#delivered) when shipped (keep the same ID and category).
 - Use **Status** values consistently (see [Status legend](#status-legend)).
-- Use **[assets/roadmap.html](assets/roadmap.html)** to filter and queue work: click filter pills (neutral → include → exclude), mark **Add to Next** with ★ on backlog rows (writes the `Next` column below when the browser can save local files; `localStorage` is a fallback).
+- Use **[assets/roadmap.html](assets/roadmap.html)** to filter and queue work: click filter pills (neutral → include → exclude); when the page loads `ROADMAP.md` over HTTP, **Delivered vs Backlog** matches the markdown (fix online drift vs the embedded snapshot). Use **★** for **Next**, **✓** on a backlog row to **mark delivered**, and Save / download fallbacks (`localStorage` still backs up Next selections).
 - Filter or sort by category in your editor, or search for e.g. `| Security |` in this file.
 
 ### For Cursor agents (including this repo)
@@ -138,4 +138,5 @@ No backlog items yet. When planning a public launch, add items here (e.g. subscr
 | 2026-05-17 | Added markdown-backed `Next` column and local-file save support in [assets/roadmap.html](assets/roadmap.html) |
 | 2026-05-17 | Added AT-032 roadmap permissions item |
 | 2026-05-17 | Marked AT-021 delivered (API key removed from frontend; JWT-only requests); reconciled backlog table with Delivered section |
+| 2026-05-17 | Roadmap page hydrates Delivered/Backlog from `ROADMAP.md` and adds ✓ manual “mark delivered” (updates markdown on save/download) |
 | 2026-05-17 | Delivered AT-027: `.env` / `config.local.js` local overrides; `config.js` for production defaults |
