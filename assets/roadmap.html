@@ -742,7 +742,13 @@ function moveBacklogItemToDeliveredMarkdown(markdown, id, deliveredLabel) {
 async function markItemDelivered(id) {
   const item = getItems().find((i) => i.id === id);
   if (!item || item.section !== 'backlog') return;
-  const deliveredLabel = new Date().toISOString().slice(0, 10);
+  const deliveredLabel = (() => {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  })();
   const ok = window.confirm(`Mark ${id} as delivered? Its backlog row will be removed from ROADMAP.md and a Delivered row will be added (date: ${deliveredLabel}).`);
   if (!ok) return;
   if (!roadmapMarkdown) {
