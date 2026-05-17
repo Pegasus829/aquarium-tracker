@@ -742,12 +742,9 @@ function moveBacklogItemToDeliveredMarkdown(markdown, id, deliveredLabel) {
 async function markItemDelivered(id) {
   const item = getItems().find((i) => i.id === id);
   if (!item || item.section !== 'backlog') return;
-  const ok = window.confirm(`Mark ${id} as delivered? This removes its backlog row from ROADMAP.md and adds a Delivered row.`);
+  const deliveredLabel = new Date().toISOString().slice(0, 10);
+  const ok = window.confirm(`Mark ${id} as delivered? Its backlog row will be removed from ROADMAP.md and a Delivered row will be added (date: ${deliveredLabel}).`);
   if (!ok) return;
-  const today = new Date().toISOString().slice(0, 10);
-  const prompted = window.prompt('Delivered column value (shown in the Delivered table)', today);
-  if (prompted === null) return;
-  const deliveredLabel = String(prompted).trim() || today;
   if (!roadmapMarkdown) {
     setSyncStatus('ROADMAP.md is not loaded yet. Serve the repo over HTTP (see AGENTS.md) or use Save to ROADMAP.md after it loads.', 'warn');
     return;
