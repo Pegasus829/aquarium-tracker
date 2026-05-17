@@ -152,6 +152,25 @@ a:hover { text-decoration: underline; }
 }
 .next-chip button:hover { color: var(--danger); }
 .next-empty { font-size: 13px; color: var(--muted); font-style: italic; }
+.sync-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin: 12px 0;
+}
+.sync-status {
+  font-size: 12px;
+  color: var(--muted);
+}
+.sync-status-ok { color: #a7f3d0; }
+.sync-status-warn { color: #fde68a; }
+.sync-status-error { color: #fecaca; }
+a.pill[aria-disabled="true"] {
+  opacity: 0.55;
+  pointer-events: none;
+  text-decoration: none;
+}
 
 .toolbar {
   display: flex;
@@ -298,7 +317,12 @@ tr.row-next td { background: rgba(251,191,36,0.04); }
 
   <div class="panel next-panel">
     <div class="panel-title">Add to next</div>
-    <p class="filter-hint">Mark backlog items with ★ below. Selections are saved in this browser only.</p>
+    <p class="filter-hint">Mark backlog items with ★ below. Selections are saved to the `Next` column in ROADMAP.md when you select the file; browser storage and download are fallbacks.</p>
+    <div class="sync-actions">
+      <button type="button" class="pill pill-util" id="btnSelectRoadmap">Save to ROADMAP.md</button>
+      <a class="pill pill-util" id="btnDownloadRoadmap" aria-disabled="true">Download updated ROADMAP.md</a>
+      <span id="syncStatus" class="sync-status" aria-live="polite">Loading ROADMAP.md…</span>
+    </div>
     <div id="nextList" class="next-list"><span class="next-empty">No items queued yet.</span></div>
   </div>
 
@@ -428,8 +452,11 @@ const ROADMAP_ITEMS = [
   { id: 'AT-027', section: 'backlog', category: 'Security', title: 'Local dev secrets (.env / build inject) instead of committed API_KEY', status: 'idea', priority: 'medium', delivered: '', source: 'deploy sessions', notes: 'Safer forks and PR previews' },
   { id: 'AT-029', section: 'backlog', category: 'Enhancement', title: 'Backfill UI for missing KH on historical readings', status: 'idea', priority: 'low', delivered: '', source: 'KH session', notes: 'Optional bulk edit or per-row prompt' },
   { id: 'AT-030', section: 'backlog', category: 'Security', title: 'Rate-limit / abuse monitoring dashboard or alarms', status: 'idea', priority: 'low', delivered: '', source: 'Security review', notes: 'Usage plan exists; observability not in repo' },
+  { id: 'AT-031', section: 'backlog', category: 'Enhancement', title: 'Generate interactive roadmap data from ROADMAP.md', status: 'idea', priority: 'low', delivered: '', source: 'agent:roadmap-next-sync', notes: 'Avoid maintaining duplicate ROADMAP_ITEMS data by hand' },
+  { id: 'AT-032', section: 'backlog', category: 'Security', title: 'Roadmap permissions with read/write access controls', status: 'idea', priority: 'medium', delivered: '', source: 'user', notes: 'Default no roadmap access; marc@amphletts.uk has write access' },
 ];
 
+const ROADMAP_PATH = '/ROADMAP.md';
 const STORAGE_NEXT = 'wqt_roadmap_next';
 const CATEGORIES = ['Security', 'Accessibility', 'New Feature', 'Enhancement', 'Commercial', 'Defect'];
 const STATUSES = ['idea', 'planned', 'in_progress', 'delivered', 'deferred', 'wont_fix'];
@@ -439,11 +466,15 @@ const PRIORITIES = ['high', 'medium', 'low'];
 const filterState = {};
 let nextOnly = false;
 let nextIds = new Set();
+let roadmapMarkdown = '';
+let roadmapFileHandle = null;
+let roadmapDownloadUrl = '';
 
 function loadNext() {
   try {
     const raw = localStorage.getItem(STORAGE_NEXT);
-    nextIds = new Set(raw ? JSON.parse(raw) : []);
+    const parsed = raw ? JSON.parse(raw) : [];
+    nextIds = new Set(Array.isArray(parsed) ? parsed : []);
   } catch {
     nextIds = new Set();
   }
@@ -451,6 +482,265 @@ function loadNext() {
 
 function saveNext() {
   localStorage.setItem(STORAGE_NEXT, JSON.stringify([...nextIds]));
+  updateRoadmapDownload();
+}
+
+function setSyncStatus(message, kind = '') {
+  const el = document.getElementById('syncStatus');
+  if (!el) return;
+  el.className = `sync-status${kind ? ` sync-status-${kind}` : ''}`;
+  el.textContent = message;
+}
+
+function splitMarkdownRow(line) {
+  const trimmed = line.trim();
+  if (!trimmed.startsWith('|') || !trimmed.endsWith('|')) return null;
+  return trimmed.slice(1, -1).split('|').map((cell) => cell.trim());
+}
+
+function formatMarkdownRow(cells) {
+  return `| ${cells.join(' | ')} |`;
+}
+
+function isMarkdownSeparator(cells) {
+  return cells.length > 0 && cells.every((cell) => /^:?-{3,}:?$/.test(cell));
+}
+
+function normalizeHeaderCell(cell) {
+  return cell.replace(/\s+/g, ' ').trim().toLowerCase();
+}
+
+function findBacklogTable(lines) {
+  let inBacklog = false;
+  for (let i = 0; i < lines.length; i += 1) {
+    if (/^##\s+Backlog\b/.test(lines[i])) {
+      inBacklog = true;
+      continue;
+    }
+    if (inBacklog && /^##\s+/.test(lines[i])) break;
+    if (!inBacklog) continue;
+
+    const cells = splitMarkdownRow(lines[i]);
+    if (!cells) continue;
+    const headers = cells.map(normalizeHeaderCell);
+    if (headers.includes('id') && headers.includes('category') && headers.includes('title') && headers.includes('status')) {
+      return { headerIndex: i };
+    }
+  }
+  return null;
+}
+
+function isNextMarker(value) {
+  return ['next', 'yes', 'true', 'x', '1', 'star', '★'].includes(String(value || '').trim().toLowerCase());
+}
+
+function dataStartIndex(lines, headerIndex) {
+  const maybeSeparator = splitMarkdownRow(lines[headerIndex + 1] || '');
+  return maybeSeparator && isMarkdownSeparator(maybeSeparator) ? headerIndex + 2 : headerIndex + 1;
+}
+
+function parseNextIdsFromMarkdown(markdown) {
+  const ids = new Set();
+  const lines = markdown.split(/\r?\n/);
+  const table = findBacklogTable(lines);
+  if (!table) return { hasNextColumn: false, ids };
+
+  const headerCells = splitMarkdownRow(lines[table.headerIndex]) || [];
+  const headers = headerCells.map(normalizeHeaderCell);
+  const idIndex = headers.indexOf('id');
+  const nextIndex = headers.indexOf('next');
+  const hasNextColumn = nextIndex !== -1;
+  if (!hasNextColumn || idIndex === -1) return { hasNextColumn, ids };
+
+  for (let i = dataStartIndex(lines, table.headerIndex); i < lines.length; i += 1) {
+    const cells = splitMarkdownRow(lines[i]);
+    if (!cells) break;
+    if (isMarkdownSeparator(cells)) continue;
+    const id = cells[idIndex];
+    if (/^AT-\d{3}$/.test(id) && isNextMarker(cells[nextIndex])) {
+      ids.add(id);
+    }
+  }
+  return { hasNextColumn, ids };
+}
+
+function updateMarkdownNextColumn(markdown, ids) {
+  const lines = markdown.split(/\r?\n/);
+  const table = findBacklogTable(lines);
+  if (!table) return markdown;
+
+  let headerCells = splitMarkdownRow(lines[table.headerIndex]) || [];
+  let headers = headerCells.map(normalizeHeaderCell);
+  let idIndex = headers.indexOf('id');
+  let nextIndex = headers.indexOf('next');
+  if (idIndex === -1) return markdown;
+
+  if (nextIndex === -1) {
+    headerCells.splice(0, 0, 'Next');
+    lines[table.headerIndex] = formatMarkdownRow(headerCells);
+    const separatorCells = splitMarkdownRow(lines[table.headerIndex + 1] || '');
+    if (separatorCells && isMarkdownSeparator(separatorCells)) {
+      separatorCells.splice(0, 0, '------');
+      lines[table.headerIndex + 1] = formatMarkdownRow(separatorCells);
+    }
+    headers = headerCells.map(normalizeHeaderCell);
+    idIndex = headers.indexOf('id');
+    nextIndex = headers.indexOf('next');
+  }
+
+  const width = headerCells.length;
+  for (let i = dataStartIndex(lines, table.headerIndex); i < lines.length; i += 1) {
+    const cells = splitMarkdownRow(lines[i]);
+    if (!cells) break;
+    if (isMarkdownSeparator(cells)) continue;
+    while (cells.length < width) cells.push('');
+    const id = cells[idIndex];
+    if (/^AT-\d{3}$/.test(id)) {
+      cells[nextIndex] = ids.has(id) ? 'next' : '';
+      lines[i] = formatMarkdownRow(cells);
+    }
+  }
+  return lines.join('\n');
+}
+
+function updateRoadmapDownload() {
+  const link = document.getElementById('btnDownloadRoadmap');
+  if (!link) return;
+  if (roadmapDownloadUrl) URL.revokeObjectURL(roadmapDownloadUrl);
+  roadmapDownloadUrl = '';
+
+  if (!roadmapMarkdown) {
+    link.removeAttribute('href');
+    link.removeAttribute('download');
+    link.setAttribute('aria-disabled', 'true');
+    return;
+  }
+
+  const updated = updateMarkdownNextColumn(roadmapMarkdown, nextIds);
+  roadmapDownloadUrl = URL.createObjectURL(new Blob([updated], { type: 'text/markdown' }));
+  link.href = roadmapDownloadUrl;
+  link.download = 'ROADMAP.md';
+  link.setAttribute('aria-disabled', 'false');
+}
+
+function refreshNextUi() {
+  renderTables();
+  renderNextPanel();
+  syncPillUI();
+  applyFilters();
+}
+
+async function loadRoadmapMarkdown() {
+  try {
+    const response = await fetch(ROADMAP_PATH, { cache: 'no-store' });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    roadmapMarkdown = await response.text();
+    const parsed = parseNextIdsFromMarkdown(roadmapMarkdown);
+    if (parsed.hasNextColumn) {
+      nextIds = parsed.ids;
+      saveNext();
+      refreshNextUi();
+      setSyncStatus('Loaded Next selections from ROADMAP.md. Star changes can now be saved to the file.', 'ok');
+    } else {
+      updateRoadmapDownload();
+      setSyncStatus('Loaded ROADMAP.md. Saving will add the Next column.', 'warn');
+    }
+  } catch (err) {
+    updateRoadmapDownload();
+    setSyncStatus('Could not load ROADMAP.md; Next selections are browser-only until you choose the file.', 'warn');
+  }
+}
+
+function canUseFilePicker() {
+  return typeof window.showOpenFilePicker === 'function';
+}
+
+async function chooseRoadmapFile({ applyNextFromFile = false } = {}) {
+  if (!canUseFilePicker()) {
+    throw new Error('This browser cannot save directly to local files.');
+  }
+
+  const [handle] = await window.showOpenFilePicker({
+    multiple: false,
+    types: [{ description: 'Markdown files', accept: { 'text/markdown': ['.md'] } }],
+  });
+  roadmapFileHandle = handle;
+  const file = await handle.getFile();
+  roadmapMarkdown = await file.text();
+
+  if (applyNextFromFile) {
+    const parsed = parseNextIdsFromMarkdown(roadmapMarkdown);
+    if (parsed.hasNextColumn) {
+      nextIds = parsed.ids;
+      saveNext();
+      refreshNextUi();
+    }
+  }
+
+  updateRoadmapDownload();
+  return handle;
+}
+
+async function writeRoadmapMarkdown() {
+  if (!roadmapFileHandle) return false;
+  const updated = updateMarkdownNextColumn(roadmapMarkdown, nextIds);
+  const writable = await roadmapFileHandle.createWritable();
+  await writable.write(updated);
+  await writable.close();
+  roadmapMarkdown = updated;
+  updateRoadmapDownload();
+  setSyncStatus('Saved Next selections to ROADMAP.md.', 'ok');
+  return true;
+}
+
+async function persistRoadmapMarkdown({ allowPrompt = false } = {}) {
+  updateRoadmapDownload();
+  if (!roadmapMarkdown && !allowPrompt) {
+    setSyncStatus('ROADMAP.md is not loaded yet. Use the download fallback once it finishes loading.', 'warn');
+    return;
+  }
+
+  if (!roadmapFileHandle) {
+    if (allowPrompt && canUseFilePicker()) {
+      setSyncStatus('Select ROADMAP.md to save Next selections.', '');
+      try {
+        await chooseRoadmapFile({ applyNextFromFile: false });
+      } catch (err) {
+        if (err && err.name === 'AbortError') {
+          setSyncStatus('Next saved in this browser. Select ROADMAP.md or use the download fallback to update the file.', 'warn');
+        } else {
+          setSyncStatus('Could not open ROADMAP.md. Use the download fallback to update the file.', 'error');
+        }
+        return;
+      }
+    } else {
+      setSyncStatus(canUseFilePicker()
+        ? 'Next saved in this browser. Use Save to ROADMAP.md to update the file.'
+        : 'Direct file save is unavailable in this browser. Use the download fallback to update ROADMAP.md.', 'warn');
+      return;
+    }
+  }
+
+  try {
+    await writeRoadmapMarkdown();
+  } catch (err) {
+    setSyncStatus('Could not write ROADMAP.md. Use the download fallback to replace the file.', 'error');
+  }
+}
+
+async function saveRoadmapNow() {
+  try {
+    await chooseRoadmapFile({ applyNextFromFile: false });
+    await writeRoadmapMarkdown();
+  } catch (err) {
+    if (err && err.name === 'AbortError') {
+      setSyncStatus('Save canceled. Next selections remain in this browser.', 'warn');
+    } else {
+      setSyncStatus(canUseFilePicker()
+        ? 'Could not save ROADMAP.md. Use the download fallback to replace the file.'
+        : 'Direct file save is unavailable in this browser. Use the download fallback to update ROADMAP.md.', 'error');
+    }
+  }
 }
 
 function slugLabel(value) {
@@ -532,6 +822,7 @@ function toggleNext(id) {
   if (nextIds.has(id)) nextIds.delete(id);
   else nextIds.add(id);
   saveNext();
+  persistRoadmapMarkdown({ allowPrompt: true });
   renderNextPanel();
   applyFilters();
   document.querySelectorAll(`[data-next-id="${id}"]`).forEach((btn) => {
@@ -658,9 +949,11 @@ renderTables();
 renderNextPanel();
 syncPillUI();
 applyFilters();
+loadRoadmapMarkdown();
 
 document.getElementById('searchInput').addEventListener('input', applyFilters);
 document.getElementById('btnResetFilters').addEventListener('click', resetFilters);
+document.getElementById('btnSelectRoadmap').addEventListener('click', saveRoadmapNow);
 document.getElementById('btnNextOnly').addEventListener('click', () => {
   nextOnly = !nextOnly;
   syncPillUI();
