@@ -15,8 +15,11 @@ Configure **`production`**:
    `push` to `main` that matches the workflow paths and every `workflow_dispatch`
    run pauses here until a reviewer approves.
 2. **Deployment branches** (recommended) — Restrict deployments to **`main`** only
-   (complements AT-048 OIDC branch restrictions).
-3. **Environment secrets** (optional) — Move `MARC_CURRENT_PASSWORD` here instead of
+   (complements AT-048 OIDC branch restrictions in `deploy/github-oidc-trust-policy.json`).
+3. **OIDC trust policy (AT-048)** — From an AWS-enabled machine, run
+   `deploy/apply-github-oidc-trust-policy.sh` so `aquarium-github-deploy-role` only accepts
+   tokens for `environment:production` on `refs/heads/main`, plus optional release tags.
+4. **Environment secrets** (optional) — Move `MARC_CURRENT_PASSWORD` here instead of
    repository secrets if only production deploys should read it.
 
 Do **not** disable required reviewers on `production` unless you accept

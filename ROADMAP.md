@@ -38,9 +38,9 @@ Living backlog for features and enhancements. **Reference items by ID** (e.g. �
 | SA-017 | Medium | Stop storing unused Cognito ID token | AT-045 | `wqt_id_token` |
 | SA-018 | Medium | Token refresh / session renewal | AT-045 | SPA re-auth on expiry |
 | SA-019 | Medium | HSTS and edge security headers | AT-046 | Follow-up to delivered AT-019 |
-| SA-020 | Medium | Tighten `roadmap.html` CSP | AT-033 | Drop `unsafe-inline` on roadmap page |
+| SA-020 | Medium | Tighten `roadmap.html` CSP | AT-033 | Delivered 2026-05-17: `assets/roadmap.css` + `roadmap.js`; CSP without `unsafe-inline` |
 | SA-021 | Medium | Parameterize CSP `connect-src` for local API | AT-047 | Hardcoded API host in `index.html` |
-| SA-022 | Medium | Restrict OIDC trust to `main` (or tags) | AT-048 | `github-oidc-trust-policy.json` |
+| SA-022 | Medium | Restrict OIDC trust to `main` (or tags) | AT-048 | Delivered 2026-05-17: `production` env + `refs/heads/main`; release tags; `apply-github-oidc-trust-policy.sh` |
 | SA-023 | Medium | Narrow CI deploy role `Resource: "*"` | AT-049 | `github-deploy-policy.json` |
 | SA-024 | Medium | Split infra vs routine Lambda deploy | AT-050 | `deploy-aws.yml` |
 | SA-025 | Medium | Staging API/credentials for E2E | AT-051 | Follow-up to delivered AT-017 |
@@ -159,6 +159,8 @@ Every item has exactly one category. Use these labels in the **Category** column
 | AT-035 | Security | API Gateway auth safe defaults in deploy scripts | 2026-05-17 | SA-004: `deploy-profile-api.sh` inherits auth from GET `/readings`; `NONE` requires `ALLOW_INSECURE_AUTH=1` |
 | AT-038 | Security | Delete or isolate legacy DynamoDB partitions | 2026-05-17 | SA-007: `purge-legacy-partitions.mjs`; dry-run / delete / isolate; `RUN_LEGACY_PURGE` |
 | AT-037 | Security | Vendor Chart.js or add SRI | 2026-05-17 | SA-006: `assets/chart.umd.min.js` (4.4.3); removed jsDelivr from CSP |
+| AT-033 | Security | Remove inline code so CSP can drop `unsafe-inline` | 2026-05-17 | SA-020: `index.html` + `assets/roadmap.html` → `app.css`/`app.js`, `roadmap.css`/`roadmap.js`; CSP `script-src`/`style-src` `'self'` only |
+| AT-048 | Security | Restrict GitHub OIDC trust to `main` | 2026-05-17 | SA-022: `deploy/github-oidc-trust-policy.json`; `production` env + `refs/heads/main`; release tags; `apply-github-oidc-trust-policy.sh` |
 
 ---
 
@@ -179,7 +181,6 @@ Use the `Next` column to queue near-term work (`next` vs blank); **Add to Next**
 |  | AT-045 | Security | Frontend auth token hygiene | idea | medium | security-review (SA-016, SA-017, SA-018) | `getValidToken` in `apiFetch`; drop `wqt_id_token`; refresh tokens |
 |  | AT-046 | Security | HSTS and edge security headers (static + API) | idea | medium | security-review (SA-019, SA-034) | Follow-up to delivered AT-019; CloudFront or similar |
 |  | AT-047 | Security | Parameterize CSP `connect-src` for local API | idea | medium | security-review (SA-021) | Hardcoded API host in `index.html` CSP |
-|  | AT-048 | Security | Restrict GitHub OIDC trust to `main` | idea | medium | security-review (SA-022) | `deploy/github-oidc-trust-policy.json` |
 |  | AT-049 | Security | Narrow CI deploy IAM policies | idea | medium | security-review (SA-023) | `github-deploy-policy.json` Cognito/CFN `Resource: "*"` |
 |  | AT-050 | Enhancement | Split infra vs routine Lambda deploy workflow | idea | medium | security-review (SA-024) | `deploy-aws.yml` API key script + stage every push |
 |  | AT-051 | Security | Staging API and credentials for E2E | idea | medium | security-review (SA-025) | Follow-up to delivered AT-017; do not hit prod API |
@@ -199,7 +200,6 @@ Use the `Next` column to queue near-term work (`next` vs blank); **Add to Next**
 |  | AT-030 | Security | Rate-limit / abuse monitoring dashboard or alarms | idea | medium | Security review | SA-003, SA-027: WAF/throttle `/auth/login` + token abuse; auth-failure audit logs and alarms |
 |  | AT-031 | Enhancement | Generate interactive roadmap data from `ROADMAP.md` | idea | low | agent:roadmap-next-sync | Avoid maintaining duplicate `ROADMAP_ITEMS` data by hand |
 |  | AT-032 | Security | Roadmap permissions with read/write access controls | idea | medium | user | SA-041: default no roadmap access; `marc@amphletts.uk` write access |
-|  | AT-033 | Security | Remove inline code so CSP can drop `unsafe-inline` | idea | medium | agent:at-019 | SA-020: `assets/roadmap.html` + main app; externalize or nonce/hash |
 
 ### Commercial (placeholder)
 
@@ -236,3 +236,4 @@ No backlog items yet. When planning a public launch, add items here (e.g. subscr
 | 2026-05-17 | Added [Security audit matrix](#security-audit-matrix-sa--roadmap) (SA-001–SA-045 → roadmap action) |
 | 2026-05-17 | Promoted security audit: AT-034–AT-058 backlog; extended AT-030, AT-033, AT-026, AT-022, AT-032 |
 | 2026-05-17 | Delivered AT-036: GitHub `production` environment gate on `deploy-aws.yml` |
+| 2026-05-17 | Delivered AT-033: externalized roadmap page assets; CSP without `unsafe-inline` on main app and roadmap |
