@@ -1193,6 +1193,13 @@ function statusClass(v, type) {
   return fn ? fn(v)[1] : 'c-muted';
 }
 
+function formatLogMetricValue(v, type) {
+  if (v === null || v === undefined) return null;
+  if (type === 'ph' || type === 'kh' || type === 'temp' || type === 'gh') return Number(v).toFixed(1);
+  if (type === 'ca' || type === 'mg') return String(Math.round(v));
+  return v;
+}
+
 // ── Status pills ──
 function updateStatus() {
   if (readings.length > 0) {
