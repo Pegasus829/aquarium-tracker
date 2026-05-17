@@ -66,7 +66,7 @@ Override it with `AUTH_DOMAIN_PREFIX` only if you need a custom Cognito prefix. 
 <prefix>.auth.<region>.amazoncognito.com
 ```
 
-The static frontend first checks the constants in `index.html`, then falls back to `GET /auth/config`. This avoids committing generated Cognito client IDs to the static site.
+The static frontend first checks `config.js` / localhost `config.local.js` (from `.env` via `scripts/generate-local-config.mjs`), then falls back to `GET /auth/config`. This avoids committing generated Cognito client IDs or API keys to the static site.
 
 ## GitHub Actions setup
 

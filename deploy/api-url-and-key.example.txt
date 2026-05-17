@@ -1,0 +1,5 @@
+# Copy to deploy/api-url-and-key.txt (gitignored) for local deploy scripts.
+# Prefer .env at the repo root; scripts/generate-local-config.mjs reads both.
+
+API_BASE_URL=https://your-api-id.execute-api.region.amazonaws.com/prod
+API_KEY=

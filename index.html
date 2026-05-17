@@ -801,14 +801,34 @@ body.profile-open { overflow: hidden; }
 
 <div id="toast"></div>
 
+<script src="config.js"></script>
+<script>
+(function () {
+  var host = location.hostname;
+  if (host === 'localhost' || host === '127.0.0.1' || host === '[::1]') {
+    var s = document.createElement('script');
+    s.src = 'config.local.js';
+    s.async = false;
+    document.currentScript.parentNode.insertBefore(s, document.currentScript.nextSibling);
+  }
+})();
+</script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script>
+function wqtMergedConfig() {
+  return Object.assign(
+    {},
+    window.WQT_CONFIG || {},
+    window.WQT_LOCAL_CONFIG || {},
+  );
+}
+const _wqtCfg = wqtMergedConfig();
 // API Gateway base URL (no trailing slash). Data/auth endpoints require Authorization.
-const API_BASE_URL = 'https://gnewkvhgwd.execute-api.eu-west-1.amazonaws.com/prod';
-// Fill these after running deploy/setup-cognito-auth.sh. When blank, the legacy password gate is used.
-const COGNITO_DOMAIN = '';
-const COGNITO_CLIENT_ID = '';
-const COGNITO_SCOPES = 'openid email profile';
+const API_BASE_URL = (_wqtCfg.apiBaseUrl || '').trim();
+// Fill via .env + scripts/generate-local-config.mjs, or leave blank for GET /auth/config.
+const COGNITO_DOMAIN = (_wqtCfg.cognitoDomain || '').trim();
+const COGNITO_CLIENT_ID = (_wqtCfg.cognitoClientId || '').trim();
+const COGNITO_SCOPES = (_wqtCfg.cognitoScopes || 'openid email profile').trim() || 'openid email profile';
 var authConfig = { domain: COGNITO_DOMAIN, clientId: COGNITO_CLIENT_ID, scopes: COGNITO_SCOPES };
 const TOKEN_STORAGE_KEY = 'wqt_token';
 const ID_TOKEN_STORAGE_KEY = 'wqt_id_token';
@@ -1461,7 +1481,7 @@ async function loadData() {
     sessionStorage.removeItem(ID_TOKEN_STORAGE_KEY);
     document.getElementById('gate').style.display = 'flex';
     document.getElementById('app').style.display = 'none';
-    showToast('Set API_BASE_URL in index.html');
+    showToast('Set WQT_API_BASE_URL in .env and run node scripts/generate-local-config.mjs');
     return;
   }
   setLoadingState(true);
@@ -1620,7 +1640,7 @@ async function unlock(event) {
   const val = input.value;
   if (!val || gateUnlockInFlight) return;
   if (!API_BASE_URL.trim()) {
-    error.textContent = 'Set API_BASE_URL in index.html';
+    error.textContent = 'Set WQT_API_BASE_URL in .env (see .env.example)';
     return;
   }
   error.textContent = '';

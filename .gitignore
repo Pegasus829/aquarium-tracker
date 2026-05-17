@@ -2,6 +2,8 @@ lambda/node_modules/
 lambda/bundle.js
 lambda/bundle.cjs
 lambda/bundle.mjs
+.env
+config.local.js
 deploy/api-url-and-key.txt
 deploy/.jwt_secret_once
 deploy/aquarium-full.zip

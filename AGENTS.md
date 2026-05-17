@@ -15,10 +15,24 @@ python3 -m http.server 8000
 Then open http://localhost:8000/ in a browser.
 Use HTTP (not `file://`) so browser APIs and API requests work correctly.
 
+### Local configuration (AT-027)
+
+Frontend API/Cognito settings live in `config.js` (committed public defaults) and optional `config.local.js` (gitignored, generated from `.env`):
+
+```bash
+cp .env.example .env
+# edit .env as needed
+node scripts/generate-local-config.mjs
+```
+
+On `localhost`, `index.html` loads `config.local.js` when present. Production GitHub Pages uses `config.js` only; Cognito client settings can still be discovered via `GET /auth/config` when left blank.
+
+Legacy `deploy/api-url-and-key.txt` is still read by the generator when `.env` omits values, but API keys are not injected into the browser (JWT-only requests).
+
 ### Authentication
 
 The app is being migrated to Cognito:
-- when `COGNITO_DOMAIN` and `COGNITO_CLIENT_ID` are set in `index.html`, the frontend uses Cognito Hosted UI with authorization-code + PKCE
+- when `COGNITO_DOMAIN` and `COGNITO_CLIENT_ID` are set in `config.js` / `config.local.js`, the frontend uses Cognito Hosted UI with authorization-code + PKCE
 - if those constants are blank, the frontend attempts to discover Cognito settings from public `GET /auth/config`
 - until those values are configured, the legacy password gate remains available via `POST /auth/login`
 - JWTs are stored in `sessionStorage` (`wqt_token`) and sent as `Authorization: Bearer ...`
