@@ -12,7 +12,7 @@ STAGE="${STAGE:-${API_GATEWAY_STAGE:-prod}}"
 LAMBDA_FUNCTION_NAME="${LAMBDA_FUNCTION_NAME:-aquarium-api}"
 TABLE_NAME="${TABLE_NAME:-aquarium-readings}"
 APP_URL="${APP_URL:-https://aquarium.vibeai.software/}"
-AUTH_DOMAIN_PREFIX="${AUTH_DOMAIN_PREFIX:-aquarium-tracker-prod}"
+AUTH_DOMAIN_PREFIX="${AUTH_DOMAIN_PREFIX:-}"
 COGNITO_SCOPES="${COGNITO_SCOPES:-openid email profile}"
 MARC_EMAIL="${MARC_EMAIL:-marc@amphletts.uk}"
 MARC_CURRENT_PASSWORD="${MARC_CURRENT_PASSWORD:-}"
@@ -176,7 +176,13 @@ protect_path_methods() {
 require_tool "$AWS_CLI"
 require_tool node
 
+ACCOUNT_ID="$(aws_cmd sts get-caller-identity --query Account --output text)"
+if [[ -z "$AUTH_DOMAIN_PREFIX" ]]; then
+  AUTH_DOMAIN_PREFIX="${APP_NAME}-${ACCOUNT_ID}-prod"
+fi
+
 echo "Deploying Cognito stack: $STACK_NAME"
+echo "Using Cognito hosted domain prefix: $AUTH_DOMAIN_PREFIX"
 if ! aws_cmd cloudformation deploy \
     --stack-name "$STACK_NAME" \
     --template-file "$TEMPLATE_FILE" \
@@ -193,7 +199,6 @@ USER_POOL_ID="$(stack_output UserPoolId)"
 USER_POOL_ARN="$(stack_output UserPoolArn)"
 USER_POOL_CLIENT_ID="$(stack_output UserPoolClientId)"
 HOSTED_AUTH_DOMAIN="$(stack_output HostedAuthDomain)"
-ACCOUNT_ID="$(aws_cmd sts get-caller-identity --query Account --output text)"
 ROOT_ID="$(get_resource_id /)"
 READINGS_ID="$(get_resource_id /readings)"
 if [[ -z "$ROOT_ID" || "$ROOT_ID" == "None" || -z "$READINGS_ID" || "$READINGS_ID" == "None" ]]; then

@@ -42,6 +42,14 @@ The script:
 7. Optionally copies legacy records into Marc's user namespace.
 8. Sets Lambda `AUTH_MODE=cognito`, `COGNITO_DOMAIN`, `COGNITO_CLIENT_ID`, and `COGNITO_SCOPES`.
 
+By default, the Cognito hosted domain prefix is account-specific:
+
+```text
+aquarium-tracker-<aws-account-id>-prod
+```
+
+Override it with `AUTH_DOMAIN_PREFIX` only if you need a custom Cognito prefix.
+
 The static frontend first checks the constants in `index.html`, then falls back to `GET /auth/config`. This avoids committing generated Cognito client IDs to the static site.
 
 ## GitHub Actions setup
