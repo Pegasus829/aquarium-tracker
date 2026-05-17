@@ -757,11 +757,37 @@ function showSessionExpired() {
   showToast('Session expired — sign in again');
 }
 
+function isPaginatedListPayload(value) {
+  return (
+    value &&
+    typeof value === 'object' &&
+    !Array.isArray(value) &&
+    Array.isArray(value.items)
+  );
+}
+
 async function loadJsonResource(path) {
   const res = await apiFetch(path);
   if (res.status === 401) return { unauthorized: true };
   if (!res.ok) return { ok: false };
-  const data = await res.json();
+  let data = await res.json();
+  if (isPaginatedListPayload(data)) {
+    const items = [...data.items];
+    let nextToken = data.nextToken;
+    while (nextToken) {
+      const sep = path.includes('?') ? '&' : '?';
+      const pagePath =
+        path + sep + 'limit=500&nextToken=' + encodeURIComponent(nextToken);
+      const pageRes = await apiFetch(pagePath);
+      if (pageRes.status === 401) return { unauthorized: true };
+      if (!pageRes.ok) return { ok: false };
+      const page = await pageRes.json();
+      if (!isPaginatedListPayload(page)) return { ok: false };
+      items.push(...page.items);
+      nextToken = page.nextToken;
+    }
+    data = items;
+  }
   return { ok: true, data };
 }
 

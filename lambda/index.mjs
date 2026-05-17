@@ -47,6 +47,15 @@ const SECURITY_HEADERS = {
 const DEFAULT_AVATAR_EMOJI = '👤';
 const AVATAR_EMOJIS = [DEFAULT_AVATAR_EMOJI, '🐠', '🐟', '🐡', '🐙', '🦐'];
 const AVATAR_IMAGE_MAX_CHARS = 220000;
+const DYNAMO_QUERY_PAGE_SIZE = Math.min(
+  Math.max(Number.parseInt(process.env.DYNAMO_QUERY_PAGE_SIZE || '100', 10) || 100, 1),
+  1000
+);
+const MAX_LIST_PAGE_LIMIT = 500;
+const MAX_PARTITION_ITEMS = Math.min(
+  Math.max(Number.parseInt(process.env.MAX_PARTITION_ITEMS || '5000', 10) || 5000, 1),
+  20000
+);
 
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}), {
   marshallOptions: { removeUndefinedValues: true },
@@ -304,6 +313,80 @@ function itemToProfile(item) {
   return normalizeProfile(item);
 }
 
+function encodePageToken(key) {
+  if (!key) return undefined;
+  return Buffer.from(JSON.stringify(key)).toString('base64url');
+}
+
+function decodePageToken(token) {
+  if (!token || typeof token !== 'string') return null;
+  try {
+    const parsed = JSON.parse(Buffer.from(token, 'base64url').toString('utf8'));
+    return parsed && typeof parsed === 'object' ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function listQueryParams(event) {
+  const q = event.queryStringParameters || {};
+  const wantsPage = q.limit != null || q.nextToken != null;
+  const limitRaw = q.limit != null ? Number.parseInt(String(q.limit), 10) : DYNAMO_QUERY_PAGE_SIZE;
+  const limit = Number.isFinite(limitRaw)
+    ? Math.min(Math.max(limitRaw, 1), MAX_LIST_PAGE_LIMIT)
+    : DYNAMO_QUERY_PAGE_SIZE;
+  return { wantsPage, limit, nextToken: q.nextToken || undefined };
+}
+
+async function queryPartitionPage(partitionKey, { limit, exclusiveStartKey } = {}) {
+  const out = await ddb.send(
+    new QueryCommand({
+      TableName: TABLE_NAME,
+      KeyConditionExpression: '#t = :pk',
+      ExpressionAttributeNames: { '#t': 'type' },
+      ExpressionAttributeValues: { ':pk': partitionKey },
+      Limit: limit,
+      ExclusiveStartKey: exclusiveStartKey,
+    })
+  );
+  return {
+    items: out.Items || [],
+    nextToken: encodePageToken(out.LastEvaluatedKey),
+  };
+}
+
+async function queryPartitionAll(partitionKey) {
+  const items = [];
+  let exclusiveStartKey;
+  do {
+    const page = await queryPartitionPage(partitionKey, {
+      limit: DYNAMO_QUERY_PAGE_SIZE,
+      exclusiveStartKey,
+    });
+    items.push(...page.items);
+    if (items.length > MAX_PARTITION_ITEMS) {
+      const err = new Error('partition_item_limit');
+      err.code = 'partition_item_limit';
+      throw err;
+    }
+    exclusiveStartKey = page.nextToken ? decodePageToken(page.nextToken) : undefined;
+  } while (exclusiveStartKey);
+  return items;
+}
+
+async function queryPartition(partitionKey, event) {
+  const { wantsPage, limit, nextToken } = listQueryParams(event);
+  if (!wantsPage) {
+    return { mode: 'all', items: await queryPartitionAll(partitionKey) };
+  }
+  const exclusiveStartKey = nextToken ? decodePageToken(nextToken) : undefined;
+  if (nextToken && !exclusiveStartKey) {
+    return { mode: 'error', error: 'invalid_next_token' };
+  }
+  const page = await queryPartitionPage(partitionKey, { limit, exclusiveStartKey });
+  return { mode: 'page', items: page.items, nextToken: page.nextToken };
+}
+
 export async function handler(event) {
   const method = event.httpMethod;
   const resource = event.resource || '';
@@ -353,19 +436,15 @@ export async function handler(event) {
 
   try {
     if (resource === '/readings' && method === 'GET') {
-      const out = await ddb.send(
-        new QueryCommand({
-          TableName: TABLE_NAME,
-          KeyConditionExpression: '#t = :tank',
-          ExpressionAttributeNames: { '#t': 'type' },
-          ExpressionAttributeValues: { ':tank': dataTypeFor(user, 'tank') },
-        })
-      );
-      return json(
-        200,
-        (out.Items || []).map((item) => itemToClientItem(item, 'tank')),
-        event
-      );
+      const listed = await queryPartition(dataTypeFor(user, 'tank'), event);
+      if (listed.mode === 'error') {
+        return json(400, { error: 'Invalid nextToken' }, event);
+      }
+      const items = listed.items.map((item) => itemToClientItem(item, 'tank'));
+      if (listed.mode === 'page') {
+        return json(200, { items, nextToken: listed.nextToken }, event);
+      }
+      return json(200, items, event);
     }
 
     if (resource === '/readings' && method === 'POST') {
@@ -403,19 +482,15 @@ export async function handler(event) {
     }
 
     if (resource === '/tap' && method === 'GET') {
-      const out = await ddb.send(
-        new QueryCommand({
-          TableName: TABLE_NAME,
-          KeyConditionExpression: '#t = :tap',
-          ExpressionAttributeNames: { '#t': 'type' },
-          ExpressionAttributeValues: { ':tap': dataTypeFor(user, 'tap') },
-        })
-      );
-      return json(
-        200,
-        (out.Items || []).map((item) => itemToClientItem(item, 'tap')),
-        event
-      );
+      const listed = await queryPartition(dataTypeFor(user, 'tap'), event);
+      if (listed.mode === 'error') {
+        return json(400, { error: 'Invalid nextToken' }, event);
+      }
+      const items = listed.items.map((item) => itemToClientItem(item, 'tap'));
+      if (listed.mode === 'page') {
+        return json(200, { items, nextToken: listed.nextToken }, event);
+      }
+      return json(200, items, event);
     }
 
     if (resource === '/tap' && method === 'POST') {
@@ -453,15 +528,21 @@ export async function handler(event) {
     }
 
     if (resource === '/profile' && method === 'GET') {
-      const out = await ddb.send(
-        new QueryCommand({
-          TableName: TABLE_NAME,
-          KeyConditionExpression: '#t = :profileType',
-          ExpressionAttributeNames: { '#t': 'type' },
-          ExpressionAttributeValues: { ':profileType': dataTypeFor(user, 'profile') },
-        })
-      );
-      const found = (out.Items || []).find((x) => x.id === 'default') || (out.Items || [])[0];
+      const listed = await queryPartition(dataTypeFor(user, 'profile'), event);
+      if (listed.mode === 'error') {
+        return json(400, { error: 'Invalid nextToken' }, event);
+      }
+      if (listed.mode === 'page') {
+        return json(
+          200,
+          {
+            items: listed.items.map((item) => itemToProfile(item)),
+            nextToken: listed.nextToken,
+          },
+          event
+        );
+      }
+      const found = listed.items.find((x) => x.id === 'default') || listed.items[0];
       return json(200, itemToProfile(found), event);
     }
 
@@ -475,6 +556,9 @@ export async function handler(event) {
 
     return json(404, { error: 'Not found' }, event);
   } catch (e) {
+    if (e?.code === 'partition_item_limit') {
+      return json(413, { error: 'Too many items in partition' }, event);
+    }
     console.error(e);
     return json(500, { error: 'Server error' }, event);
   }
