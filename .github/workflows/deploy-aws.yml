@@ -3,7 +3,7 @@ name: Deploy to AWS (OIDC)
 on:
   workflow_dispatch:
     inputs:
-      enable_cognito_setup:
+      enable_cognito_setup: true
         description: "Create/update Cognito, API Gateway authorizer, and Lambda auth config"
         required: false
         default: "false"
@@ -11,7 +11,7 @@ on:
         options:
           - "false"
           - "true"
-      run_legacy_migration:
+      run_legacy_migration: true
         description: "Copy legacy shared readings/profile into Marc's Cognito user namespace"
         required: false
         default: "false"
