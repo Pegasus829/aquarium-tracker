@@ -9,6 +9,7 @@ This repo now supports a Cognito-first authenticated-user architecture while ret
 - Email/password sign-in enabled.
 - Passkeys enabled with `WEB_AUTHN` as an allowed first factor.
 - API Gateway REST API methods protected by a Cognito user-pool authorizer.
+- Browser requests use `Authorization: Bearer ...` only; the static frontend does not ship an API Gateway usage-plan key.
 - Lambda reads the authenticated user from API Gateway claims.
 - DynamoDB records are copied into user-scoped partitions:
 
@@ -38,9 +39,20 @@ The script:
 3. Sets Marc's permanent password when `MARC_CURRENT_PASSWORD` is provided.
 4. Creates/reuses an API Gateway Cognito authorizer.
 5. Protects the existing `/readings`, `/tap`, and `/profile` methods.
-6. Creates public `GET /auth/config` so the static frontend can discover Cognito settings at runtime.
-7. Optionally copies legacy records into Marc's user namespace.
-8. Sets Lambda `AUTH_MODE=cognito`, `COGNITO_DOMAIN`, `COGNITO_CLIENT_ID`, and `COGNITO_SCOPES`.
+6. Clears `apiKeyRequired` on protected methods and legacy `POST /auth/login`.
+7. Creates public `GET /auth/config` so the static frontend can discover Cognito settings at runtime.
+8. Optionally copies legacy records into Marc's user namespace.
+9. Sets Lambda `AUTH_MODE=cognito`, `COGNITO_DOMAIN`, `COGNITO_CLIENT_ID`, and `COGNITO_SCOPES`.
+
+## Removing the legacy browser API key requirement
+
+AT-021 removes the committed `API_KEY` from `index.html`. If an existing REST API stage still has `apiKeyRequired=true` on app routes, clear it and deploy the stage:
+
+```bash
+DEPLOY_STAGE=1 deploy/disable-api-key-requirement.sh
+```
+
+The GitHub Actions deploy workflow also runs this script before creating its API Gateway deployment. API Gateway API keys are suitable for usage-plan metering of trusted clients, but they are not an authorization mechanism for public browser code.
 
 By default, the Cognito hosted domain prefix is account-specific:
 

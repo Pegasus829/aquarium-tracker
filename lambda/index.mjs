@@ -19,7 +19,7 @@ const LEGACY_USER_SUB = process.env.LEGACY_USER_SUB || 'legacy-aquarium';
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': 'https://aquarium.vibeai.software',
-  'Access-Control-Allow-Headers': 'Content-Type,Authorization,x-api-key',
+  'Access-Control-Allow-Headers': 'Content-Type,Authorization',
   'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
 };
 const DEFAULT_AVATAR_EMOJI = '👤';

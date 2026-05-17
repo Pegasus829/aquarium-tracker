@@ -101,6 +101,9 @@ jobs:
           fi
           deploy/setup-cognito-auth.sh
 
+      - name: Disable browser API key requirement
+        run: deploy/disable-api-key-requirement.sh
+
       - name: Deploy API Gateway stage
         run: |
           aws apigateway create-deployment \

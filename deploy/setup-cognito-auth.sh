@@ -143,7 +143,7 @@ put_options_method() {
     --resource-id "$resource_id" \
     --http-method OPTIONS \
     --status-code 200 \
-    --response-parameters "{\"method.response.header.Access-Control-Allow-Headers\":\"'Content-Type,Authorization,x-api-key'\",\"method.response.header.Access-Control-Allow-Methods\":\"'${allow_methods}'\",\"method.response.header.Access-Control-Allow-Origin\":\"'${APP_URL%/}'\"}" >/dev/null
+    --response-parameters "{\"method.response.header.Access-Control-Allow-Headers\":\"'Content-Type,Authorization'\",\"method.response.header.Access-Control-Allow-Methods\":\"'${allow_methods}'\",\"method.response.header.Access-Control-Allow-Origin\":\"'${APP_URL%/}'\"}" >/dev/null
 }
 
 put_method_auth() {
@@ -155,7 +155,38 @@ put_method_auth() {
     --http-method "$method" \
     --patch-operations \
       op=replace,path=/authorizationType,value=COGNITO_USER_POOLS \
-      op=replace,path=/authorizerId,value="$AUTHORIZER_ID" >/dev/null
+      op=replace,path=/authorizerId,value="$AUTHORIZER_ID" \
+      op=replace,path=/apiKeyRequired,value=false >/dev/null
+}
+
+clear_method_api_key_requirement() {
+  local resource_id="$1"
+  local method="$2"
+  aws_cmd apigateway update-method \
+    --rest-api-id "$API_ID" \
+    --resource-id "$resource_id" \
+    --http-method "$method" \
+    --patch-operations op=replace,path=/apiKeyRequired,value=false >/dev/null
+}
+
+clear_path_method_api_key_requirement() {
+  local path="$1"
+  local method="$2"
+  local resource_id
+  resource_id="$(get_resource_id "$path")"
+  if [[ -z "$resource_id" || "$resource_id" == "None" ]]; then
+    echo "Skipping $method $path because the API resource does not exist"
+    return
+  fi
+  if ! aws_cmd apigateway get-method \
+    --rest-api-id "$API_ID" \
+    --resource-id "$resource_id" \
+    --http-method "$method" >/dev/null 2>&1; then
+    echo "Skipping $method $path because the method does not exist"
+    return
+  fi
+  echo "Removing API key requirement from $method $path"
+  clear_method_api_key_requirement "$resource_id" "$method"
 }
 
 protect_path_methods() {
@@ -269,6 +300,7 @@ protect_path_methods '/readings/{id}' PUT DELETE
 protect_path_methods /tap GET POST
 protect_path_methods '/tap/{id}' PUT DELETE
 protect_path_methods /profile GET PUT
+clear_path_method_api_key_requirement /auth/login POST
 
 AUTH_ID="$(ensure_child_resource "$ROOT_ID" auth /auth)"
 AUTH_CONFIG_ID="$(ensure_child_resource "$AUTH_ID" config /auth/config)"

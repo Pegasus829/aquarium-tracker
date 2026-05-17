@@ -801,10 +801,8 @@ body.profile-open { overflow: hidden; }
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script>
-// API Gateway base URL (no trailing slash). Data requires a JWT (Authorization: Bearer).
+// API Gateway base URL (no trailing slash). Data/auth endpoints require Authorization.
 const API_BASE_URL = 'https://gnewkvhgwd.execute-api.eu-west-1.amazonaws.com/prod';
-// Usage plan requires this header on protected routes. It is not a secret in a browser app.
-const API_KEY = '8lpMzm6DCL1dgipDrSaJs4LGozq0X64a3QGwMgfU';
 // Fill these after running deploy/setup-cognito-auth.sh. When blank, the legacy password gate is used.
 const COGNITO_DOMAIN = '';
 const COGNITO_CLIENT_ID = '';
@@ -1245,9 +1243,7 @@ async function loadAuthConfig() {
   };
   if (isCognitoConfigured() || !API_BASE_URL.trim()) return;
   try {
-    const headers = {};
-    if (API_KEY.trim()) headers['x-api-key'] = API_KEY.trim();
-    const res = await fetch(API_BASE_URL + '/auth/config', { headers });
+    const res = await fetch(API_BASE_URL + '/auth/config');
     if (!res.ok) return;
     const data = await res.json();
     const cognito = data?.cognito || {};
@@ -1383,13 +1379,11 @@ function getValidToken() {
 
 function apiFetch(path, options = {}) {
   const token = sessionStorage.getItem(TOKEN_STORAGE_KEY);
-  const key = API_KEY.trim();
   return fetch(API_BASE_URL + path, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
       ...(token ? { Authorization: 'Bearer ' + token } : {}),
-      ...(key ? { 'x-api-key': key } : {}),
       ...(options.headers ?? {}),
     },
   });
@@ -1631,11 +1625,9 @@ async function unlock(event) {
   gateUnlockInFlight = true;
   setGateSubmitting(true);
   try {
-    const loginHeaders = { 'Content-Type': 'application/json' };
-    if (API_KEY.trim()) loginHeaders['x-api-key'] = API_KEY.trim();
     const res = await fetch(API_BASE_URL + '/auth/login', {
       method: 'POST',
-      headers: loginHeaders,
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ password: val }),
     });
     const data = await res.json().catch(() => ({}));
