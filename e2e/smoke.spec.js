@@ -41,7 +41,10 @@ test.describe('smoke', () => {
     );
 
     const token = await loginForToken(request);
-    test.skip(!token, 'WQT_E2E_PASSWORD is not valid for POST /auth/login');
+    expect(
+      token,
+      'WQT_E2E_PASSWORD must be the Aquarium Tracker gate password (POST /auth/login)'
+    ).toBeTruthy();
   });
 
   test('login, add tank reading, and render pH chart', async ({ page, request }) => {

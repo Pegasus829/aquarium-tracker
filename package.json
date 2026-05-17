@@ -7,10 +7,11 @@
     "lint:js": "eslint .",
     "lint:html": "html-validate index.html assets/roadmap.html",
     "lint:fix": "eslint . --fix",
-    "format": "prettier --write index.html assets/app.js assets/app.css config.js assets/config-local-loader.js lambda/index.mjs lambda/migrate-legacy-data.mjs scripts/generate-local-config.mjs eslint.config.js playwright.config.js e2e/**/*.js package.json .github/workflows/lint.yml .github/workflows/e2e.yml",
-    "format:check": "prettier --check index.html assets/app.js assets/app.css config.js assets/config-local-loader.js lambda/index.mjs lambda/migrate-legacy-data.mjs scripts/generate-local-config.mjs eslint.config.js playwright.config.js e2e/**/*.js package.json .github/workflows/lint.yml .github/workflows/e2e.yml",
+    "format": "prettier --write index.html assets/app.js assets/app.css config.js assets/config-local-loader.js lambda/index.mjs lambda/migrate-legacy-data.mjs scripts/generate-local-config.mjs scripts/verify-e2e-password.mjs eslint.config.js playwright.config.js e2e/**/*.js package.json .github/workflows/lint.yml .github/workflows/e2e.yml",
+    "format:check": "prettier --check index.html assets/app.js assets/app.css config.js assets/config-local-loader.js lambda/index.mjs lambda/migrate-legacy-data.mjs scripts/generate-local-config.mjs scripts/verify-e2e-password.mjs eslint.config.js playwright.config.js e2e/**/*.js package.json .github/workflows/lint.yml .github/workflows/e2e.yml",
     "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:verify-password": "node scripts/verify-e2e-password.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.52.0",
