@@ -100,8 +100,7 @@ function getBearer(event) {
 
 function requireAuth(event) {
   const claims =
-    event.requestContext?.authorizer?.claims ??
-    event.requestContext?.authorizer?.jwt?.claims;
+    event.requestContext?.authorizer?.claims ?? event.requestContext?.authorizer?.jwt?.claims;
   if (claims?.sub) {
     return {
       user: {
@@ -150,7 +149,9 @@ function attachOwner(item, user, kind) {
 
 function itemToClientItem(item, kind) {
   if (!item || typeof item !== 'object') return item;
-  const { ownerSub, ownerEmail, ...rest } = item;
+  const rest = { ...item };
+  delete rest.ownerSub;
+  delete rest.ownerEmail;
   return { ...rest, type: kind };
 }
 
@@ -217,9 +218,11 @@ function sanitizeRange(raw, fallback, minCap, maxCap) {
 }
 
 function isSafeAvatarImageDataUrl(value) {
-  return typeof value === 'string'
-    && value.length <= AVATAR_IMAGE_MAX_CHARS
-    && /^data:image\/(?:png|jpe?g|webp);base64,[A-Za-z0-9+/=]+$/.test(value);
+  return (
+    typeof value === 'string' &&
+    value.length <= AVATAR_IMAGE_MAX_CHARS &&
+    /^data:image\/(?:png|jpe?g|webp);base64,[A-Za-z0-9+/=]+$/.test(value)
+  );
 }
 
 function normalizeAvatar(raw = {}) {
@@ -234,13 +237,24 @@ function normalizeAvatar(raw = {}) {
 
 function normalizeProfile(raw = {}) {
   return {
-    userName: typeof raw.userName === 'string' && raw.userName.trim() ? raw.userName.trim() : DEFAULT_PROFILE.userName,
-    aquariumName: typeof raw.aquariumName === 'string' && raw.aquariumName.trim() ? raw.aquariumName.trim() : DEFAULT_PROFILE.aquariumName,
-    aquariumSize: Number.isFinite(Number(raw.aquariumSize)) ? Number(raw.aquariumSize) : DEFAULT_PROFILE.aquariumSize,
+    userName:
+      typeof raw.userName === 'string' && raw.userName.trim()
+        ? raw.userName.trim()
+        : DEFAULT_PROFILE.userName,
+    aquariumName:
+      typeof raw.aquariumName === 'string' && raw.aquariumName.trim()
+        ? raw.aquariumName.trim()
+        : DEFAULT_PROFILE.aquariumName,
+    aquariumSize: Number.isFinite(Number(raw.aquariumSize))
+      ? Number(raw.aquariumSize)
+      : DEFAULT_PROFILE.aquariumSize,
     aquariumUnits: raw.aquariumUnits === 'gallons' ? 'gallons' : 'litres',
     avatar: normalizeAvatar(raw.avatar),
     settings: {
-      trackTapWater: typeof raw.settings?.trackTapWater === 'boolean' ? raw.settings.trackTapWater : DEFAULT_PROFILE.settings.trackTapWater,
+      trackTapWater:
+        typeof raw.settings?.trackTapWater === 'boolean'
+          ? raw.settings.trackTapWater
+          : DEFAULT_PROFILE.settings.trackTapWater,
     },
     safeZones: {
       kh: sanitizeRange(raw.safeZones?.kh, DEFAULT_PROFILE.safeZones.kh, 0, 30),
@@ -253,12 +267,16 @@ function normalizeProfile(raw = {}) {
 }
 
 function profileToItem(profile, user) {
-  return attachOwner({
-    type: 'profile',
-    id: 'default',
-    ...normalizeProfile(profile),
-    updatedAt: new Date().toISOString(),
-  }, user, 'profile');
+  return attachOwner(
+    {
+      type: 'profile',
+      id: 'default',
+      ...normalizeProfile(profile),
+      updatedAt: new Date().toISOString(),
+    },
+    user,
+    'profile'
+  );
 }
 
 function itemToProfile(item) {
@@ -317,9 +335,12 @@ export async function handler(event) {
           KeyConditionExpression: '#t = :tank',
           ExpressionAttributeNames: { '#t': 'type' },
           ExpressionAttributeValues: { ':tank': dataTypeFor(user, 'tank') },
-        }),
+        })
       );
-      return json(200, (out.Items || []).map((item) => itemToClientItem(item, 'tank')));
+      return json(
+        200,
+        (out.Items || []).map((item) => itemToClientItem(item, 'tank'))
+      );
     }
 
     if (resource === '/readings' && method === 'POST') {
@@ -351,7 +372,7 @@ export async function handler(event) {
         new DeleteCommand({
           TableName: TABLE_NAME,
           Key: { type: dataTypeFor(user, 'tank'), id },
-        }),
+        })
       );
       return json(204, '');
     }
@@ -363,9 +384,12 @@ export async function handler(event) {
           KeyConditionExpression: '#t = :tap',
           ExpressionAttributeNames: { '#t': 'type' },
           ExpressionAttributeValues: { ':tap': dataTypeFor(user, 'tap') },
-        }),
+        })
       );
-      return json(200, (out.Items || []).map((item) => itemToClientItem(item, 'tap')));
+      return json(
+        200,
+        (out.Items || []).map((item) => itemToClientItem(item, 'tap'))
+      );
     }
 
     if (resource === '/tap' && method === 'POST') {
@@ -397,7 +421,7 @@ export async function handler(event) {
         new DeleteCommand({
           TableName: TABLE_NAME,
           Key: { type: dataTypeFor(user, 'tap'), id },
-        }),
+        })
       );
       return json(204, '');
     }
@@ -409,7 +433,7 @@ export async function handler(event) {
           KeyConditionExpression: '#t = :profileType',
           ExpressionAttributeNames: { '#t': 'type' },
           ExpressionAttributeValues: { ':profileType': dataTypeFor(user, 'profile') },
-        }),
+        })
       );
       const found = (out.Items || []).find((x) => x.id === 'default') || (out.Items || [])[0];
       return json(200, itemToProfile(found));

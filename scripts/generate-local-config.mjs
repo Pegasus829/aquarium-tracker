@@ -58,7 +58,7 @@ const cognitoScopes =
 
 if (!apiBaseUrl && !cognitoDomain && !cognitoClientId) {
   console.error(
-    'No local config found. Copy .env.example to .env or deploy/api-url-and-key.example.txt to deploy/api-url-and-key.txt, then set at least WQT_API_BASE_URL.',
+    'No local config found. Copy .env.example to .env or deploy/api-url-and-key.example.txt to deploy/api-url-and-key.txt, then set at least WQT_API_BASE_URL.'
   );
   process.exit(1);
 }
@@ -66,7 +66,7 @@ if (!apiBaseUrl && !cognitoDomain && !cognitoClientId) {
 const legacyApiKey = pick(merged, 'API_KEY');
 if (legacyApiKey) {
   console.warn(
-    'Note: API_KEY in .env / api-url-and-key.txt is ignored for the browser (JWT-only). Remove it from those files when no longer needed for deploy scripts.',
+    'Note: API_KEY in .env / api-url-and-key.txt is ignored for the browser (JWT-only). Remove it from those files when no longer needed for deploy scripts.'
   );
 }
 
@@ -87,7 +87,7 @@ if (apiBaseUrl) {
     const defaultOrigin = 'https://gnewkvhgwd.execute-api.eu-west-1.amazonaws.com';
     if (origin !== defaultOrigin) {
       console.warn(
-        `Custom API host ${origin}: add it to the Content-Security-Policy connect-src in index.html if requests are blocked.`,
+        `Custom API host ${origin}: add it to the Content-Security-Policy connect-src in index.html if requests are blocked.`
       );
     }
   } catch {

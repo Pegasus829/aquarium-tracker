@@ -1,0 +1,9 @@
+node_modules/
+lambda/node_modules/
+lambda/bundle.js
+lambda/package-lock.json
+package-lock.json
+config.local.js
+deploy/
+**/* 2.html
+lambda/* 2.mjs

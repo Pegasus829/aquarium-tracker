@@ -1,9 +1,5 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import {
-  DynamoDBDocumentClient,
-  QueryCommand,
-  PutCommand,
-} from '@aws-sdk/lib-dynamodb';
+import { DynamoDBDocumentClient, QueryCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
 
 const TABLE_NAME = process.env.TABLE_NAME || 'aquarium-readings';
 const COGNITO_USER_SUB = process.env.COGNITO_USER_SUB;
@@ -23,13 +19,15 @@ async function queryLegacyItems(type) {
   const items = [];
   let ExclusiveStartKey;
   do {
-    const out = await ddb.send(new QueryCommand({
-      TableName: TABLE_NAME,
-      KeyConditionExpression: '#t = :type',
-      ExpressionAttributeNames: { '#t': 'type' },
-      ExpressionAttributeValues: { ':type': type },
-      ExclusiveStartKey,
-    }));
+    const out = await ddb.send(
+      new QueryCommand({
+        TableName: TABLE_NAME,
+        KeyConditionExpression: '#t = :type',
+        ExpressionAttributeNames: { '#t': 'type' },
+        ExpressionAttributeValues: { ':type': type },
+        ExclusiveStartKey,
+      })
+    );
     items.push(...(out.Items || []));
     ExclusiveStartKey = out.LastEvaluatedKey;
   } while (ExclusiveStartKey);
@@ -56,4 +54,6 @@ for (const type of LEGACY_TYPES) {
   await migrateType(type);
 }
 
-console.log(`Migration complete for USER#${COGNITO_USER_SUB}. Legacy records were copied, not deleted.`);
+console.log(
+  `Migration complete for USER#${COGNITO_USER_SUB}. Legacy records were copied, not deleted.`
+);

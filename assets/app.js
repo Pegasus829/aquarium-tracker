@@ -42,20 +42,28 @@ function wireAppEventListeners() {
   });
   document.getElementById('profileAvatarFile')?.addEventListener('change', handleAvatarUpload);
   document.querySelector('.profile-logout-btn')?.addEventListener('click', logOut);
-  document.querySelector('#confirmModal .modal-btn-secondary')?.addEventListener('click', closeConfirmModal);
-  document.getElementById('confirmModalConfirmBtn')?.addEventListener('click', runConfirmModalAction);
-  document.querySelector('#editTankModal .modal-btn-secondary')?.addEventListener('click', closeEditTankModal);
-  document.querySelector('#editTankModal .modal-btn-primary')?.addEventListener('click', saveEditTankReading);
-  document.querySelector('#editTapModal .modal-btn-secondary')?.addEventListener('click', closeEditTapModal);
-  document.querySelector('#editTapModal .modal-btn-primary')?.addEventListener('click', saveEditTapReading);
+  document
+    .querySelector('#confirmModal .modal-btn-secondary')
+    ?.addEventListener('click', closeConfirmModal);
+  document
+    .getElementById('confirmModalConfirmBtn')
+    ?.addEventListener('click', runConfirmModalAction);
+  document
+    .querySelector('#editTankModal .modal-btn-secondary')
+    ?.addEventListener('click', closeEditTankModal);
+  document
+    .querySelector('#editTankModal .modal-btn-primary')
+    ?.addEventListener('click', saveEditTankReading);
+  document
+    .querySelector('#editTapModal .modal-btn-secondary')
+    ?.addEventListener('click', closeEditTapModal);
+  document
+    .querySelector('#editTapModal .modal-btn-primary')
+    ?.addEventListener('click', saveEditTapReading);
 }
 
 function wqtMergedConfig() {
-  return Object.assign(
-    {},
-    window.WQT_CONFIG || {},
-    window.WQT_LOCAL_CONFIG || {},
-  );
+  return Object.assign({}, window.WQT_CONFIG || {}, window.WQT_LOCAL_CONFIG || {});
 }
 const _wqtCfg = wqtMergedConfig();
 // API Gateway base URL (no trailing slash). Data/auth endpoints require Authorization.
@@ -63,7 +71,8 @@ const API_BASE_URL = (_wqtCfg.apiBaseUrl || '').trim();
 // Fill via .env + scripts/generate-local-config.mjs, or leave blank for GET /auth/config.
 const COGNITO_DOMAIN = (_wqtCfg.cognitoDomain || '').trim();
 const COGNITO_CLIENT_ID = (_wqtCfg.cognitoClientId || '').trim();
-const COGNITO_SCOPES = (_wqtCfg.cognitoScopes || 'openid email profile').trim() || 'openid email profile';
+const COGNITO_SCOPES =
+  (_wqtCfg.cognitoScopes || 'openid email profile').trim() || 'openid email profile';
 var authConfig = { domain: COGNITO_DOMAIN, clientId: COGNITO_CLIENT_ID, scopes: COGNITO_SCOPES };
 const TOKEN_STORAGE_KEY = 'wqt_token';
 const ID_TOKEN_STORAGE_KEY = 'wqt_id_token';
@@ -104,9 +113,11 @@ function sanitizeRange(raw, fallback, minCap, maxCap) {
 }
 
 function isSafeAvatarImageDataUrl(value) {
-  return typeof value === 'string'
-    && value.length <= AVATAR_IMAGE_MAX_CHARS
-    && /^data:image\/(?:png|jpe?g|webp);base64,[A-Za-z0-9+/=]+$/.test(value);
+  return (
+    typeof value === 'string' &&
+    value.length <= AVATAR_IMAGE_MAX_CHARS &&
+    /^data:image\/(?:png|jpe?g|webp);base64,[A-Za-z0-9+/=]+$/.test(value)
+  );
 }
 
 function normalizeAvatar(raw = {}) {
@@ -122,13 +133,24 @@ function normalizeAvatar(raw = {}) {
 function normalizeProfile(raw = {}) {
   const defaults = defaultProfile();
   return {
-    userName: typeof raw.userName === 'string' && raw.userName.trim() ? raw.userName.trim() : defaults.userName,
-    aquariumName: typeof raw.aquariumName === 'string' && raw.aquariumName.trim() ? raw.aquariumName.trim() : defaults.aquariumName,
-    aquariumSize: Number.isFinite(Number(raw.aquariumSize)) ? Number(raw.aquariumSize) : defaults.aquariumSize,
+    userName:
+      typeof raw.userName === 'string' && raw.userName.trim()
+        ? raw.userName.trim()
+        : defaults.userName,
+    aquariumName:
+      typeof raw.aquariumName === 'string' && raw.aquariumName.trim()
+        ? raw.aquariumName.trim()
+        : defaults.aquariumName,
+    aquariumSize: Number.isFinite(Number(raw.aquariumSize))
+      ? Number(raw.aquariumSize)
+      : defaults.aquariumSize,
     aquariumUnits: raw.aquariumUnits === 'gallons' ? 'gallons' : 'litres',
     avatar: normalizeAvatar(raw.avatar),
     settings: {
-      trackTapWater: typeof raw.settings?.trackTapWater === 'boolean' ? raw.settings.trackTapWater : defaults.settings.trackTapWater,
+      trackTapWater:
+        typeof raw.settings?.trackTapWater === 'boolean'
+          ? raw.settings.trackTapWater
+          : defaults.settings.trackTapWater,
     },
     safeZones: {
       kh: sanitizeRange(raw.safeZones?.kh, defaults.safeZones.kh, 0, 30),
@@ -196,23 +218,27 @@ function updateChartRangeLabels() {
   const no3Warn = getNo3WarningRange(no3);
 
   const rangeKh = document.getElementById('range-kh');
-  if (rangeKh) rangeKh.textContent = `Target: ${formatRangeValue(kh.min, 1)}-${formatRangeValue(kh.max, 1)} dKH`;
+  if (rangeKh)
+    rangeKh.textContent = `Target: ${formatRangeValue(kh.min, 1)}-${formatRangeValue(kh.max, 1)} dKH`;
 
   const rangePh = document.getElementById('range-ph');
-  if (rangePh) rangePh.textContent = `Target: ${formatRangeValue(ph.min, 1)}-${formatRangeValue(ph.max, 1)}`;
+  if (rangePh)
+    rangePh.textContent = `Target: ${formatRangeValue(ph.min, 1)}-${formatRangeValue(ph.max, 1)}`;
 
   const rangeNh3 = document.getElementById('range-nh3');
   if (rangeNh3) {
-    rangeNh3.textContent = nh3.min === 0 && nh3.max === 0
-      ? 'Target: 0 ppm'
-      : `Safe: ${formatRangeValue(nh3.min)}-${formatRangeValue(nh3.max)} ppm`;
+    rangeNh3.textContent =
+      nh3.min === 0 && nh3.max === 0
+        ? 'Target: 0 ppm'
+        : `Safe: ${formatRangeValue(nh3.min)}-${formatRangeValue(nh3.max)} ppm`;
   }
 
   const rangeNo2 = document.getElementById('range-no2');
   if (rangeNo2) {
-    rangeNo2.textContent = no2.min === 0 && no2.max === 0
-      ? 'Target: 0 ppm'
-      : `Safe: ${formatRangeValue(no2.min)}-${formatRangeValue(no2.max)} ppm`;
+    rangeNo2.textContent =
+      no2.min === 0 && no2.max === 0
+        ? 'Target: 0 ppm'
+        : `Safe: ${formatRangeValue(no2.min)}-${formatRangeValue(no2.max)} ppm`;
   }
 
   const rangeNo3 = document.getElementById('range-no3');
@@ -223,7 +249,9 @@ function updateChartRangeLabels() {
 
 function updateHeaderMeta() {
   const unitLabel = profile.aquariumUnits === 'gallons' ? 'gal' : 'L';
-  const size = Number.isFinite(profile.aquariumSize) ? formatRangeValue(profile.aquariumSize, 1) : '';
+  const size = Number.isFinite(profile.aquariumSize)
+    ? formatRangeValue(profile.aquariumSize, 1)
+    : '';
   const subtitle = `${profile.aquariumName} · ${size}${unitLabel === 'L' ? 'L' : ` ${unitLabel}`}`;
   const gateSub = document.getElementById('gateSub');
   if (gateSub) gateSub.textContent = subtitle;
@@ -403,7 +431,7 @@ async function resizeAvatarImage(file) {
     0,
     0,
     outputSize,
-    outputSize,
+    outputSize
   );
 
   const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
@@ -443,23 +471,42 @@ async function handleAvatarUpload(event) {
 async function saveProfile() {
   const nextProfile = {
     userName: document.getElementById('profileUserName').value.trim() || profile.userName,
-    aquariumName: document.getElementById('profileAquariumName').value.trim() || profile.aquariumName,
+    aquariumName:
+      document.getElementById('profileAquariumName').value.trim() || profile.aquariumName,
     aquariumSize: Number(document.getElementById('profileAquariumSize').value),
-    aquariumUnits: document.getElementById('profileAquariumUnits').value === 'gallons' ? 'gallons' : 'litres',
+    aquariumUnits:
+      document.getElementById('profileAquariumUnits').value === 'gallons' ? 'gallons' : 'litres',
     avatar: normalizeAvatar(profileAvatarDraft || profile.avatar),
     safeZones: {
-      kh: { min: Number(document.getElementById('profileSafeKhMin').value), max: Number(document.getElementById('profileSafeKhMax').value) },
-      ph: { min: Number(document.getElementById('profileSafePhMin').value), max: Number(document.getElementById('profileSafePhMax').value) },
-      nh3: { min: Number(document.getElementById('profileSafeNh3Min').value), max: Number(document.getElementById('profileSafeNh3Max').value) },
-      no2: { min: Number(document.getElementById('profileSafeNo2Min').value), max: Number(document.getElementById('profileSafeNo2Max').value) },
-      no3: { min: Number(document.getElementById('profileSafeNo3Min').value), max: Number(document.getElementById('profileSafeNo3Max').value) },
+      kh: {
+        min: Number(document.getElementById('profileSafeKhMin').value),
+        max: Number(document.getElementById('profileSafeKhMax').value),
+      },
+      ph: {
+        min: Number(document.getElementById('profileSafePhMin').value),
+        max: Number(document.getElementById('profileSafePhMax').value),
+      },
+      nh3: {
+        min: Number(document.getElementById('profileSafeNh3Min').value),
+        max: Number(document.getElementById('profileSafeNh3Max').value),
+      },
+      no2: {
+        min: Number(document.getElementById('profileSafeNo2Min').value),
+        max: Number(document.getElementById('profileSafeNo2Max').value),
+      },
+      no3: {
+        min: Number(document.getElementById('profileSafeNo3Min').value),
+        max: Number(document.getElementById('profileSafeNo3Max').value),
+      },
     },
   };
   const defaults = defaultProfile();
   profile = {
     userName: nextProfile.userName,
     aquariumName: nextProfile.aquariumName,
-    aquariumSize: Number.isFinite(nextProfile.aquariumSize) ? nextProfile.aquariumSize : defaults.aquariumSize,
+    aquariumSize: Number.isFinite(nextProfile.aquariumSize)
+      ? nextProfile.aquariumSize
+      : defaults.aquariumSize,
     aquariumUnits: nextProfile.aquariumUnits,
     avatar: nextProfile.avatar,
     settings: {
@@ -506,7 +553,10 @@ async function loadAuthConfig() {
     authConfig = {
       domain: typeof cognito.domain === 'string' ? cognito.domain.trim() : '',
       clientId: typeof cognito.clientId === 'string' ? cognito.clientId.trim() : '',
-      scopes: typeof cognito.scopes === 'string' && cognito.scopes.trim() ? cognito.scopes : COGNITO_SCOPES,
+      scopes:
+        typeof cognito.scopes === 'string' && cognito.scopes.trim()
+          ? cognito.scopes
+          : COGNITO_SCOPES,
     };
   } catch {
     authConfig = { domain: '', clientId: '', scopes: COGNITO_SCOPES };
@@ -515,7 +565,9 @@ async function loadAuthConfig() {
 
 function base64UrlFromBytes(bytes) {
   let binary = '';
-  bytes.forEach((byte) => { binary += String.fromCharCode(byte); });
+  bytes.forEach((byte) => {
+    binary += String.fromCharCode(byte);
+  });
   return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
@@ -547,7 +599,9 @@ async function startCognitoSignIn() {
     code_challenge_method: 'S256',
     code_challenge: await sha256Base64Url(verifier),
   });
-  window.location.assign(`${authConfig.domain.replace(/\/$/, '')}/oauth2/authorize?${params.toString()}`);
+  window.location.assign(
+    `${authConfig.domain.replace(/\/$/, '')}/oauth2/authorize?${params.toString()}`
+  );
   return true;
 }
 
@@ -567,7 +621,8 @@ async function exchangeCognitoCode(code) {
     body,
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok || !data.access_token) throw new Error(data.error_description || 'Token exchange failed');
+  if (!res.ok || !data.access_token)
+    throw new Error(data.error_description || 'Token exchange failed');
   sessionStorage.setItem(TOKEN_STORAGE_KEY, data.access_token);
   if (data.id_token) sessionStorage.setItem(ID_TOKEN_STORAGE_KEY, data.id_token);
   sessionStorage.removeItem(COGNITO_PKCE_VERIFIER_KEY);
@@ -657,7 +712,7 @@ function showToast(msg) {
 function setLoadingState(loading) {
   isDataLoading = loading;
 
-  ['nd-ph','nd-nh3','nd-no2','nd-no3','nd-kh'].forEach((id) => {
+  ['nd-ph', 'nd-nh3', 'nd-no2', 'nd-no3', 'nd-kh'].forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.textContent = loading ? 'Loading…' : 'No readings yet';
   });
@@ -676,10 +731,12 @@ function setLoadingState(loading) {
 
   const tapPills = document.querySelectorAll('#tapStatusBar .stat-pill');
   if (tapPills[0]) {
-    tapPills[0].innerHTML = '<div class="stat-label">Latest Filtered Tap NO₃</div><div class="stat-value c-muted">Loading…</div><div class="stat-status c-muted">Sync</div>';
+    tapPills[0].innerHTML =
+      '<div class="stat-label">Latest Filtered Tap NO₃</div><div class="stat-value c-muted">Loading…</div><div class="stat-status c-muted">Sync</div>';
   }
   if (tapPills[1]) {
-    tapPills[1].innerHTML = '<div class="stat-label">Last Tested</div><div class="stat-value c-muted stat-value-compact">Loading…</div>';
+    tapPills[1].innerHTML =
+      '<div class="stat-label">Last Tested</div><div class="stat-value c-muted stat-value-compact">Loading…</div>';
   }
 
   const logCount = document.getElementById('logCount');
@@ -794,7 +851,6 @@ function setGateSubmitting(isSubmitting) {
 
 function queueGateAutofillSubmit() {
   const input = document.getElementById('gateInput');
-  const gate = document.getElementById('gate');
   if (!input || !input.value || gateUnlockInFlight || isGateHidden()) return;
   clearTimeout(gateAutofillTimer);
   gateAutofillTimer = setTimeout(() => {
@@ -856,7 +912,6 @@ function initGateForm() {
         clearInterval(autofillPoll);
       }
     }
-    const gate = document.getElementById('gate');
     if (pollCount >= 25 || isGateHidden()) clearInterval(autofillPoll);
   }, 100);
 }
@@ -890,7 +945,10 @@ async function unlock(event) {
       input.classList.add('error');
       input.value = '';
       lastGateInputValue = '';
-      setTimeout(() => { input.classList.remove('error'); error.textContent = ''; }, 2000);
+      setTimeout(() => {
+        input.classList.remove('error');
+        error.textContent = '';
+      }, 2000);
       return;
     }
     if (!data.token) {
@@ -905,7 +963,10 @@ async function unlock(event) {
   } catch {
     error.textContent = 'Cannot reach API';
     input.classList.add('error');
-    setTimeout(() => { input.classList.remove('error'); error.textContent = ''; }, 2000);
+    setTimeout(() => {
+      input.classList.remove('error');
+      error.textContent = '';
+    }, 2000);
   } finally {
     gateUnlockInFlight = false;
     setGateSubmitting(false);
@@ -936,7 +997,7 @@ function escapeHtml(s) {
 function nowLocal() {
   const d = new Date();
   d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-  return d.toISOString().slice(0,16);
+  return d.toISOString().slice(0, 16);
 }
 document.getElementById('t-date').value = nowLocal();
 
@@ -973,176 +1034,258 @@ function khStatus(v) {
   if (v >= warnLow && v <= warnHigh) return [display, 'c-warn', 'WATCH'];
   return [display, 'c-danger', 'ACT'];
 }
-function phStatus(v)  { if(v===null)return['—','c-muted','']; if(v>=6.5&&v<=7.2)return[v.toFixed(1),'c-safe','GOOD']; if(v>=6.2&&v<=7.5)return[v.toFixed(1),'c-warn','WATCH']; return[v.toFixed(1),'c-danger','ACT']; }
-function nh3Status(v) { if(v===null)return['—','c-muted','']; if(v===0)return['0','c-safe','CLEAR']; if(v<=0.5)return[v,'c-warn','CYCLING']; return[v,'c-danger','HIGH']; }
-function no2Status(v) { if(v===null)return['—','c-muted','']; if(v===0)return['0','c-safe','CLEAR']; if(v<=1)return[v,'c-warn','CYCLING']; return[v,'c-danger','HIGH']; }
-function no3Status(v) { if(v===null)return['—','c-muted','']; if(v<=20)return[v,'c-safe','GOOD']; if(v<=40)return[v,'c-warn','CHANGE']; return[v,'c-danger','HIGH']; }
-function tapStatus(v) { if(v===null)return['—','c-muted','']; if(v<=20)return[v,'c-safe','LOW']; if(v<=40)return[v,'c-warn','MED']; return[v,'c-danger','HIGH']; }
-function statusClass(v,type) {
-  if(v===null||v===undefined)return'c-muted';
-  if(type==='kh') return khStatus(v)[1]; if(type==='ph') return phStatus(v)[1]; if(type==='nh3')return nh3Status(v)[1];
-  if(type==='no2')return no2Status(v)[1]; if(type==='no3')return no3Status(v)[1];
-  if(type==='tap')return tapStatus(v)[1]; return'c-muted';
+function phStatus(v) {
+  if (v === null) return ['—', 'c-muted', ''];
+  if (v >= 6.5 && v <= 7.2) return [v.toFixed(1), 'c-safe', 'GOOD'];
+  if (v >= 6.2 && v <= 7.5) return [v.toFixed(1), 'c-warn', 'WATCH'];
+  return [v.toFixed(1), 'c-danger', 'ACT'];
+}
+function nh3Status(v) {
+  if (v === null) return ['—', 'c-muted', ''];
+  if (v === 0) return ['0', 'c-safe', 'CLEAR'];
+  if (v <= 0.5) return [v, 'c-warn', 'CYCLING'];
+  return [v, 'c-danger', 'HIGH'];
+}
+function no2Status(v) {
+  if (v === null) return ['—', 'c-muted', ''];
+  if (v === 0) return ['0', 'c-safe', 'CLEAR'];
+  if (v <= 1) return [v, 'c-warn', 'CYCLING'];
+  return [v, 'c-danger', 'HIGH'];
+}
+function no3Status(v) {
+  if (v === null) return ['—', 'c-muted', ''];
+  if (v <= 20) return [v, 'c-safe', 'GOOD'];
+  if (v <= 40) return [v, 'c-warn', 'CHANGE'];
+  return [v, 'c-danger', 'HIGH'];
+}
+function tapStatus(v) {
+  if (v === null) return ['—', 'c-muted', ''];
+  if (v <= 20) return [v, 'c-safe', 'LOW'];
+  if (v <= 40) return [v, 'c-warn', 'MED'];
+  return [v, 'c-danger', 'HIGH'];
+}
+function statusClass(v, type) {
+  if (v === null || v === undefined) return 'c-muted';
+  if (type === 'kh') return khStatus(v)[1];
+  if (type === 'ph') return phStatus(v)[1];
+  if (type === 'nh3') return nh3Status(v)[1];
+  if (type === 'no2') return no2Status(v)[1];
+  if (type === 'no3') return no3Status(v)[1];
+  if (type === 'tap') return tapStatus(v)[1];
+  return 'c-muted';
 }
 
 // ── Status pills ──
 function updateStatus() {
-  if(readings.length>0) {
-    const last=readings[readings.length-1];
-    const pills=document.querySelectorAll('#statusBar .stat-pill');
-    [[last.ph,phStatus,'pH',last.ph!=null?last.ph.toFixed(1):'—'],
-     [last.nh3,nh3Status,'NH₃',last.nh3!==null?last.nh3+' ppm':'—'],
-     [last.no2,no2Status,'NO₂',last.no2!==null?last.no2+' ppm':'—'],
-     [last.no3,no3Status,'NO₃',last.no3!==null?last.no3+' ppm':'—'],
-     [last.kh,khStatus,'KH',last.kh!=null?last.kh.toFixed(1)+' dKH':'—']
-    ].forEach(([val,fn,label,display],i)=>{
-      const[,cls,status]=fn(val);
-      pills[i].innerHTML=`<div class="stat-label">${label}</div><div class="stat-value ${cls}">${display}</div><div class="stat-status ${cls}">${status}</div>`;
+  if (readings.length > 0) {
+    const last = readings[readings.length - 1];
+    const pills = document.querySelectorAll('#statusBar .stat-pill');
+    [
+      [last.ph, phStatus, 'pH', last.ph != null ? last.ph.toFixed(1) : '—'],
+      [last.nh3, nh3Status, 'NH₃', last.nh3 !== null ? last.nh3 + ' ppm' : '—'],
+      [last.no2, no2Status, 'NO₂', last.no2 !== null ? last.no2 + ' ppm' : '—'],
+      [last.no3, no3Status, 'NO₃', last.no3 !== null ? last.no3 + ' ppm' : '—'],
+      [last.kh, khStatus, 'KH', last.kh != null ? last.kh.toFixed(1) + ' dKH' : '—'],
+    ].forEach(([val, fn, label, display], i) => {
+      const [, cls, status] = fn(val);
+      pills[i].innerHTML =
+        `<div class="stat-label">${label}</div><div class="stat-value ${cls}">${display}</div><div class="stat-status ${cls}">${status}</div>`;
     });
   }
-  const tapPills=document.querySelectorAll('#tapStatusBar .stat-pill');
-  if(tapReadings.length>0) {
-    const last=tapReadings[tapReadings.length-1];
-    const[,cls,status]=tapStatus(last.no3);
-    tapPills[0].innerHTML=`<div class="stat-label">Latest Filtered Tap NO₃</div><div class="stat-value ${cls}">${last.no3} ppm</div><div class="stat-status ${cls}">${status}</div>`;
-    const d=new Date(last.date);
-    tapPills[1].innerHTML=`<div class="stat-label">Last Tested</div><div class="stat-value c-muted stat-value-compact">${d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})}</div>`;
+  const tapPills = document.querySelectorAll('#tapStatusBar .stat-pill');
+  if (tapReadings.length > 0) {
+    const last = tapReadings[tapReadings.length - 1];
+    const [, cls, status] = tapStatus(last.no3);
+    tapPills[0].innerHTML = `<div class="stat-label">Latest Filtered Tap NO₃</div><div class="stat-value ${cls}">${last.no3} ppm</div><div class="stat-status ${cls}">${status}</div>`;
+    const d = new Date(last.date);
+    tapPills[1].innerHTML = `<div class="stat-label">Last Tested</div><div class="stat-value c-muted stat-value-compact">${d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</div>`;
   }
 }
 
 // ── Evenly-spaced chart ──
-function drawChart(canvasId, ndId, pts, color, yMin, yMax, safeMin, safeMax, secondary, secColor, warnMin, warnMax) {
-  const canvas=document.getElementById(canvasId);
-  const nd=document.getElementById(ndId);
-  if(isDataLoading){setChartHasData(canvasId,false);return;}
+function drawChart(
+  canvasId,
+  ndId,
+  pts,
+  color,
+  yMin,
+  yMax,
+  safeMin,
+  safeMax,
+  secondary,
+  secColor,
+  warnMin,
+  warnMax
+) {
+  const canvas = document.getElementById(canvasId);
+  if (isDataLoading) {
+    setChartHasData(canvasId, false);
+    return;
+  }
   // pts = [{t, v}] sorted by t
-  const valid=pts.filter(p=>p.v!==null&&p.v!==undefined);
-  if(valid.length===0){setChartHasData(canvasId,false);return;}
-  setChartHasData(canvasId,true);
+  const valid = pts.filter((p) => p.v !== null && p.v !== undefined);
+  if (valid.length === 0) {
+    setChartHasData(canvasId, false);
+    return;
+  }
+  setChartHasData(canvasId, true);
 
-  const dpr=window.devicePixelRatio||1;
-  const w=canvas.offsetWidth||400;
-  const h=110;
-  canvas.width=w*dpr; canvas.height=h*dpr;
-  const ctx=canvas.getContext('2d');
-  ctx.scale(dpr,dpr);
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.offsetWidth || 400;
+  const h = 110;
+  canvas.width = w * dpr;
+  canvas.height = h * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
 
-  const pad={t:10,b:22,l:38,r:10};
-  const pw=w-pad.l-pad.r;
-  const ph=h-pad.t-pad.b;
+  const pad = { t: 10, b: 22, l: 38, r: 10 };
+  const pw = w - pad.l - pad.r;
+  const ph = h - pad.t - pad.b;
 
   // Build x-axis slots from chronological timestamps, but space slots evenly.
   const allSeries = secondary && secondary.length > 0 ? [...valid, ...secondary] : valid;
-  const allT = Array.from(new Set(allSeries.map(p => p.t))).sort((a, b) => a - b);
+  const allT = Array.from(new Set(allSeries.map((p) => p.t))).sort((a, b) => a - b);
   const tIndex = new Map(allT.map((t, idx) => [t, idx]));
-  let allV=[...valid.map(p=>p.v)];
-  if(secondary&&secondary.length>0){allV=[...allV,...secondary.map(p=>p.v)];}
+  let allV = [...valid.map((p) => p.v)];
+  if (secondary && secondary.length > 0) {
+    allV = [...allV, ...secondary.map((p) => p.v)];
+  }
 
   // Value range
-  const dMin=Math.min(...allV);
-  const dMax=Math.max(...allV);
-  const rMin=Math.min(yMin,dMin);
-  const rMax=Math.max(yMax,dMax)||1;
+  const dMin = Math.min(...allV);
+  const dMax = Math.max(...allV);
+  const rMin = Math.min(yMin, dMin);
+  const rMax = Math.max(yMax, dMax) || 1;
 
-  const xPos=t=>{
-    const idx=tIndex.get(t);
-    if(allT.length<=1||idx===undefined)return pad.l+pw/2;
-    return pad.l+(idx/(allT.length-1))*pw;
+  const xPos = (t) => {
+    const idx = tIndex.get(t);
+    if (allT.length <= 1 || idx === undefined) return pad.l + pw / 2;
+    return pad.l + (idx / (allT.length - 1)) * pw;
   };
-  const yPos=v=>pad.t+ph-((v-rMin)/(rMax-rMin||1))*ph;
+  const yPos = (v) => pad.t + ph - ((v - rMin) / (rMax - rMin || 1)) * ph;
 
   // Warning zone
-  if(warnMin!==undefined&&warnMax!==undefined){
-    const y1=yPos(Math.min(warnMax,rMax));
-    const y2=yPos(Math.max(warnMin,rMin));
-    ctx.fillStyle='rgba(245,158,11,0.16)';
-    ctx.fillRect(pad.l,y1,pw,y2-y1);
+  if (warnMin !== undefined && warnMax !== undefined) {
+    const y1 = yPos(Math.min(warnMax, rMax));
+    const y2 = yPos(Math.max(warnMin, rMin));
+    ctx.fillStyle = 'rgba(245,158,11,0.16)';
+    ctx.fillRect(pad.l, y1, pw, y2 - y1);
   }
 
   // Safe zone
-  if(safeMin!==undefined){
-    const y1=yPos(Math.min(safeMax,rMax));
-    const y2=yPos(Math.max(safeMin,rMin));
-    ctx.fillStyle='rgba(16,185,129,0.18)';
-    ctx.fillRect(pad.l,y1,pw,y2-y1);
+  if (safeMin !== undefined) {
+    const y1 = yPos(Math.min(safeMax, rMax));
+    const y2 = yPos(Math.max(safeMin, rMin));
+    ctx.fillStyle = 'rgba(16,185,129,0.18)';
+    ctx.fillRect(pad.l, y1, pw, y2 - y1);
   }
 
   // Grid lines
-  ctx.strokeStyle='rgba(255,255,255,0.05)';ctx.lineWidth=1;
-  for(let i=0;i<=4;i++){
-    const y=pad.t+(i/4)*ph;
-    ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(w-pad.r,y);ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.t + (i / 4) * ph;
+    ctx.beginPath();
+    ctx.moveTo(pad.l, y);
+    ctx.lineTo(w - pad.r, y);
+    ctx.stroke();
   }
 
-  function drawSeries(series,col){
-    if(!series||series.length===0)return;
-    const grad=ctx.createLinearGradient(0,pad.t,0,h-pad.b);
-    grad.addColorStop(0,col+'44');grad.addColorStop(1,col+'00');
+  function drawSeries(series, col) {
+    if (!series || series.length === 0) return;
+    const grad = ctx.createLinearGradient(0, pad.t, 0, h - pad.b);
+    grad.addColorStop(0, col + '44');
+    grad.addColorStop(1, col + '00');
     // Fill
     ctx.beginPath();
-    ctx.moveTo(xPos(series[0].t),yPos(series[0].v));
-    series.forEach((p,i)=>{if(i>0)ctx.lineTo(xPos(p.t),yPos(p.v));});
-    ctx.lineTo(xPos(series[series.length-1].t),h-pad.b);
-    ctx.lineTo(xPos(series[0].t),h-pad.b);
-    ctx.closePath();ctx.fillStyle=grad;ctx.fill();
+    ctx.moveTo(xPos(series[0].t), yPos(series[0].v));
+    series.forEach((p, i) => {
+      if (i > 0) ctx.lineTo(xPos(p.t), yPos(p.v));
+    });
+    ctx.lineTo(xPos(series[series.length - 1].t), h - pad.b);
+    ctx.lineTo(xPos(series[0].t), h - pad.b);
+    ctx.closePath();
+    ctx.fillStyle = grad;
+    ctx.fill();
     // Line
     ctx.beginPath();
-    ctx.moveTo(xPos(series[0].t),yPos(series[0].v));
-    series.forEach((p,i)=>{if(i>0)ctx.lineTo(xPos(p.t),yPos(p.v));});
-    ctx.strokeStyle=col;ctx.lineWidth=2;ctx.lineJoin='round';ctx.stroke();
+    ctx.moveTo(xPos(series[0].t), yPos(series[0].v));
+    series.forEach((p, i) => {
+      if (i > 0) ctx.lineTo(xPos(p.t), yPos(p.v));
+    });
+    ctx.strokeStyle = col;
+    ctx.lineWidth = 2;
+    ctx.lineJoin = 'round';
+    ctx.stroke();
     // Dots — one per point
-    series.forEach(p=>{
+    series.forEach((p) => {
       ctx.beginPath();
-      ctx.arc(xPos(p.t),yPos(p.v),4,0,Math.PI*2);
-      ctx.fillStyle=col;ctx.fill();
+      ctx.arc(xPos(p.t), yPos(p.v), 4, 0, Math.PI * 2);
+      ctx.fillStyle = col;
+      ctx.fill();
       ctx.beginPath();
-      ctx.arc(xPos(p.t),yPos(p.v),2,0,Math.PI*2);
-      ctx.fillStyle='#0c0f14';ctx.fill();
+      ctx.arc(xPos(p.t), yPos(p.v), 2, 0, Math.PI * 2);
+      ctx.fillStyle = '#0c0f14';
+      ctx.fill();
     });
     // Value labels above each dot
-    ctx.fillStyle=col;
-    ctx.font=`bold 10px var(--mono,'Courier New')`;
-    ctx.textAlign='center';
-    series.forEach(p=>{
-      const label=Number.isInteger(p.v)?p.v:p.v.toFixed(1);
-      ctx.fillText(label,xPos(p.t),yPos(p.v)-7);
+    ctx.fillStyle = col;
+    ctx.font = `bold 10px var(--mono,'Courier New')`;
+    ctx.textAlign = 'center';
+    series.forEach((p) => {
+      const label = Number.isInteger(p.v) ? p.v : p.v.toFixed(1);
+      ctx.fillText(label, xPos(p.t), yPos(p.v) - 7);
     });
   }
 
-  drawSeries(valid,color);
-  if(secondary&&secondary.length>0)drawSeries(secondary,secColor);
+  drawSeries(valid, color);
+  if (secondary && secondary.length > 0) drawSeries(secondary, secColor);
 
   // Y axis labels
-  ctx.fillStyle='#9aabc4';
-  ctx.font=`10px var(--mono,'Courier New')`;
-  ctx.textAlign='right';
-  const ySteps=[rMin,rMax];
-  ySteps.forEach(v=>ctx.fillText(Number.isInteger(v)?v:v.toFixed(1),pad.l-4,yPos(v)+3));
+  ctx.fillStyle = '#9aabc4';
+  ctx.font = `10px var(--mono,'Courier New')`;
+  ctx.textAlign = 'right';
+  const ySteps = [rMin, rMax];
+  ySteps.forEach((v) =>
+    ctx.fillText(Number.isInteger(v) ? v : v.toFixed(1), pad.l - 4, yPos(v) + 3)
+  );
 
   // X axis date labels — sampled from evenly spaced x slots
-  ctx.textAlign='center';ctx.fillStyle='#9aabc4';
-  ctx.font=`10px var(--mono,'Courier New')`;
-  const maxLabels=6;
-  const step=Math.max(1,Math.ceil(allT.length/maxLabels));
-  let lastLabel='';
-  allT.forEach((t,i)=>{
-    if(i!==allT.length-1&&i%step!==0)return;
-    const d=new Date(t);
-    const key=`${d.getDate()}/${d.getMonth()+1}`;
-    if(i!==allT.length-1&&key===lastLabel)return;
-    lastLabel=key;
-    ctx.fillText(key,xPos(t),h-5);
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#9aabc4';
+  ctx.font = `10px var(--mono,'Courier New')`;
+  const maxLabels = 6;
+  const step = Math.max(1, Math.ceil(allT.length / maxLabels));
+  let lastLabel = '';
+  allT.forEach((t, i) => {
+    if (i !== allT.length - 1 && i % step !== 0) return;
+    const d = new Date(t);
+    const key = `${d.getDate()}/${d.getMonth() + 1}`;
+    if (i !== allT.length - 1 && key === lastLabel) return;
+    lastLabel = key;
+    ctx.fillText(key, xPos(t), h - 5);
   });
 }
 
-function renderMetricChart(chartKey, canvasId, ndId, pts, color, yMin, yMax, safeMin, safeMax, warnMin, warnMax) {
+function renderMetricChart(
+  chartKey,
+  canvasId,
+  ndId,
+  pts,
+  color,
+  yMin,
+  yMax,
+  safeMin,
+  safeMax,
+  warnMin,
+  warnMax
+) {
   if (typeof Chart === 'undefined') {
     drawChart(canvasId, ndId, pts, color, yMin, yMax, safeMin, safeMax);
     return;
   }
 
   const canvas = document.getElementById(canvasId);
-  const nd = document.getElementById(ndId);
   if (isDataLoading) {
     setChartHasData(canvasId, false);
     return;
@@ -1270,12 +1413,24 @@ function renderMetricChart(chartKey, canvasId, ndId, pts, color, yMin, yMax, saf
 function renderNo3Chart(tankPts, tapPts, safeZone, warningZone) {
   if (typeof Chart === 'undefined') {
     const chartMax = Math.max(100, warningZone.max);
-    drawChart('chart-no3', 'nd-no3', tankPts, '#facc15', 0, chartMax, safeZone.min, safeZone.max, tapPts, '#22d3ee', warningZone.min, warningZone.max);
+    drawChart(
+      'chart-no3',
+      'nd-no3',
+      tankPts,
+      '#facc15',
+      0,
+      chartMax,
+      safeZone.min,
+      safeZone.max,
+      tapPts,
+      '#22d3ee',
+      warningZone.min,
+      warningZone.max
+    );
     return;
   }
 
   const canvas = document.getElementById('chart-no3');
-  const nd = document.getElementById('nd-no3');
   if (isDataLoading) {
     setChartHasData('chart-no3', false);
     return;
@@ -1303,19 +1458,21 @@ function renderNo3Chart(tankPts, tapPts, safeZone, warningZone) {
   const yMin = Math.min(0, Math.min(...allValues));
   const yMax = Math.max(100, Math.max(...allValues)) || 1;
 
-  const datasets = [{
-    label: 'Tank',
-    data: tankData,
-    borderColor: '#facc15',
-    backgroundColor: 'rgba(250,204,21,0.20)',
-    pointBackgroundColor: '#facc15',
-    pointBorderColor: '#0c0f14',
-    pointBorderWidth: 2,
-    pointRadius: 4,
-    tension: 0.25,
-    spanGaps: true,
-    fill: false,
-  }];
+  const datasets = [
+    {
+      label: 'Tank',
+      data: tankData,
+      borderColor: '#facc15',
+      backgroundColor: 'rgba(250,204,21,0.20)',
+      pointBackgroundColor: '#facc15',
+      pointBorderColor: '#0c0f14',
+      pointBorderWidth: 2,
+      pointRadius: 4,
+      tension: 0.25,
+      spanGaps: true,
+      fill: false,
+    },
+  ];
   if (tapPts.length > 0) {
     datasets.push({
       label: 'Filtered Tap',
@@ -1422,7 +1579,10 @@ function renderNo3Chart(tankPts, tapPts, safeZone, warningZone) {
 
 // ── Build chart data ──
 function renderCharts() {
-  const toPts=(arr,key)=>arr.filter(r=>r[key]!==null&&r[key]!==undefined).map(r=>({t:new Date(r.date).getTime(),v:r[key]}));
+  const toPts = (arr, key) =>
+    arr
+      .filter((r) => r[key] !== null && r[key] !== undefined)
+      .map((r) => ({ t: new Date(r.date).getTime(), v: r[key] }));
   const khSafe = profile.safeZones.kh;
   const phSafe = profile.safeZones.ph;
   const nh3Safe = profile.safeZones.nh3;
@@ -1432,42 +1592,95 @@ function renderCharts() {
   const phWarning = getPhWarningRange(phSafe);
   const no3Warning = getNo3WarningRange(no3Safe);
 
-  const khPts = toPts(readings,'kh');
-  const phPts = toPts(readings,'ph');
-  const nh3Pts = toPts(readings,'nh3');
-  const no2Pts = toPts(readings,'no2');
-  const no3Pts = toPts(readings,'no3');
-  const tapNo3Pts = tapFeatureEnabled ? toPts(tapReadings,'no3') : [];
+  const khPts = toPts(readings, 'kh');
+  const phPts = toPts(readings, 'ph');
+  const nh3Pts = toPts(readings, 'nh3');
+  const no2Pts = toPts(readings, 'no2');
+  const no3Pts = toPts(readings, 'no3');
+  const tapNo3Pts = tapFeatureEnabled ? toPts(tapReadings, 'no3') : [];
 
-  renderMetricChart('ph', 'chart-ph', 'nd-ph', phPts, '#a78bfa', 6.0, 7.5, phSafe.min, phSafe.max, phWarning.min, phWarning.max);
-  renderMetricChart('nh3','chart-nh3','nd-nh3',nh3Pts,'#f87171', 0, 1, nh3Safe.min, nh3Safe.max);
-  renderMetricChart('no2','chart-no2','nd-no2',no2Pts,'#fb923c', 0, 1, no2Safe.min, no2Safe.max);
+  renderMetricChart(
+    'ph',
+    'chart-ph',
+    'nd-ph',
+    phPts,
+    '#a78bfa',
+    6.0,
+    7.5,
+    phSafe.min,
+    phSafe.max,
+    phWarning.min,
+    phWarning.max
+  );
+  renderMetricChart(
+    'nh3',
+    'chart-nh3',
+    'nd-nh3',
+    nh3Pts,
+    '#f87171',
+    0,
+    1,
+    nh3Safe.min,
+    nh3Safe.max
+  );
+  renderMetricChart(
+    'no2',
+    'chart-no2',
+    'nd-no2',
+    no2Pts,
+    '#fb923c',
+    0,
+    1,
+    no2Safe.min,
+    no2Safe.max
+  );
   renderNo3Chart(no3Pts, tapNo3Pts, no3Safe, no3Warning);
-  renderMetricChart('kh', 'chart-kh', 'nd-kh', khPts, '#2dd4bf', 0, 12, khSafe.min, khSafe.max, khWarning.min, khWarning.max);
+  renderMetricChart(
+    'kh',
+    'chart-kh',
+    'nd-kh',
+    khPts,
+    '#2dd4bf',
+    0,
+    12,
+    khSafe.min,
+    khSafe.max,
+    khWarning.min,
+    khWarning.max
+  );
 }
 
 // ── Render tank log ──
 function renderLog() {
-  const body=document.getElementById('logBody');
-  const count=document.getElementById('logCount');
-  count.textContent=`${readings.length} reading${readings.length!==1?'s':''}`;
-  if(readings.length===0){body.innerHTML='<div class="log-empty">No readings logged yet</div>';return;}
-  const rows=[...readings].reverse().map((r)=>{
-    const d=new Date(r.date);
-    const ds=d.toLocaleDateString('en-GB',{day:'2-digit',month:'short'});
-    const ts=d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
-    const fmt=(v,type)=>v!==null&&v!==undefined?`<span class="${statusClass(v,type)}">${type==='ph'||type==='kh'?Number(v).toFixed(1):v}</span>`:'<span class="c-muted">—</span>';
-    return`<tr>
+  const body = document.getElementById('logBody');
+  const count = document.getElementById('logCount');
+  count.textContent = `${readings.length} reading${readings.length !== 1 ? 's' : ''}`;
+  if (readings.length === 0) {
+    body.innerHTML = '<div class="log-empty">No readings logged yet</div>';
+    return;
+  }
+  const rows = [...readings]
+    .reverse()
+    .map((r) => {
+      const d = new Date(r.date);
+      const ds = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+      const ts = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+      const fmt = (v, type) =>
+        v !== null && v !== undefined
+          ? `<span class="${statusClass(v, type)}">${type === 'ph' || type === 'kh' ? Number(v).toFixed(1) : v}</span>`
+          : '<span class="c-muted">—</span>';
+      return `<tr>
       <td class="log-cell-muted">${ds}<br>${ts}</td>
-      <td>${fmt(r.ph,'ph')}</td><td>${fmt(r.nh3,'nh3')}</td>
-      <td>${fmt(r.no2,'no2')}</td><td>${fmt(r.no3,'no3')}</td><td>${fmt(r.kh,'kh')}</td>
+      <td>${fmt(r.ph, 'ph')}</td><td>${fmt(r.nh3, 'nh3')}</td>
+      <td>${fmt(r.no2, 'no2')}</td><td>${fmt(r.no3, 'no3')}</td><td>${fmt(r.kh, 'kh')}</td>
       <td class="log-actions">
         <button type="button" class="icon-btn edit-btn" data-action="edit-tank" data-id="${escapeHtml(r.id)}" aria-label="Edit reading">✎</button>
         <button type="button" class="icon-btn del-btn" data-action="delete-tank" data-id="${escapeHtml(r.id)}" aria-label="Delete reading">×</button>
       </td>
     </tr>`;
-  }).join('');
-  body.innerHTML=`<table class="log-table"><thead><tr>
+    })
+    .join('');
+  body.innerHTML = `<table class="log-table"><thead><tr>
     <th>Date</th><th class="ph-label">pH</th><th class="nh3-label">NH₃</th>
     <th class="no2-label">NO₂</th><th class="no3-label">NO₃</th><th class="kh-label">KH</th><th></th>
   </tr></thead><tbody>${rows}</tbody></table>`;
@@ -1475,67 +1688,86 @@ function renderLog() {
 
 // ── Render tap log ──
 function renderTapLog() {
-  const body=document.getElementById('tapLogBody');
-  const count=document.getElementById('tapLogCount');
-  count.textContent=`${tapReadings.length} reading${tapReadings.length!==1?'s':''}`;
-  if(tapReadings.length===0){body.innerHTML='<div class="log-empty">No tap tests logged yet</div>';return;}
-  const rows=[...tapReadings].reverse().map((r)=>{
-    const d=new Date(r.date);
-    const ds=d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
-    const[,cls]=tapStatus(r.no3);
-    return`<tr>
+  const body = document.getElementById('tapLogBody');
+  const count = document.getElementById('tapLogCount');
+  count.textContent = `${tapReadings.length} reading${tapReadings.length !== 1 ? 's' : ''}`;
+  if (tapReadings.length === 0) {
+    body.innerHTML = '<div class="log-empty">No tap tests logged yet</div>';
+    return;
+  }
+  const rows = [...tapReadings]
+    .reverse()
+    .map((r) => {
+      const d = new Date(r.date);
+      const ds = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+      const [, cls] = tapStatus(r.no3);
+      return `<tr>
       <td class="log-cell-muted">${ds}</td>
       <td><span class="${cls}">${r.no3} ppm</span></td>
-      <td class="log-cell-muted">${escapeHtml(r.note||'')}</td>
+      <td class="log-cell-muted">${escapeHtml(r.note || '')}</td>
       <td class="log-actions">
         <button type="button" class="icon-btn edit-btn" data-action="edit-tap" data-id="${escapeHtml(r.id)}" aria-label="Edit tap test">✎</button>
         <button type="button" class="icon-btn del-btn" data-action="delete-tap" data-id="${escapeHtml(r.id)}" aria-label="Delete tap test">×</button>
       </td>
     </tr>`;
-  }).join('');
-  body.innerHTML=`<table class="log-table"><thead><tr>
+    })
+    .join('');
+  body.innerHTML = `<table class="log-table"><thead><tr>
     <th>Date</th><th class="tap-label">Filtered Tap NO₃</th><th>Notes</th><th></th>
   </tr></thead><tbody>${rows}</tbody></table>`;
 }
 
 // ── Add readings ──
 async function addReading() {
-  const get=fid=>{const v=document.getElementById(fid).value;return v===''?null:parseFloat(v);};
-  const date=nowLocal();
-  const newId=crypto.randomUUID();
-  const r={id:newId,date,kh:get('f-kh'),ph:get('f-ph'),nh3:get('f-nh3'),no2:get('f-no2'),no3:get('f-no3')};
-  if([r.kh,r.ph,r.nh3,r.no2,r.no3].every(v=>v===null))return;
+  const get = (fid) => {
+    const v = document.getElementById(fid).value;
+    return v === '' ? null : parseFloat(v);
+  };
+  const date = nowLocal();
+  const newId = crypto.randomUUID();
+  const r = {
+    id: newId,
+    date,
+    kh: get('f-kh'),
+    ph: get('f-ph'),
+    nh3: get('f-nh3'),
+    no2: get('f-no2'),
+    no3: get('f-no3'),
+  };
+  if ([r.kh, r.ph, r.nh3, r.no2, r.no3].every((v) => v === null)) return;
   readings.push(r);
-  readings.sort((a,b)=>new Date(a.date)-new Date(b.date));
+  readings.sort((a, b) => new Date(a.date) - new Date(b.date));
   render();
-  ['f-ph','f-nh3','f-no2','f-no3','f-kh'].forEach(fid=>document.getElementById(fid).value='');
-  const res=await apiFetch('/readings',{method:'POST',body:JSON.stringify(r)});
-  if(!res.ok){
-    readings=readings.filter(x=>x.id!==newId);
+  ['f-ph', 'f-nh3', 'f-no2', 'f-no3', 'f-kh'].forEach(
+    (fid) => (document.getElementById(fid).value = '')
+  );
+  const res = await apiFetch('/readings', { method: 'POST', body: JSON.stringify(r) });
+  if (!res.ok) {
+    readings = readings.filter((x) => x.id !== newId);
     render();
-    showToast(res.status===401?'Session expired':'Could not save reading');
+    showToast(res.status === 401 ? 'Session expired' : 'Could not save reading');
     return;
   }
   showToast('Reading added ✓');
 }
 async function addTapReading() {
-  const v=document.getElementById('t-no3').value;
-  if(v==='')return;
-  const date=document.getElementById('t-date').value||nowLocal();
-  const note=document.getElementById('t-note').value.trim();
-  const newId=crypto.randomUUID();
-  const row={id:newId,date,no3:parseFloat(v),note};
+  const v = document.getElementById('t-no3').value;
+  if (v === '') return;
+  const date = document.getElementById('t-date').value || nowLocal();
+  const note = document.getElementById('t-note').value.trim();
+  const newId = crypto.randomUUID();
+  const row = { id: newId, date, no3: parseFloat(v), note };
   tapReadings.push(row);
-  tapReadings.sort((a,b)=>new Date(a.date)-new Date(b.date));
+  tapReadings.sort((a, b) => new Date(a.date) - new Date(b.date));
   render();
-  document.getElementById('t-no3').value='';
-  document.getElementById('t-note').value='';
-  document.getElementById('t-date').value=nowLocal();
-  const res=await apiFetch('/tap',{method:'POST',body:JSON.stringify(row)});
-  if(!res.ok){
-    tapReadings=tapReadings.filter(x=>x.id!==newId);
+  document.getElementById('t-no3').value = '';
+  document.getElementById('t-note').value = '';
+  document.getElementById('t-date').value = nowLocal();
+  const res = await apiFetch('/tap', { method: 'POST', body: JSON.stringify(row) });
+  if (!res.ok) {
+    tapReadings = tapReadings.filter((x) => x.id !== newId);
     render();
-    showToast(res.status===401?'Session expired':'Could not save tap test');
+    showToast(res.status === 401 ? 'Session expired' : 'Could not save tap test');
     return;
   }
   showToast('Tap test added ✓');
@@ -1544,8 +1776,11 @@ function formatReadingDateLabel(iso) {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return 'this reading';
   return d.toLocaleString('en-GB', {
-    day: '2-digit', month: 'short', year: 'numeric',
-    hour: '2-digit', minute: '2-digit',
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
   });
 }
 
@@ -1560,8 +1795,10 @@ function openConfirmModal({ title, message, confirmLabel, onConfirm }) {
 
 function closeConfirmModal() {
   document.getElementById('confirmModal').classList.remove('show');
-  if (!document.getElementById('editTankModal').classList.contains('show')
-      && !document.getElementById('editTapModal').classList.contains('show')) {
+  if (
+    !document.getElementById('editTankModal').classList.contains('show') &&
+    !document.getElementById('editTapModal').classList.contains('show')
+  ) {
     document.body.classList.remove('modal-open');
   }
   confirmModalAction = null;
@@ -1652,8 +1889,10 @@ function openEditTankModal(readingId) {
 function closeEditTankModal() {
   document.getElementById('editTankModal').classList.remove('show');
   editingTankId = null;
-  if (!document.getElementById('confirmModal').classList.contains('show')
-      && !document.getElementById('editTapModal').classList.contains('show')) {
+  if (
+    !document.getElementById('confirmModal').classList.contains('show') &&
+    !document.getElementById('editTapModal').classList.contains('show')
+  ) {
     document.body.classList.remove('modal-open');
   }
 }
@@ -1672,8 +1911,10 @@ function openEditTapModal(readingId) {
 function closeEditTapModal() {
   document.getElementById('editTapModal').classList.remove('show');
   editingTapId = null;
-  if (!document.getElementById('confirmModal').classList.contains('show')
-      && !document.getElementById('editTankModal').classList.contains('show')) {
+  if (
+    !document.getElementById('confirmModal').classList.contains('show') &&
+    !document.getElementById('editTankModal').classList.contains('show')
+  ) {
     document.body.classList.remove('modal-open');
   }
 }
@@ -1798,7 +2039,7 @@ function initLogTableActions() {
 }
 
 // ── Full render ──
-function render(){
+function render() {
   try {
     updateStatus();
     renderCharts();

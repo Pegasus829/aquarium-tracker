@@ -1,327 +1,550 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://gnewkvhgwd.execute-api.eu-west-1.amazonaws.com https://*.auth.eu-west-1.amazoncognito.com; form-action 'self' https://*.auth.eu-west-1.amazoncognito.com; frame-src 'none'; manifest-src 'self'; worker-src 'none'">
-<meta name="referrer" content="no-referrer">
-<title>Aquarium Tracker</title>
-<!-- Aquarium Tracker icons -->
-<link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
-<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
-<link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16.png">
-<link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png">
-<link rel="manifest" href="/assets/site.webmanifest">
-<meta name="theme-color" content="#0f2a3a">
-<link rel="stylesheet" href="/assets/app.css">
-</head>
-<body>
-
-<!-- Password gate -->
-<div id="gate">
-  <div class="gate-card">
-    <div class="gate-icon">🐠</div>
-    <div class="gate-title">Aquarium Tracker</div>
-    <div class="gate-sub" id="gateSub">Fluval Flex 2.0 · 57L</div>
-    <form id="gateForm" autocomplete="on">
-      <input class="gate-input" type="password" id="gateInput" name="password" placeholder="••••••••••••"
-        autocomplete="current-password" autocapitalize="off" spellcheck="false">
-      <button class="gate-btn" type="submit">Unlock</button>
-    </form>
-    <div class="gate-error" id="gateError"></div>
-    <div class="gate-hint">Password protected · readings are read-only without access</div>
-  </div>
-</div>
-
-<!-- App (hidden until unlocked) -->
-<div id="app">
-
-<div class="header">
-  <div class="header-left">
-    <h1>Aquarium Tracker</h1>
-    <p id="headerSub">Fluval Flex 2.0 · 57L</p>
-  </div>
-  <div class="header-right">
-    <button class="profile-btn" id="profileButton" aria-label="Open profile"><span class="avatar-emoji">👤</span></button>
-  </div>
-</div>
-
-<!-- Tank form -->
-<div class="section-label">
-  <div class="section-label-text">🐠 Add Tank Readings</div>
-  <div class="section-toggle-controls">
-    <div class="section-label-line"></div>
-    <label class="section-toggle">
-      <input type="checkbox" id="tap-feature-toggle" checked>
-      <span>Track Tap Water</span>
-    </label>
-  </div>
-</div>
-<div class="form-card">
-  <div class="form-title">+ Log Tank Reading</div>
-  <div class="form-grid">
-    <div class="field"><label class="ph-label">pH</label><input type="number" id="f-ph" step="0.1" min="0" max="14" placeholder="6.8"></div>
-    <div class="field"><label class="nh3-label">Ammonia (ppm)</label><input type="number" id="f-nh3" step="0.25" min="0" placeholder="0.0"></div>
-    <div class="field"><label class="no2-label">Nitrite (ppm)</label><input type="number" id="f-no2" step="0.25" min="0" placeholder="0.0"></div>
-    <div class="field"><label class="no3-label">Nitrate (ppm)</label><input type="number" id="f-no3" step="5" min="0" placeholder="0"></div>
-    <div class="field"><label class="kh-label">KH (dKH)</label><input type="number" id="f-kh" step="0.5" min="0" placeholder="4"></div>
-  </div>
-  <div class="form-row form-row-right">
-    <button class="btn-add">Add Reading</button>
-  </div>
-</div>
-
-<div class="section-label" id="tapSectionHeader">
-  <div class="section-label-text">🚰 Filtered Tap Water</div>
-  <div class="section-label-line"></div>
-</div>
-
-<!-- Tap form -->
-<div id="tapEntryPanel">
-<div class="form-card tap-card">
-  <div class="form-title">+ Log Tap Water Test</div>
-  <div class="form-grid-tap">
-    <div class="field"><label class="tap-label">Nitrate (ppm)</label><input type="number" id="t-no3" step="5" min="0" placeholder="25"></div>
-    <div class="field"><label class="label-muted">Notes (optional)</label><input type="text" id="t-note" placeholder="e.g. filter changed"></div>
-  </div>
-  <div class="form-row">
-    <div class="field date-field"><label class="label-muted">Date &amp; Time</label><input type="datetime-local" id="t-date"></div>
-    <button class="btn-add tap-btn">Add Tap Test</button>
-  </div>
-</div>
-</div>
-
-<div class="status-bar" id="statusBar">
-  <div class="stat-pill"><div class="stat-label">pH</div><div class="stat-value c-muted">—</div></div>
-  <div class="stat-pill"><div class="stat-label">Ammonia</div><div class="stat-value c-muted">—</div></div>
-  <div class="stat-pill"><div class="stat-label">Nitrite</div><div class="stat-value c-muted">—</div></div>
-  <div class="stat-pill"><div class="stat-label">Nitrate</div><div class="stat-value c-muted">—</div></div>
-  <div class="stat-pill"><div class="stat-label">KH</div><div class="stat-value c-muted">—</div></div>
-</div>
-
-<div class="section-label">
-  <div class="section-label-text">📈 Tank Readings History</div>
-  <div class="section-label-line"></div>
-</div>
-
-<div class="charts-wrap">
-  <div class="chart-card">
-    <div class="chart-header">
-      <div class="chart-dot chart-dot-ph"></div>
-      <div class="chart-name">pH</div>
-      <div class="chart-range" id="range-ph">Target: 6.5–7.0</div>
-    </div>
-    <div class="chart-canvas-wrap"><canvas class="chart" id="chart-ph"></canvas><div class="chart-no-data" id="nd-ph">No readings yet</div></div>
-  </div>
-  <div class="chart-card">
-    <div class="chart-header">
-      <div class="chart-dot chart-dot-nh3"></div>
-      <div class="chart-name">Ammonia</div>
-      <div class="chart-range" id="range-nh3">Target: 0 ppm</div>
-    </div>
-    <div class="chart-canvas-wrap"><canvas class="chart" id="chart-nh3"></canvas><div class="chart-no-data" id="nd-nh3">No readings yet</div></div>
-  </div>
-  <div class="chart-card">
-    <div class="chart-header">
-      <div class="chart-dot chart-dot-no2"></div>
-      <div class="chart-name">Nitrite</div>
-      <div class="chart-range" id="range-no2">Target: 0 ppm</div>
-    </div>
-    <div class="chart-canvas-wrap"><canvas class="chart" id="chart-no2"></canvas><div class="chart-no-data" id="nd-no2">No readings yet</div></div>
-  </div>
-  <div class="chart-card">
-    <div class="chart-header">
-      <div class="chart-dot chart-dot-no3"></div>
-      <div class="chart-name">Nitrate</div>
-      <div class="chart-range" id="range-no3">Safe: 0-20 ppm · Warning: 20-40 ppm</div>
-      <div class="chart-legend">
-        <div class="legend-item"><div class="legend-dot legend-dot-no3"></div>Tank</div>
-        <div class="legend-item" id="tapLegendItem"><div class="legend-dot legend-dot-tap"></div>Filtered Tap</div>
-      </div>
-    </div>
-    <div class="chart-canvas-wrap"><canvas class="chart" id="chart-no3"></canvas><div class="chart-no-data" id="nd-no3">No readings yet</div></div>
-  </div>
-  <div class="chart-card">
-    <div class="chart-header">
-      <div class="chart-dot chart-dot-kh"></div>
-      <div class="chart-name">KH (Carbonate)</div>
-      <div class="chart-range" id="range-kh">Target: 2–6 dKH</div>
-    </div>
-    <div class="chart-canvas-wrap"><canvas class="chart" id="chart-kh"></canvas><div class="chart-no-data" id="nd-kh">No readings yet</div></div>
-  </div>
-</div>
-
-<div class="log-wrap">
-  <div class="log-header">
-    <div class="log-title">Tank Reading Log</div>
-    <div class="log-count" id="logCount">0 readings</div>
-  </div>
-  <div id="logBody"><div class="log-empty">No readings logged yet</div></div>
-</div>
-
-<div class="tap-status-bar" id="tapStatusBar">
-  <div class="stat-pill tap-pill"><div class="stat-label">Latest Filtered Tap NO₃</div><div class="stat-value c-muted">—</div></div>
-  <div class="stat-pill tap-pill"><div class="stat-label">Last Tested</div><div class="stat-value c-muted stat-value-compact">—</div></div>
-</div>
-<div class="log-wrap tap-log" id="tapLogWrap">
-  <div class="log-header">
-    <div class="log-title">Tap Water Log</div>
-    <div class="log-count" id="tapLogCount">0 readings</div>
-  </div>
-  <div id="tapLogBody"><div class="log-empty">No tap tests logged yet</div></div>
-</div>
-
-<footer class="footer">Copyright VibeAI Software <span id="currentYear"></span></footer>
-
-</div><!-- /app -->
-
-<div id="profilePage">
-  <div class="profile-card">
-    <div class="profile-header">
-      <div class="profile-title">Profile</div>
-      <div class="profile-header-actions">
-        <button class="profile-save-btn">Save</button>
-        <button class="profile-close-btn">Close</button>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://gnewkvhgwd.execute-api.eu-west-1.amazonaws.com https://*.auth.eu-west-1.amazoncognito.com; form-action 'self' https://*.auth.eu-west-1.amazoncognito.com; frame-src 'none'; manifest-src 'self'; worker-src 'none'"
+    />
+    <meta name="referrer" content="no-referrer" />
+    <title>Aquarium Tracker</title>
+    <!-- Aquarium Tracker icons -->
+    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png" />
+    <link rel="manifest" href="/assets/site.webmanifest" />
+    <meta name="theme-color" content="#0f2a3a" />
+    <link rel="stylesheet" href="/assets/app.css" />
+  </head>
+  <body>
+    <!-- Password gate -->
+    <div id="gate">
+      <div class="gate-card">
+        <div class="gate-icon">🐠</div>
+        <div class="gate-title">Aquarium Tracker</div>
+        <div class="gate-sub" id="gateSub">Fluval Flex 2.0 · 57L</div>
+        <form id="gateForm" autocomplete="on">
+          <input
+            class="gate-input"
+            type="password"
+            id="gateInput"
+            name="password"
+            placeholder="••••••••••••"
+            autocomplete="current-password"
+            autocapitalize="off"
+            spellcheck="false"
+          />
+          <button class="gate-btn" type="submit">Unlock</button>
+        </form>
+        <div class="gate-error" id="gateError"></div>
+        <div class="gate-hint">Password protected · readings are read-only without access</div>
       </div>
     </div>
 
-    <div class="profile-section-title">Aquarist</div>
-    <div class="avatar-editor">
-      <button class="avatar-preview" type="button" aria-label="Upload custom avatar">
-        <span id="profileAvatarEmoji">👤</span>
-        <img id="profileAvatarImage" alt="" hidden>
-      </button>
-      <div class="avatar-controls">
-        <div class="avatar-options" role="radiogroup" aria-label="Choose avatar icon">
-          <button class="avatar-option" type="button" role="radio" data-avatar-emoji="👤" aria-label="Person avatar">👤</button>
-          <button class="avatar-option" type="button" role="radio" data-avatar-emoji="🐠" aria-label="Tropical fish avatar">🐠</button>
-          <button class="avatar-option" type="button" role="radio" data-avatar-emoji="🐟" aria-label="Fish avatar">🐟</button>
-          <button class="avatar-option" type="button" role="radio" data-avatar-emoji="🐡" aria-label="Puffer fish avatar">🐡</button>
-          <button class="avatar-option" type="button" role="radio" data-avatar-emoji="🐙" aria-label="Octopus avatar">🐙</button>
-          <button class="avatar-option" type="button" role="radio" data-avatar-emoji="🦐" aria-label="Shrimp avatar">🦐</button>
+    <!-- App (hidden until unlocked) -->
+    <div id="app">
+      <div class="header">
+        <div class="header-left">
+          <h1>Aquarium Tracker</h1>
+          <p id="headerSub">Fluval Flex 2.0 · 57L</p>
         </div>
-        <div class="avatar-actions">
-          <button class="avatar-action-btn" type="button">Upload image</button>
-          <button class="avatar-action-btn" id="removeAvatarImageBtn" type="button">Use icon</button>
-        </div>
-        <input type="file" id="profileAvatarFile" accept="image/png,image/jpeg,image/webp" hidden>
-        <div class="avatar-help">Choose an icon or upload a JPG, PNG, or WebP. Images are cropped square and resized before saving.</div>
-      </div>
-    </div>
-    <div class="profile-grid">
-      <div class="field"><label>Name</label><input type="text" id="profileUserName" placeholder="Your name"></div>
-    </div>
-
-    <div class="profile-section-title">Aquarium</div>
-    <div class="profile-grid">
-      <div class="field"><label>Aquarium Name</label><input type="text" id="profileAquariumName" placeholder="Aquarium"></div>
-      <div class="field"><label>Aquarium Size</label><input type="number" id="profileAquariumSize" step="0.1" min="0" placeholder="57"></div>
-      <div class="field">
-        <label>Units</label>
-        <select id="profileAquariumUnits" class="gate-input profile-units-select" id="profileAquariumUnits">
-          <option value="litres">Litres</option>
-          <option value="gallons">Gallons</option>
-        </select>
-      </div>
-    </div>
-
-    <div class="profile-section-title">Chart Safe Zones</div>
-    <div class="safe-zone-list">
-      <div class="safe-zone-row">
-        <div class="safe-zone-category">pH</div>
-        <div class="safe-zone-inputs">
-          <div class="field"><label class="safe-zone-label">Min</label><input type="number" id="profileSafePhMin" step="0.1" min="0" max="14"></div>
-          <div class="field"><label class="safe-zone-label">Max</label><input type="number" id="profileSafePhMax" step="0.1" min="0" max="14"></div>
-        </div>
-      </div>
-      <div class="safe-zone-row">
-        <div class="safe-zone-category">Ammonia (ppm)</div>
-        <div class="safe-zone-inputs">
-          <div class="field"><label class="safe-zone-label">Min</label><input type="number" id="profileSafeNh3Min" step="0.01" min="0"></div>
-          <div class="field"><label class="safe-zone-label">Max</label><input type="number" id="profileSafeNh3Max" step="0.01" min="0"></div>
-        </div>
-      </div>
-      <div class="safe-zone-row">
-        <div class="safe-zone-category">Nitrite (ppm)</div>
-        <div class="safe-zone-inputs">
-          <div class="field"><label class="safe-zone-label">Min</label><input type="number" id="profileSafeNo2Min" step="0.01" min="0"></div>
-          <div class="field"><label class="safe-zone-label">Max</label><input type="number" id="profileSafeNo2Max" step="0.01" min="0"></div>
-        </div>
-      </div>
-      <div class="safe-zone-row">
-        <div class="safe-zone-category">Nitrate (ppm)</div>
-        <div class="safe-zone-inputs">
-          <div class="field"><label class="safe-zone-label">Min</label><input type="number" id="profileSafeNo3Min" step="1" min="0"></div>
-          <div class="field"><label class="safe-zone-label">Max</label><input type="number" id="profileSafeNo3Max" step="1" min="0"></div>
-        </div>
-      </div>
-      <div class="safe-zone-row">
-        <div class="safe-zone-category">KH (dKH)</div>
-        <div class="safe-zone-inputs">
-          <div class="field"><label class="safe-zone-label">Min</label><input type="number" id="profileSafeKhMin" step="0.5" min="0"></div>
-          <div class="field"><label class="safe-zone-label">Max</label><input type="number" id="profileSafeKhMax" step="0.5" min="0"></div>
+        <div class="header-right">
+          <button type="button" class="profile-btn" id="profileButton" aria-label="Open profile">
+            <span class="avatar-emoji">👤</span>
+          </button>
         </div>
       </div>
 
+      <!-- Tank form -->
+      <div class="section-label">
+        <div class="section-label-text">🐠 Add Tank Readings</div>
+        <div class="section-toggle-controls">
+          <div class="section-label-line"></div>
+          <label class="section-toggle">
+            <input type="checkbox" id="tap-feature-toggle" checked />
+            <span>Track Tap Water</span>
+          </label>
+        </div>
+      </div>
+      <div class="form-card">
+        <div class="form-title">+ Log Tank Reading</div>
+        <div class="form-grid">
+          <div class="field">
+            <label class="ph-label">pH</label
+            ><input type="number" id="f-ph" step="0.1" min="0" max="14" placeholder="6.8" />
+          </div>
+          <div class="field">
+            <label class="nh3-label">Ammonia (ppm)</label
+            ><input type="number" id="f-nh3" step="0.25" min="0" placeholder="0.0" />
+          </div>
+          <div class="field">
+            <label class="no2-label">Nitrite (ppm)</label
+            ><input type="number" id="f-no2" step="0.25" min="0" placeholder="0.0" />
+          </div>
+          <div class="field">
+            <label class="no3-label">Nitrate (ppm)</label
+            ><input type="number" id="f-no3" step="5" min="0" placeholder="0" />
+          </div>
+          <div class="field">
+            <label class="kh-label">KH (dKH)</label
+            ><input type="number" id="f-kh" step="0.5" min="0" placeholder="4" />
+          </div>
+        </div>
+        <div class="form-row form-row-right">
+          <button type="button" class="btn-add">Add Reading</button>
+        </div>
+      </div>
+
+      <div class="section-label" id="tapSectionHeader">
+        <div class="section-label-text">🚰 Filtered Tap Water</div>
+        <div class="section-label-line"></div>
+      </div>
+
+      <!-- Tap form -->
+      <div id="tapEntryPanel">
+        <div class="form-card tap-card">
+          <div class="form-title">+ Log Tap Water Test</div>
+          <div class="form-grid-tap">
+            <div class="field">
+              <label class="tap-label">Nitrate (ppm)</label
+              ><input type="number" id="t-no3" step="5" min="0" placeholder="25" />
+            </div>
+            <div class="field">
+              <label class="label-muted">Notes (optional)</label
+              ><input type="text" id="t-note" placeholder="e.g. filter changed" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="field date-field">
+              <label class="label-muted">Date &amp; Time</label
+              ><input type="datetime-local" id="t-date" />
+            </div>
+            <button type="button" class="btn-add tap-btn">Add Tap Test</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="status-bar" id="statusBar">
+        <div class="stat-pill">
+          <div class="stat-label">pH</div>
+          <div class="stat-value c-muted">—</div>
+        </div>
+        <div class="stat-pill">
+          <div class="stat-label">Ammonia</div>
+          <div class="stat-value c-muted">—</div>
+        </div>
+        <div class="stat-pill">
+          <div class="stat-label">Nitrite</div>
+          <div class="stat-value c-muted">—</div>
+        </div>
+        <div class="stat-pill">
+          <div class="stat-label">Nitrate</div>
+          <div class="stat-value c-muted">—</div>
+        </div>
+        <div class="stat-pill">
+          <div class="stat-label">KH</div>
+          <div class="stat-value c-muted">—</div>
+        </div>
+      </div>
+
+      <div class="section-label">
+        <div class="section-label-text">📈 Tank Readings History</div>
+        <div class="section-label-line"></div>
+      </div>
+
+      <div class="charts-wrap">
+        <div class="chart-card">
+          <div class="chart-header">
+            <div class="chart-dot chart-dot-ph"></div>
+            <div class="chart-name">pH</div>
+            <div class="chart-range" id="range-ph">Target: 6.5–7.0</div>
+          </div>
+          <div class="chart-canvas-wrap">
+            <canvas class="chart" id="chart-ph"></canvas>
+            <div class="chart-no-data" id="nd-ph">No readings yet</div>
+          </div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-header">
+            <div class="chart-dot chart-dot-nh3"></div>
+            <div class="chart-name">Ammonia</div>
+            <div class="chart-range" id="range-nh3">Target: 0 ppm</div>
+          </div>
+          <div class="chart-canvas-wrap">
+            <canvas class="chart" id="chart-nh3"></canvas>
+            <div class="chart-no-data" id="nd-nh3">No readings yet</div>
+          </div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-header">
+            <div class="chart-dot chart-dot-no2"></div>
+            <div class="chart-name">Nitrite</div>
+            <div class="chart-range" id="range-no2">Target: 0 ppm</div>
+          </div>
+          <div class="chart-canvas-wrap">
+            <canvas class="chart" id="chart-no2"></canvas>
+            <div class="chart-no-data" id="nd-no2">No readings yet</div>
+          </div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-header">
+            <div class="chart-dot chart-dot-no3"></div>
+            <div class="chart-name">Nitrate</div>
+            <div class="chart-range" id="range-no3">Safe: 0-20 ppm · Warning: 20-40 ppm</div>
+            <div class="chart-legend">
+              <div class="legend-item">
+                <div class="legend-dot legend-dot-no3"></div>
+                Tank
+              </div>
+              <div class="legend-item" id="tapLegendItem">
+                <div class="legend-dot legend-dot-tap"></div>
+                Filtered Tap
+              </div>
+            </div>
+          </div>
+          <div class="chart-canvas-wrap">
+            <canvas class="chart" id="chart-no3"></canvas>
+            <div class="chart-no-data" id="nd-no3">No readings yet</div>
+          </div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-header">
+            <div class="chart-dot chart-dot-kh"></div>
+            <div class="chart-name">KH (Carbonate)</div>
+            <div class="chart-range" id="range-kh">Target: 2–6 dKH</div>
+          </div>
+          <div class="chart-canvas-wrap">
+            <canvas class="chart" id="chart-kh"></canvas>
+            <div class="chart-no-data" id="nd-kh">No readings yet</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="log-wrap">
+        <div class="log-header">
+          <div class="log-title">Tank Reading Log</div>
+          <div class="log-count" id="logCount">0 readings</div>
+        </div>
+        <div id="logBody"><div class="log-empty">No readings logged yet</div></div>
+      </div>
+
+      <div class="tap-status-bar" id="tapStatusBar">
+        <div class="stat-pill tap-pill">
+          <div class="stat-label">Latest Filtered Tap NO₃</div>
+          <div class="stat-value c-muted">—</div>
+        </div>
+        <div class="stat-pill tap-pill">
+          <div class="stat-label">Last Tested</div>
+          <div class="stat-value c-muted stat-value-compact">—</div>
+        </div>
+      </div>
+      <div class="log-wrap tap-log" id="tapLogWrap">
+        <div class="log-header">
+          <div class="log-title">Tap Water Log</div>
+          <div class="log-count" id="tapLogCount">0 readings</div>
+        </div>
+        <div id="tapLogBody"><div class="log-empty">No tap tests logged yet</div></div>
+      </div>
+
+      <footer class="footer">Copyright VibeAI Software <span id="currentYear"></span></footer>
+    </div>
+    <!-- /app -->
+
+    <div id="profilePage">
+      <div class="profile-card">
+        <div class="profile-header">
+          <div class="profile-title">Profile</div>
+          <div class="profile-header-actions">
+            <button type="button" class="profile-save-btn">Save</button>
+            <button type="button" class="profile-close-btn">Close</button>
+          </div>
+        </div>
+
+        <div class="profile-section-title">Aquarist</div>
+        <div class="avatar-editor">
+          <button class="avatar-preview" type="button" aria-label="Upload custom avatar">
+            <span id="profileAvatarEmoji">👤</span>
+            <img
+              id="profileAvatarImage"
+              src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+              alt=""
+              hidden
+            />
+          </button>
+          <div class="avatar-controls">
+            <div class="avatar-options" role="radiogroup" aria-label="Choose avatar icon">
+              <button
+                class="avatar-option"
+                type="button"
+                role="radio"
+                data-avatar-emoji="👤"
+                aria-label="Person avatar"
+              >
+                👤
+              </button>
+              <button
+                class="avatar-option"
+                type="button"
+                role="radio"
+                data-avatar-emoji="🐠"
+                aria-label="Tropical fish avatar"
+              >
+                🐠
+              </button>
+              <button
+                class="avatar-option"
+                type="button"
+                role="radio"
+                data-avatar-emoji="🐟"
+                aria-label="Fish avatar"
+              >
+                🐟
+              </button>
+              <button
+                class="avatar-option"
+                type="button"
+                role="radio"
+                data-avatar-emoji="🐡"
+                aria-label="Puffer fish avatar"
+              >
+                🐡
+              </button>
+              <button
+                class="avatar-option"
+                type="button"
+                role="radio"
+                data-avatar-emoji="🐙"
+                aria-label="Octopus avatar"
+              >
+                🐙
+              </button>
+              <button
+                class="avatar-option"
+                type="button"
+                role="radio"
+                data-avatar-emoji="🦐"
+                aria-label="Shrimp avatar"
+              >
+                🦐
+              </button>
+            </div>
+            <div class="avatar-actions">
+              <button class="avatar-action-btn" type="button">Upload image</button>
+              <button class="avatar-action-btn" id="removeAvatarImageBtn" type="button">
+                Use icon
+              </button>
+            </div>
+            <input
+              type="file"
+              id="profileAvatarFile"
+              accept="image/png,image/jpeg,image/webp"
+              hidden
+            />
+            <div class="avatar-help">
+              Choose an icon or upload a JPG, PNG, or WebP. Images are cropped square and resized
+              before saving.
+            </div>
+          </div>
+        </div>
+        <div class="profile-grid">
+          <div class="field">
+            <label>Name</label><input type="text" id="profileUserName" placeholder="Your name" />
+          </div>
+        </div>
+
+        <div class="profile-section-title">Aquarium</div>
+        <div class="profile-grid">
+          <div class="field">
+            <label>Aquarium Name</label
+            ><input type="text" id="profileAquariumName" placeholder="Aquarium" />
+          </div>
+          <div class="field">
+            <label>Aquarium Size</label
+            ><input type="number" id="profileAquariumSize" step="0.1" min="0" placeholder="57" />
+          </div>
+          <div class="field">
+            <label>Units</label>
+            <select id="profileAquariumUnits" class="gate-input profile-units-select">
+              <option value="litres">Litres</option>
+              <option value="gallons">Gallons</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="profile-section-title">Chart Safe Zones</div>
+        <div class="safe-zone-list">
+          <div class="safe-zone-row">
+            <div class="safe-zone-category">pH</div>
+            <div class="safe-zone-inputs">
+              <div class="field">
+                <label class="safe-zone-label">Min</label
+                ><input type="number" id="profileSafePhMin" step="0.1" min="0" max="14" />
+              </div>
+              <div class="field">
+                <label class="safe-zone-label">Max</label
+                ><input type="number" id="profileSafePhMax" step="0.1" min="0" max="14" />
+              </div>
+            </div>
+          </div>
+          <div class="safe-zone-row">
+            <div class="safe-zone-category">Ammonia (ppm)</div>
+            <div class="safe-zone-inputs">
+              <div class="field">
+                <label class="safe-zone-label">Min</label
+                ><input type="number" id="profileSafeNh3Min" step="0.01" min="0" />
+              </div>
+              <div class="field">
+                <label class="safe-zone-label">Max</label
+                ><input type="number" id="profileSafeNh3Max" step="0.01" min="0" />
+              </div>
+            </div>
+          </div>
+          <div class="safe-zone-row">
+            <div class="safe-zone-category">Nitrite (ppm)</div>
+            <div class="safe-zone-inputs">
+              <div class="field">
+                <label class="safe-zone-label">Min</label
+                ><input type="number" id="profileSafeNo2Min" step="0.01" min="0" />
+              </div>
+              <div class="field">
+                <label class="safe-zone-label">Max</label
+                ><input type="number" id="profileSafeNo2Max" step="0.01" min="0" />
+              </div>
+            </div>
+          </div>
+          <div class="safe-zone-row">
+            <div class="safe-zone-category">Nitrate (ppm)</div>
+            <div class="safe-zone-inputs">
+              <div class="field">
+                <label class="safe-zone-label">Min</label
+                ><input type="number" id="profileSafeNo3Min" step="1" min="0" />
+              </div>
+              <div class="field">
+                <label class="safe-zone-label">Max</label
+                ><input type="number" id="profileSafeNo3Max" step="1" min="0" />
+              </div>
+            </div>
+          </div>
+          <div class="safe-zone-row">
+            <div class="safe-zone-category">KH (dKH)</div>
+            <div class="safe-zone-inputs">
+              <div class="field">
+                <label class="safe-zone-label">Min</label
+                ><input type="number" id="profileSafeKhMin" step="0.5" min="0" />
+              </div>
+              <div class="field">
+                <label class="safe-zone-label">Max</label
+                ><input type="number" id="profileSafeKhMax" step="0.5" min="0" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="profile-footer">
+          <button class="profile-logout-btn" type="button">Log Out</button>
+        </div>
+      </div>
     </div>
 
-    <div class="profile-footer">
-      <button class="profile-logout-btn" type="button">Log Out</button>
+    <div
+      id="confirmModal"
+      class="modal-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="confirmModalTitle"
+    >
+      <div class="modal-card">
+        <div class="modal-title" id="confirmModalTitle">Delete reading?</div>
+        <p class="modal-message" id="confirmModalMessage">This cannot be undone.</p>
+        <div class="modal-actions">
+          <button type="button" class="modal-btn modal-btn-secondary">Cancel</button>
+          <button type="button" class="modal-btn modal-btn-danger" id="confirmModalConfirmBtn">
+            Delete
+          </button>
+        </div>
+      </div>
     </div>
-  </div>
-</div>
 
-<div id="confirmModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="confirmModalTitle">
-  <div class="modal-card">
-    <div class="modal-title" id="confirmModalTitle">Delete reading?</div>
-    <p class="modal-message" id="confirmModalMessage">This cannot be undone.</p>
-    <div class="modal-actions">
-      <button type="button" class="modal-btn modal-btn-secondary">Cancel</button>
-      <button type="button" class="modal-btn modal-btn-danger" id="confirmModalConfirmBtn">Delete</button>
+    <div
+      id="editTankModal"
+      class="modal-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="editTankModalTitle"
+    >
+      <div class="modal-card modal-card-wide">
+        <div class="modal-title" id="editTankModalTitle">Edit tank reading</div>
+        <p class="modal-message">Update values and save. Leave fields blank if not measured.</p>
+        <div class="modal-form-grid">
+          <div class="field">
+            <label class="ph-label">pH</label
+            ><input type="number" id="edit-ph" step="0.1" min="0" max="14" />
+          </div>
+          <div class="field">
+            <label class="nh3-label">Ammonia (ppm)</label
+            ><input type="number" id="edit-nh3" step="0.25" min="0" />
+          </div>
+          <div class="field">
+            <label class="no2-label">Nitrite (ppm)</label
+            ><input type="number" id="edit-no2" step="0.25" min="0" />
+          </div>
+          <div class="field">
+            <label class="no3-label">Nitrate (ppm)</label
+            ><input type="number" id="edit-no3" step="5" min="0" />
+          </div>
+          <div class="field">
+            <label class="kh-label">KH (dKH)</label
+            ><input type="number" id="edit-kh" step="0.5" min="0" />
+          </div>
+          <div class="field field-date">
+            <label class="label-muted">Date &amp; Time</label
+            ><input type="datetime-local" id="edit-tank-date" />
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="modal-btn modal-btn-secondary">Cancel</button>
+          <button type="button" class="modal-btn modal-btn-primary">Save changes</button>
+        </div>
+      </div>
     </div>
-  </div>
-</div>
 
-<div id="editTankModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="editTankModalTitle">
-  <div class="modal-card modal-card-wide">
-    <div class="modal-title" id="editTankModalTitle">Edit tank reading</div>
-    <p class="modal-message">Update values and save. Leave fields blank if not measured.</p>
-    <div class="modal-form-grid">
-      <div class="field"><label class="ph-label">pH</label><input type="number" id="edit-ph" step="0.1" min="0" max="14"></div>
-      <div class="field"><label class="nh3-label">Ammonia (ppm)</label><input type="number" id="edit-nh3" step="0.25" min="0"></div>
-      <div class="field"><label class="no2-label">Nitrite (ppm)</label><input type="number" id="edit-no2" step="0.25" min="0"></div>
-      <div class="field"><label class="no3-label">Nitrate (ppm)</label><input type="number" id="edit-no3" step="5" min="0"></div>
-      <div class="field"><label class="kh-label">KH (dKH)</label><input type="number" id="edit-kh" step="0.5" min="0"></div>
-      <div class="field field-date"><label class="label-muted">Date &amp; Time</label><input type="datetime-local" id="edit-tank-date"></div>
+    <div
+      id="editTapModal"
+      class="modal-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="editTapModalTitle"
+    >
+      <div class="modal-card">
+        <div class="modal-title" id="editTapModalTitle">Edit tap water test</div>
+        <div class="modal-form-grid">
+          <div class="field">
+            <label class="tap-label">Nitrate (ppm)</label
+            ><input type="number" id="edit-tap-no3" step="5" min="0" />
+          </div>
+          <div class="field field-date">
+            <label class="label-muted">Date &amp; Time</label
+            ><input type="datetime-local" id="edit-tap-date" />
+          </div>
+          <div class="field field-date">
+            <label class="label-muted">Notes</label
+            ><input type="text" id="edit-tap-note" placeholder="Optional" />
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="modal-btn modal-btn-secondary">Cancel</button>
+          <button type="button" class="modal-btn modal-btn-primary">Save changes</button>
+        </div>
+      </div>
     </div>
-    <div class="modal-actions">
-      <button type="button" class="modal-btn modal-btn-secondary">Cancel</button>
-      <button type="button" class="modal-btn modal-btn-primary">Save changes</button>
-    </div>
-  </div>
-</div>
 
-<div id="editTapModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="editTapModalTitle">
-  <div class="modal-card">
-    <div class="modal-title" id="editTapModalTitle">Edit tap water test</div>
-    <div class="modal-form-grid">
-      <div class="field"><label class="tap-label">Nitrate (ppm)</label><input type="number" id="edit-tap-no3" step="5" min="0"></div>
-      <div class="field field-date"><label class="label-muted">Date &amp; Time</label><input type="datetime-local" id="edit-tap-date"></div>
-      <div class="field field-date"><label class="label-muted">Notes</label><input type="text" id="edit-tap-note" placeholder="Optional"></div>
-    </div>
-    <div class="modal-actions">
-      <button type="button" class="modal-btn modal-btn-secondary">Cancel</button>
-      <button type="button" class="modal-btn modal-btn-primary">Save changes</button>
-    </div>
-  </div>
-</div>
+    <div id="toast"></div>
 
-<div id="toast"></div>
-
-
-<script src="config.js"></script>
-<script src="/assets/config-local-loader.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
-<script src="/assets/app.js"></script>
-</body>
+    <script src="config.js"></script>
+    <script src="/assets/config-local-loader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+    <script src="/assets/app.js"></script>
+  </body>
 </html>

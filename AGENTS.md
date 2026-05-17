@@ -45,7 +45,7 @@ The app is being migrated to Cognito:
 - **Data flow:** frontend loads and mutates readings via backend endpoints (`/readings`, `/tap`) using `fetch`.
 - `readings` and `tapReadings` arrays are runtime client caches, hydrated from the API.
 - **Backend code/artifacts:** `lambda/index.mjs`, `lambda/package.json`, and `deploy/*`.
-- No automated tests or linting infrastructure exist in this repo.
+- **Lint/format (AT-018):** from the repo root, `npm ci` then `npm run lint` (ESLint for `assets/*.js`, `config.js`, `lambda/*.mjs`, `scripts/`; html-validate for `index.html` and `assets/roadmap.html`), `npm run format` / `format:check` (Prettier). CI: `.github/workflows/lint.yml`.
 
 ### Roadmap
 
