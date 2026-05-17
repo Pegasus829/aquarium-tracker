@@ -83,11 +83,29 @@ Every item has exactly one category. Use these labels in the **Category** column
 | AT-014 | Defect | Fix render when legacy readings lack `kh` | 2026-05 (`99dda5f`) | Post–KH rollout |
 | AT-015 | Defect | API Gateway CORS JSON for OPTIONS routes | 2026-05 (`1e79788`) | Deploy script fix |
 | AT-016 | Enhancement | Roadmap tracking file + agent workflow | 2026-05-17 | This document |
+| AT-028 | Enhancement | Remove duplicate stray files (`index 2.html`, `lambda/index 2.mjs`, etc.) | 2026-05-17 | Added `.gitignore` guard for local duplicate copy artifacts |
 
 ---
 
 ## Backlog
 
+**Add to Next** is managed in [assets/roadmap.html](assets/roadmap.html) (★ column, `localStorage` key `wqt_roadmap_next`), not in this table.
+
+| ID | Category | Title | Status | Priority | Source | Notes |
+|----|----------|-------|--------|----------|--------|-------|
+| AT-017 | Enhancement | Playwright E2E smoke tests (login, add reading, chart render) | idea | medium | `AGENTS.md` gap; `node_modules/playwright` present | No `playwright.config` or CI job yet |
+| AT-018 | Enhancement | Lint/format tooling for `index.html` + `lambda/` | idea | low | `AGENTS.md` | Single-file frontend; consider HTML/JS checks only |
+| AT-019 | Security | Content-Security-Policy (and related security headers) | idea | medium | Security review ([391aaea1](391aaea1-337f-4d97-bdd6-f6b88ba882c0)) | GitHub Pages limits; document what’s feasible |
+| AT-020 | Enhancement | API Gateway gateway responses: CORS on 5xx/integration failures | idea | low | Auth/deploy session ([391aaea1](391aaea1-337f-4d97-bdd6-f6b88ba882c0)) | Reduces misleading browser “CORS” errors when Lambda fails |
+| AT-021 | Security | Reduce exposure of static `API_KEY` in `index.html` | idea | medium | Security review | JWT helps; key still public to anyone loading the page |
+| AT-022 | New Feature | Export readings (CSV or JSON download) | idea | medium | Security review (export mentioned) | No `downloadFile` in current `index.html` |
+| AT-023 | Enhancement | Chart date-range filter / zoom | idea | low | UX | Long histories get crowded |
+| AT-024 | New Feature | Out-of-range alerts (email/push or on-open banner) | idea | low | user | Would need notification channel + thresholds |
+| AT-025 | New Feature | Additional parameters (e.g. temperature, GH, Ca, Mg) | idea | low | user | Follow KH pattern; profile safe zones + API validation |
+| AT-026 | New Feature | Multi-tank / multiple aquarium profiles | idea | low | user | Data model + partition key design |
+| AT-027 | Security | Local dev secrets (`.env` / build inject) instead of committed `API_KEY` | idea | medium | deploy sessions | Safer forks and PR previews |
+| AT-029 | Enhancement | Backfill UI for missing KH on historical readings | idea | low | KH session ([aff87b27](aff87b27-a3af-4666-855c-02edcc319a66)) | Optional bulk edit or per-row prompt |
+| AT-030 | Security | Rate-limit / abuse monitoring dashboard or alarms | idea | low | Security review | Usage plan exists; observability not in repo |
 Use the `Next` column to queue near-term work. Mark selected rows as `next`; leave unselected rows blank.
 
 | Next | ID | Category | Title | Status | Priority | Source | Notes |
