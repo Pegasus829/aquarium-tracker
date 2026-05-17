@@ -1,7 +1,12 @@
 import js from '@eslint/js';
 import globals from 'globals';
 
-const browserFiles = ['assets/app.js', 'assets/config-local-loader.js', 'config.js'];
+const browserFiles = [
+  'assets/app.js',
+  'assets/config-local-loader.js',
+  'assets/roadmap.js',
+  'config.js',
+];
 
 const nodeFiles = [
   'lambda/index.mjs',

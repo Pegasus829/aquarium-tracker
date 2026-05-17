@@ -22,12 +22,14 @@ The main app permits:
   form/navigation targets;
 - `data:` images for locally uploaded profile avatars.
 
-The main app (`index.html`) loads same-origin `assets/app.css`, `assets/app.js`,
-and `assets/config-local-loader.js`, so its CSP meta tag no longer includes
-`'unsafe-inline'` for scripts or styles.
+Both static pages load same-origin CSS and JavaScript only. The main app
+(`index.html`) uses `assets/app.css`, `assets/app.js`, and
+`assets/config-local-loader.js`. The roadmap page (`assets/roadmap.html`) uses
+`assets/roadmap.css` and `assets/roadmap.js` (SA-020 / AT-033).
 
-`assets/roadmap.html` still uses inline CSS and JavaScript and keeps
-`'unsafe-inline'` in its CSP until that page is externalized the same way.
+Neither page’s CSP meta tag includes `'unsafe-inline'` for scripts or styles.
+The roadmap page does not allow third-party script origins; the main app still
+permits `cdn.jsdelivr.net` for Chart.js until AT-037 is delivered.
 
 ## API responses
 

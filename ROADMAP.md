@@ -38,7 +38,7 @@ Living backlog for features and enhancements. **Reference items by ID** (e.g. �
 | SA-017 | Medium | Stop storing unused Cognito ID token | AT-045 | `wqt_id_token` |
 | SA-018 | Medium | Token refresh / session renewal | AT-045 | SPA re-auth on expiry |
 | SA-019 | Medium | HSTS and edge security headers | AT-046 | Follow-up to delivered AT-019 |
-| SA-020 | Medium | Tighten `roadmap.html` CSP | AT-033 | Drop `unsafe-inline` on roadmap page |
+| SA-020 | Medium | Tighten `roadmap.html` CSP | AT-033 | Delivered 2026-05-17: `assets/roadmap.css` + `roadmap.js`; CSP without `unsafe-inline` |
 | SA-021 | Medium | Parameterize CSP `connect-src` for local API | AT-047 | Hardcoded API host in `index.html` |
 | SA-022 | Medium | Restrict OIDC trust to `main` (or tags) | AT-048 | `github-oidc-trust-policy.json` |
 | SA-023 | Medium | Narrow CI deploy role `Resource: "*"` | AT-049 | `github-deploy-policy.json` |
@@ -67,7 +67,7 @@ Living backlog for features and enhancements. **Reference items by ID** (e.g. �
 
 | Roadmap action | Count |
 |----------------|------:|
-| **Tracked** (`AT-###` in backlog) | 38 |
+| **Tracked** (`AT-###` in backlog) | 37 |
 | **none** (no backlog row) | 7 |
 
 **Promoted 2026-05-17:** **new** → AT-034–AT-058; **extend** → AT-030, AT-033, AT-026, AT-022, AT-032; **partial** → AT-046 (SA-019), AT-051 (SA-025), AT-058 (SA-044). **none** (SA-026, SA-031, SA-035–SA-037, SA-039, SA-042) — no backlog row.
@@ -157,6 +157,7 @@ Every item has exactly one category. Use these labels in the **Category** column
 | AT-020 | Enhancement | API Gateway gateway responses: CORS on 5xx/integration failures | 2026-05-17 | `deploy/configure-gateway-cors-responses.sh`; CI + deploy scripts |
 | AT-036 | Security | GitHub deployment protection on `main` | 2026-05-17 | `production` environment + required reviewers; `deploy/github-environments.md` |
 | AT-035 | Security | API Gateway auth safe defaults in deploy scripts | 2026-05-17 | SA-004: `deploy-profile-api.sh` inherits auth from GET `/readings`; `NONE` requires `ALLOW_INSECURE_AUTH=1` |
+| AT-033 | Security | Remove inline code so CSP can drop `unsafe-inline` | 2026-05-17 | SA-020: `index.html` + `assets/roadmap.html` → `app.css`/`app.js`, `roadmap.css`/`roadmap.js`; CSP `script-src`/`style-src` `'self'` only |
 
 ---
 
@@ -199,7 +200,6 @@ Use the `Next` column to queue near-term work (`next` vs blank); **Add to Next**
 |  | AT-030 | Security | Rate-limit / abuse monitoring dashboard or alarms | idea | medium | Security review | SA-003, SA-027: WAF/throttle `/auth/login` + token abuse; auth-failure audit logs and alarms |
 |  | AT-031 | Enhancement | Generate interactive roadmap data from `ROADMAP.md` | idea | low | agent:roadmap-next-sync | Avoid maintaining duplicate `ROADMAP_ITEMS` data by hand |
 |  | AT-032 | Security | Roadmap permissions with read/write access controls | idea | medium | user | SA-041: default no roadmap access; `marc@amphletts.uk` write access |
-|  | AT-033 | Security | Remove inline code so CSP can drop `unsafe-inline` | idea | medium | agent:at-019 | SA-020: `assets/roadmap.html` + main app; externalize or nonce/hash |
 
 ### Commercial (placeholder)
 
@@ -236,3 +236,4 @@ No backlog items yet. When planning a public launch, add items here (e.g. subscr
 | 2026-05-17 | Added [Security audit matrix](#security-audit-matrix-sa--roadmap) (SA-001–SA-045 → roadmap action) |
 | 2026-05-17 | Promoted security audit: AT-034–AT-058 backlog; extended AT-030, AT-033, AT-026, AT-022, AT-032 |
 | 2026-05-17 | Delivered AT-036: GitHub `production` environment gate on `deploy-aws.yml` |
+| 2026-05-17 | Delivered AT-033: externalized roadmap page assets; CSP without `unsafe-inline` on main app and roadmap |
