@@ -83,6 +83,7 @@ Every item has exactly one category. Use these labels in the **Category** column
 | AT-014 | Defect | Fix render when legacy readings lack `kh` | 2026-05 (`99dda5f`) | Post–KH rollout |
 | AT-015 | Defect | API Gateway CORS JSON for OPTIONS routes | 2026-05 (`1e79788`) | Deploy script fix |
 | AT-016 | Enhancement | Roadmap tracking file + agent workflow | 2026-05-17 | This document |
+| AT-028 | Enhancement | Remove duplicate stray files (`index 2.html`, `lambda/index 2.mjs`, etc.) | 2026-05-17 | Added `.gitignore` guard for local duplicate copy artifacts |
 
 ---
 
@@ -103,7 +104,6 @@ Every item has exactly one category. Use these labels in the **Category** column
 | AT-025 | New Feature | Additional parameters (e.g. temperature, GH, Ca, Mg) | idea | low | user | Follow KH pattern; profile safe zones + API validation |
 | AT-026 | New Feature | Multi-tank / multiple aquarium profiles | idea | low | user | Data model + partition key design |
 | AT-027 | Security | Local dev secrets (`.env` / build inject) instead of committed `API_KEY` | idea | medium | deploy sessions | Safer forks and PR previews |
-| AT-028 | Enhancement | Remove duplicate stray files (`index 2.html`, `lambda/index 2.mjs`, etc.) | planned | low | git status / agent cleanup | Untracked duplicates; avoid confusion |
 | AT-029 | Enhancement | Backfill UI for missing KH on historical readings | idea | low | KH session ([aff87b27](aff87b27-a3af-4666-855c-02edcc319a66)) | Optional bulk edit or per-row prompt |
 | AT-030 | Security | Rate-limit / abuse monitoring dashboard or alarms | idea | low | Security review | Usage plan exists; observability not in repo |
 
