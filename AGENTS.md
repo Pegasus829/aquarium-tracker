@@ -17,17 +17,19 @@ Use HTTP (not `file://`) so browser APIs and API requests work correctly.
 
 ### Authentication
 
-The app shows a client-side password gate UI, but password verification is server-side:
-- login call: `POST /auth/login` on `API_BASE_URL`
-- JWT is stored in `sessionStorage` (`wqt_token`) and sent as `Authorization: Bearer ...`
-- protected API calls include `x-api-key` from `API_KEY` in `index.html`
+The app is being migrated to Cognito:
+- when `COGNITO_DOMAIN` and `COGNITO_CLIENT_ID` are set in `index.html`, the frontend uses Cognito Hosted UI with authorization-code + PKCE
+- until those values are configured, the legacy password gate remains available via `POST /auth/login`
+- JWTs are stored in `sessionStorage` (`wqt_token`) and sent as `Authorization: Bearer ...`
+- protected API calls currently include `x-api-key` from `API_KEY` in `index.html`
+- Cognito setup and migration assets live in `deploy/cognito-auth-template.yaml`, `deploy/setup-cognito-auth.sh`, and `AUTHENTICATION.md`
 
 ### Architecture
 
 - **Frontend:** no build step; UI logic lives in a single `index.html`.
 - **Data flow:** frontend loads and mutates readings via backend endpoints (`/readings`, `/tap`) using `fetch`.
 - `readings` and `tapReadings` arrays are runtime client caches, hydrated from the API.
-- **Backend code/artifacts:** `lambda/index.mjs`, `lambda/package.json`, and `deploy/*.json`.
+- **Backend code/artifacts:** `lambda/index.mjs`, `lambda/package.json`, and `deploy/*`.
 - No automated tests or linting infrastructure exist in this repo.
 
 ### Key notes

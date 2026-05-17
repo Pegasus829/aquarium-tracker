@@ -1,0 +1,92 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Reusable Cognito hosted-login auth foundation for static apps and API Gateway.
+
+Parameters:
+  AppName:
+    Type: String
+    Default: aquarium-tracker
+  HostedAuthDomainPrefix:
+    Type: String
+    Description: Globally unique Cognito hosted domain prefix, for example aquarium-tracker-prod.
+  CallbackUrl:
+    Type: String
+    Default: https://aquarium.vibeai.software/
+  LogoutUrl:
+    Type: String
+    Default: https://aquarium.vibeai.software/
+
+Resources:
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub "${AppName}-users"
+      UserPoolTier: ESSENTIALS
+      UsernameAttributes:
+        - email
+      AutoVerifiedAttributes:
+        - email
+      AccountRecoverySetting:
+        RecoveryMechanisms:
+          - Name: verified_email
+            Priority: 1
+      AdminCreateUserConfig:
+        AllowAdminCreateUserOnly: true
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 12
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: false
+          RequireUppercase: true
+          TemporaryPasswordValidityDays: 7
+        SignInPolicy:
+          AllowedFirstAuthFactors:
+            - PASSWORD
+            - WEB_AUTHN
+      WebAuthnFactorConfiguration: SINGLE_FACTOR
+      WebAuthnRelyingPartyID: !Sub "${HostedAuthDomainPrefix}.auth.${AWS::Region}.amazoncognito.com"
+      Schema:
+        - Name: email
+          Required: true
+          Mutable: true
+      WebAuthnUserVerification: preferred
+
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: !Sub "${AppName}-web"
+      UserPoolId: !Ref UserPool
+      GenerateSecret: false
+      PreventUserExistenceErrors: ENABLED
+      SupportedIdentityProviders:
+        - COGNITO
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthFlows:
+        - code
+      AllowedOAuthScopes:
+        - openid
+        - email
+        - profile
+      CallbackURLs:
+        - !Ref CallbackUrl
+      LogoutURLs:
+        - !Ref LogoutUrl
+      ExplicitAuthFlows:
+        - ALLOW_REFRESH_TOKEN_AUTH
+        - ALLOW_USER_SRP_AUTH
+
+  UserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      Domain: !Ref HostedAuthDomainPrefix
+      UserPoolId: !Ref UserPool
+
+Outputs:
+  UserPoolId:
+    Value: !Ref UserPool
+  UserPoolArn:
+    Value: !GetAtt UserPool.Arn
+  UserPoolClientId:
+    Value: !Ref UserPoolClient
+  HostedAuthDomain:
+    Value: !Sub "https://${HostedAuthDomainPrefix}.auth.${AWS::Region}.amazoncognito.com"

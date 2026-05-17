@@ -801,10 +801,18 @@ body.profile-open { overflow: hidden; }
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script>
-// API Gateway base URL (no trailing slash). Password verified on Lambda; set PASSWORD_HASH and JWT_SECRET there. Data requires JWT (Authorization: Bearer).
+// API Gateway base URL (no trailing slash). Data requires a JWT (Authorization: Bearer).
 const API_BASE_URL = 'https://gnewkvhgwd.execute-api.eu-west-1.amazonaws.com/prod';
-// Usage plan requires this header on protected routes (login route does not).
+// Usage plan requires this header on protected routes. It is not a secret in a browser app.
 const API_KEY = '8lpMzm6DCL1dgipDrSaJs4LGozq0X64a3QGwMgfU';
+// Fill these after running deploy/setup-cognito-auth.sh. When blank, the legacy password gate is used.
+const COGNITO_DOMAIN = '';
+const COGNITO_CLIENT_ID = '';
+const COGNITO_SCOPES = 'openid email profile';
+const TOKEN_STORAGE_KEY = 'wqt_token';
+const ID_TOKEN_STORAGE_KEY = 'wqt_id_token';
+const COGNITO_PKCE_VERIFIER_KEY = 'wqt_pkce_verifier';
+const COGNITO_OAUTH_STATE_KEY = 'wqt_oauth_state';
 const DEFAULT_AVATAR_EMOJI = '👤';
 const AVATAR_EMOJIS = [DEFAULT_AVATAR_EMOJI, '🐠', '🐟', '🐡', '🐙', '🦐'];
 const AVATAR_UPLOAD_MAX_BYTES = 6 * 1024 * 1024;
@@ -1033,7 +1041,10 @@ function onProfileBackdropClick(event) {
 }
 
 function logOut() {
-  sessionStorage.removeItem('wqt_token');
+  sessionStorage.removeItem(TOKEN_STORAGE_KEY);
+  sessionStorage.removeItem(ID_TOKEN_STORAGE_KEY);
+  sessionStorage.removeItem(COGNITO_PKCE_VERIFIER_KEY);
+  sessionStorage.removeItem(COGNITO_OAUTH_STATE_KEY);
   closeProfilePage();
   readings = [];
   tapReadings = [];
@@ -1046,6 +1057,14 @@ function logOut() {
   if (gateError) gateError.textContent = '';
   document.getElementById('app').style.display = 'none';
   document.getElementById('gate').style.display = 'flex';
+  if (isCognitoConfigured()) {
+    const params = new URLSearchParams({
+      client_id: COGNITO_CLIENT_ID.trim(),
+      logout_uri: getRedirectUri(),
+    });
+    window.location.assign(`${COGNITO_DOMAIN.replace(/\/$/, '')}/logout?${params.toString()}`);
+    return;
+  }
   showToast('Logged out');
 }
 
@@ -1209,6 +1228,110 @@ async function saveProfile() {
   showToast('Profile updated ✓');
 }
 
+function isCognitoConfigured() {
+  return Boolean(COGNITO_DOMAIN.trim() && COGNITO_CLIENT_ID.trim());
+}
+
+function getRedirectUri() {
+  return window.location.origin + window.location.pathname;
+}
+
+function base64UrlFromBytes(bytes) {
+  let binary = '';
+  bytes.forEach((byte) => { binary += String.fromCharCode(byte); });
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+async function sha256Base64Url(value) {
+  const bytes = new TextEncoder().encode(value);
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return base64UrlFromBytes(new Uint8Array(digest));
+}
+
+function randomBase64Url(byteLength = 32) {
+  const bytes = new Uint8Array(byteLength);
+  crypto.getRandomValues(bytes);
+  return base64UrlFromBytes(bytes);
+}
+
+async function startCognitoSignIn() {
+  if (!isCognitoConfigured()) return false;
+  const verifier = randomBase64Url(64);
+  const state = randomBase64Url(24);
+  sessionStorage.setItem(COGNITO_PKCE_VERIFIER_KEY, verifier);
+  sessionStorage.setItem(COGNITO_OAUTH_STATE_KEY, state);
+
+  const params = new URLSearchParams({
+    client_id: COGNITO_CLIENT_ID.trim(),
+    response_type: 'code',
+    scope: COGNITO_SCOPES,
+    redirect_uri: getRedirectUri(),
+    state,
+    code_challenge_method: 'S256',
+    code_challenge: await sha256Base64Url(verifier),
+  });
+  window.location.assign(`${COGNITO_DOMAIN.replace(/\/$/, '')}/oauth2/authorize?${params.toString()}`);
+  return true;
+}
+
+async function exchangeCognitoCode(code) {
+  const verifier = sessionStorage.getItem(COGNITO_PKCE_VERIFIER_KEY);
+  if (!verifier) throw new Error('Missing sign-in verifier');
+  const body = new URLSearchParams({
+    grant_type: 'authorization_code',
+    client_id: COGNITO_CLIENT_ID.trim(),
+    code,
+    redirect_uri: getRedirectUri(),
+    code_verifier: verifier,
+  });
+  const res = await fetch(`${COGNITO_DOMAIN.replace(/\/$/, '')}/oauth2/token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.access_token) throw new Error(data.error_description || 'Token exchange failed');
+  sessionStorage.setItem(TOKEN_STORAGE_KEY, data.access_token);
+  if (data.id_token) sessionStorage.setItem(ID_TOKEN_STORAGE_KEY, data.id_token);
+  sessionStorage.removeItem(COGNITO_PKCE_VERIFIER_KEY);
+  sessionStorage.removeItem(COGNITO_OAUTH_STATE_KEY);
+}
+
+async function handleCognitoRedirect() {
+  if (!isCognitoConfigured()) return false;
+  const url = new URL(window.location.href);
+  const code = url.searchParams.get('code');
+  const state = url.searchParams.get('state');
+  if (!code) return false;
+  const expectedState = sessionStorage.getItem(COGNITO_OAUTH_STATE_KEY);
+  if (!expectedState || state !== expectedState) {
+    showToast('Sign-in response could not be verified');
+    return false;
+  }
+  try {
+    await exchangeCognitoCode(code);
+    url.searchParams.delete('code');
+    url.searchParams.delete('state');
+    window.history.replaceState({}, document.title, url.pathname + url.search + url.hash);
+    return true;
+  } catch {
+    sessionStorage.removeItem(COGNITO_PKCE_VERIFIER_KEY);
+    sessionStorage.removeItem(COGNITO_OAUTH_STATE_KEY);
+    showToast('Could not complete sign-in');
+    return false;
+  }
+}
+
+function initAuthUi() {
+  const input = document.getElementById('gateInput');
+  const button = document.querySelector('#gateForm .gate-btn');
+  const hint = document.querySelector('.gate-hint');
+  if (!isCognitoConfigured()) return;
+  if (input) input.hidden = true;
+  if (button) button.textContent = 'Sign in';
+  if (hint) hint.textContent = 'Use email, password, or passkey via secure hosted sign-in';
+}
+
 function parseJwtPayload(token) {
   try {
     const p = token.split('.')[1];
@@ -1224,16 +1347,17 @@ function parseJwtPayload(token) {
 }
 
 function getValidToken() {
-  const t = sessionStorage.getItem('wqt_token');
+  const t = sessionStorage.getItem(TOKEN_STORAGE_KEY);
   if (!t || !parseJwtPayload(t)) {
-    sessionStorage.removeItem('wqt_token');
+    sessionStorage.removeItem(TOKEN_STORAGE_KEY);
+    sessionStorage.removeItem(ID_TOKEN_STORAGE_KEY);
     return null;
   }
   return t;
 }
 
 function apiFetch(path, options = {}) {
-  const token = sessionStorage.getItem('wqt_token');
+  const token = sessionStorage.getItem(TOKEN_STORAGE_KEY);
   const key = API_KEY.trim();
   return fetch(API_BASE_URL + path, {
     ...options,
@@ -1295,7 +1419,8 @@ function setLoadingState(loading) {
 }
 
 function showSessionExpired() {
-  sessionStorage.removeItem('wqt_token');
+  sessionStorage.removeItem(TOKEN_STORAGE_KEY);
+  sessionStorage.removeItem(ID_TOKEN_STORAGE_KEY);
   document.getElementById('gate').style.display = 'flex';
   document.getElementById('app').style.display = 'none';
   showToast('Session expired — sign in again');
@@ -1311,7 +1436,8 @@ async function loadJsonResource(path) {
 
 async function loadData() {
   if (!API_BASE_URL.trim()) {
-    sessionStorage.removeItem('wqt_token');
+    sessionStorage.removeItem(TOKEN_STORAGE_KEY);
+    sessionStorage.removeItem(ID_TOKEN_STORAGE_KEY);
     document.getElementById('gate').style.display = 'flex';
     document.getElementById('app').style.display = 'none';
     showToast('Set API_BASE_URL in index.html');
@@ -1434,6 +1560,8 @@ function initGateForm() {
   const form = document.getElementById('gateForm');
   const input = document.getElementById('gateInput');
   if (form) form.addEventListener('submit', unlock);
+  initAuthUi();
+  if (isCognitoConfigured()) return;
   if (!input) return;
 
   lastGateInputValue = input.value;
@@ -1462,6 +1590,10 @@ function initGateForm() {
 
 async function unlock(event) {
   if (event) event.preventDefault();
+  if (isCognitoConfigured()) {
+    await startCognitoSignIn();
+    return;
+  }
   const input = document.getElementById('gateInput');
   const error = document.getElementById('gateError');
   const val = input.value;
@@ -1494,7 +1626,7 @@ async function unlock(event) {
       error.textContent = 'Invalid server response';
       return;
     }
-    sessionStorage.setItem('wqt_token', data.token);
+    sessionStorage.setItem(TOKEN_STORAGE_KEY, data.token);
     input.value = '';
     lastGateInputValue = '';
     document.getElementById('gate').style.display = 'none';
@@ -2416,17 +2548,22 @@ function render(){
   }
 }
 
-document.getElementById('currentYear').textContent = new Date().getFullYear();
-applyProfileToUI();
-initGateForm();
-if (getValidToken() && API_BASE_URL.trim()) {
-  document.getElementById('gate').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
-  loadData();
+async function initApp() {
+  document.getElementById('currentYear').textContent = new Date().getFullYear();
+  applyProfileToUI();
+  initGateForm();
+  await handleCognitoRedirect();
+  if (getValidToken() && API_BASE_URL.trim()) {
+    document.getElementById('gate').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    loadData();
+  }
+  initTapFeatureToggle();
+  initLogTableActions();
+  window.addEventListener('resize', renderCharts);
 }
-initTapFeatureToggle();
-initLogTableActions();
-window.addEventListener('resize', renderCharts);
+
+initApp();
 </script>
 </body>
 </html>

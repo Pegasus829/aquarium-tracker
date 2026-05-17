@@ -8,9 +8,11 @@ import {
 } from '@aws-sdk/lib-dynamodb';
 
 const TABLE_NAME = process.env.TABLE_NAME || 'aquarium-readings';
+const AUTH_MODE = process.env.AUTH_MODE || 'legacy';
 const PASSWORD_HASH = process.env.PASSWORD_HASH;
 const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRY_SEC = Number.parseInt(process.env.JWT_EXPIRY_SEC || '86400', 10);
+const LEGACY_USER_SUB = process.env.LEGACY_USER_SUB || 'legacy-aquarium';
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': 'https://aquarium.vibeai.software',
@@ -54,7 +56,7 @@ function timingSafeCompareHex(a, b) {
 
 function signJwt() {
   const now = Math.floor(Date.now() / 1000);
-  const payload = { sub: 'aquarium', iat: now, exp: now + JWT_EXPIRY_SEC };
+  const payload = { sub: LEGACY_USER_SUB, iat: now, exp: now + JWT_EXPIRY_SEC };
   const header = base64urlEncode(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
   const payloadPart = base64urlEncode(JSON.stringify(payload));
   const data = `${header}.${payloadPart}`;
@@ -88,14 +90,59 @@ function getBearer(event) {
 }
 
 function requireAuth(event) {
+  const claims =
+    event.requestContext?.authorizer?.claims ??
+    event.requestContext?.authorizer?.jwt?.claims;
+  if (claims?.sub) {
+    return {
+      user: {
+        sub: String(claims.sub),
+        email: typeof claims.email === 'string' ? claims.email : '',
+        username: typeof claims['cognito:username'] === 'string' ? claims['cognito:username'] : '',
+        provider: 'cognito',
+      },
+    };
+  }
+
+  if (AUTH_MODE === 'cognito') {
+    return { error: json(401, { error: 'Unauthorized' }) };
+  }
+
   const bearer = getBearer(event);
   if (!bearer) return { error: json(401, { error: 'Unauthorized' }) };
   try {
-    verifyJwt(bearer);
-    return {};
+    const payload = verifyJwt(bearer);
+    return {
+      user: {
+        sub: String(payload.sub || LEGACY_USER_SUB),
+        email: '',
+        username: '',
+        provider: 'legacy',
+      },
+    };
   } catch {
     return { error: json(401, { error: 'Unauthorized' }) };
   }
+}
+
+function dataTypeFor(user, kind) {
+  return user.provider === 'cognito' ? `USER#${user.sub}#${kind}` : kind;
+}
+
+function attachOwner(item, user, kind) {
+  if (user.provider !== 'cognito') return item;
+  return {
+    ...item,
+    type: dataTypeFor(user, kind),
+    ownerSub: user.sub,
+    ...(user.email ? { ownerEmail: user.email } : {}),
+  };
+}
+
+function itemToClientItem(item, kind) {
+  if (!item || typeof item !== 'object') return item;
+  const { ownerSub, ownerEmail, ...rest } = item;
+  return { ...rest, type: kind };
 }
 
 function parseBody(event) {
@@ -196,13 +243,13 @@ function normalizeProfile(raw = {}) {
   };
 }
 
-function profileToItem(profile) {
-  return {
+function profileToItem(profile, user) {
+  return attachOwner({
     type: 'profile',
     id: 'default',
     ...normalizeProfile(profile),
     updatedAt: new Date().toISOString(),
-  };
+  }, user, 'profile');
 }
 
 function itemToProfile(item) {
@@ -214,7 +261,7 @@ export async function handler(event) {
   const method = event.httpMethod;
   const resource = event.resource || '';
 
-  if (!PASSWORD_HASH || !JWT_SECRET) {
+  if (AUTH_MODE !== 'cognito' && (!PASSWORD_HASH || !JWT_SECRET)) {
     return json(500, { error: 'Server misconfiguration' });
   }
 
@@ -223,6 +270,9 @@ export async function handler(event) {
   }
 
   if (resource === '/auth/login' && method === 'POST') {
+    if (AUTH_MODE === 'cognito') {
+      return json(410, { error: 'Use Cognito sign-in' });
+    }
     const body = parseBody(event);
     if (!body) return json(400, { error: 'Invalid JSON' });
     const pwd = body.password;
@@ -237,6 +287,7 @@ export async function handler(event) {
 
   const auth = requireAuth(event);
   if (auth.error) return auth.error;
+  const { user } = auth;
 
   try {
     if (resource === '/readings' && method === 'GET') {
@@ -245,10 +296,10 @@ export async function handler(event) {
           TableName: TABLE_NAME,
           KeyConditionExpression: '#t = :tank',
           ExpressionAttributeNames: { '#t': 'type' },
-          ExpressionAttributeValues: { ':tank': 'tank' },
+          ExpressionAttributeValues: { ':tank': dataTypeFor(user, 'tank') },
         }),
       );
-      return json(200, out.Items || []);
+      return json(200, (out.Items || []).map((item) => itemToClientItem(item, 'tank')));
     }
 
     if (resource === '/readings' && method === 'POST') {
@@ -256,8 +307,9 @@ export async function handler(event) {
       if (!body) return json(400, { error: 'Invalid JSON' });
       const item = validateTankItem(body);
       if (!item) return json(400, { error: 'Invalid tank reading' });
-      await ddb.send(new PutCommand({ TableName: TABLE_NAME, Item: item }));
-      return json(201, item);
+      const stored = attachOwner(item, user, 'tank');
+      await ddb.send(new PutCommand({ TableName: TABLE_NAME, Item: stored }));
+      return json(201, itemToClientItem(stored, 'tank'));
     }
 
     if (resource === '/readings/{id}' && method === 'PUT') {
@@ -267,8 +319,9 @@ export async function handler(event) {
       if (!body) return json(400, { error: 'Invalid JSON' });
       const item = validateTankItem({ ...body, id });
       if (!item) return json(400, { error: 'Invalid tank reading' });
-      await ddb.send(new PutCommand({ TableName: TABLE_NAME, Item: item }));
-      return json(200, item);
+      const stored = attachOwner(item, user, 'tank');
+      await ddb.send(new PutCommand({ TableName: TABLE_NAME, Item: stored }));
+      return json(200, itemToClientItem(stored, 'tank'));
     }
 
     if (resource === '/readings/{id}' && method === 'DELETE') {
@@ -277,7 +330,7 @@ export async function handler(event) {
       await ddb.send(
         new DeleteCommand({
           TableName: TABLE_NAME,
-          Key: { type: 'tank', id },
+          Key: { type: dataTypeFor(user, 'tank'), id },
         }),
       );
       return json(204, '');
@@ -289,10 +342,10 @@ export async function handler(event) {
           TableName: TABLE_NAME,
           KeyConditionExpression: '#t = :tap',
           ExpressionAttributeNames: { '#t': 'type' },
-          ExpressionAttributeValues: { ':tap': 'tap' },
+          ExpressionAttributeValues: { ':tap': dataTypeFor(user, 'tap') },
         }),
       );
-      return json(200, out.Items || []);
+      return json(200, (out.Items || []).map((item) => itemToClientItem(item, 'tap')));
     }
 
     if (resource === '/tap' && method === 'POST') {
@@ -300,8 +353,9 @@ export async function handler(event) {
       if (!body) return json(400, { error: 'Invalid JSON' });
       const item = validateTapItem(body);
       if (!item) return json(400, { error: 'Invalid tap reading' });
-      await ddb.send(new PutCommand({ TableName: TABLE_NAME, Item: item }));
-      return json(201, item);
+      const stored = attachOwner(item, user, 'tap');
+      await ddb.send(new PutCommand({ TableName: TABLE_NAME, Item: stored }));
+      return json(201, itemToClientItem(stored, 'tap'));
     }
 
     if (resource === '/tap/{id}' && method === 'PUT') {
@@ -311,8 +365,9 @@ export async function handler(event) {
       if (!body) return json(400, { error: 'Invalid JSON' });
       const item = validateTapItem({ ...body, id });
       if (!item) return json(400, { error: 'Invalid tap reading' });
-      await ddb.send(new PutCommand({ TableName: TABLE_NAME, Item: item }));
-      return json(200, item);
+      const stored = attachOwner(item, user, 'tap');
+      await ddb.send(new PutCommand({ TableName: TABLE_NAME, Item: stored }));
+      return json(200, itemToClientItem(stored, 'tap'));
     }
 
     if (resource === '/tap/{id}' && method === 'DELETE') {
@@ -321,7 +376,7 @@ export async function handler(event) {
       await ddb.send(
         new DeleteCommand({
           TableName: TABLE_NAME,
-          Key: { type: 'tap', id },
+          Key: { type: dataTypeFor(user, 'tap'), id },
         }),
       );
       return json(204, '');
@@ -333,7 +388,7 @@ export async function handler(event) {
           TableName: TABLE_NAME,
           KeyConditionExpression: '#t = :profileType',
           ExpressionAttributeNames: { '#t': 'type' },
-          ExpressionAttributeValues: { ':profileType': 'profile' },
+          ExpressionAttributeValues: { ':profileType': dataTypeFor(user, 'profile') },
         }),
       );
       const found = (out.Items || []).find((x) => x.id === 'default') || (out.Items || [])[0];
@@ -343,7 +398,7 @@ export async function handler(event) {
     if (resource === '/profile' && method === 'PUT') {
       const body = parseBody(event);
       if (!body) return json(400, { error: 'Invalid JSON' });
-      const item = profileToItem(body);
+      const item = profileToItem(body, user);
       await ddb.send(new PutCommand({ TableName: TABLE_NAME, Item: item }));
       return json(200, itemToProfile(item));
     }
