@@ -44,9 +44,11 @@
         "cloudformation:CreateStack",
         "cloudformation:DeleteChangeSet",
         "cloudformation:DescribeChangeSet",
+        "cloudformation:DescribeStackEvents",
         "cloudformation:DescribeStacks",
         "cloudformation:ExecuteChangeSet",
         "cloudformation:GetTemplate",
+        "cloudformation:GetTemplateSummary",
         "cloudformation:UpdateStack"
       ],
       "Resource": "*"
